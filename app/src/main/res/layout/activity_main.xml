@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:gravity="center">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="TAXI DRIVER"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="32dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Керування Замовленням"
+        android:textStyle="bold"/>
+
+    <EditText
+        android:id="@+id/et_order_id"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="ID Замовлення"
+        android:inputType="number"
+        android:layout_marginTop="16dp"/>
+
+    <Button
+        android:id="@+id/btn_accept"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Прийняти замовлення"
+        android:backgroundTint="#4CAF50"
+        android:layout_marginTop="16dp"/>
+
+    <Button
+        android:id="@+id/btn_complete"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Завершити замовлення"
+        android:backgroundTint="#F44336"
+        android:layout_marginTop="8dp"/>
+
+    <TextView
+        android:id="@+id/tv_status"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Статус: Очікування"
+        android:gravity="center"
+        android:layout_marginTop="24dp"/>
+        
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"/>
+
+    <Button
+        android:id="@+id/btn_logout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Вийти з акаунту"
+        android:backgroundTint="#757575"
+        android:layout_marginTop="32dp"/>
+
+</LinearLayout>
