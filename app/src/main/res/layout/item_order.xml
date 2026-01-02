@@ -21,15 +21,36 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="12dp">
 
-            <TextView
-                android:id="@+id/tv_price"
+            <LinearLayout
+                android:id="@+id/ll_price_background"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="245 ₴"
-                android:textColor="@color/driver_neon_teal"
-                android:textSize="24sp"
-                android:textStyle="bold"
-                android:layout_alignParentStart="true"/>
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/bg_price_container"
+                android:backgroundTint="@color/driver_neon_teal"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="6dp"
+                android:layout_alignParentStart="true"
+                android:layout_centerVertical="true">
+
+                <ImageView
+                    android:id="@+id/iv_payment_icon"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@drawable/ic_payment_cash"
+                    app:tint="#000000"/>
+
+                <TextView
+                    android:id="@+id/tv_price"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:text="245 ₴"
+                    android:textColor="#000000"
+                    android:textSize="18sp"
+                    android:textStyle="bold"/>
+            </LinearLayout>
 
             <TextView
                 android:id="@+id/tv_tariff_badge"
@@ -42,7 +63,7 @@
                 android:textColor="@color/driver_text_secondary"
                 android:textSize="12sp"
                 android:textStyle="bold"
-                android:layout_toEndOf="@id/tv_price"
+                android:layout_toEndOf="@id/ll_price_background"
                 android:layout_marginStart="12dp"
                 android:layout_centerVertical="true"/>
 
@@ -129,7 +150,8 @@
                 android:textColor="@color/driver_text_primary"
                 android:textSize="16sp"
                 android:maxLines="2"
-                android:layout_marginTop="-4dp"/> </LinearLayout>
+                android:layout_marginTop="-4dp"/>
+        </LinearLayout>
 
         <TextView
             android:id="@+id/tv_distance"

@@ -65,29 +65,64 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun handleActionButton() {
+        val orderId = currentOrder?.id ?: return
+
         when (currentState) {
             RideState.TO_CLIENT -> {
-                // Водитель нажал "На месте" -> переходим в режим ожидания
-                // Тут должен быть API вызов: notifyArrived()
-                currentState = RideState.WAITING
-                tvStatusTitle.text = "Очікування клієнта"
-                tvDestinationLabel.text = "Клієнт виходить..."
-                btnAction.text = "ПОЧАТИ ПОЇЗДКУ"
-                // Можно запустить таймер тут
-            }
-            RideState.WAITING -> {
-                // Водитель нажал "Начать" -> едем в точку Б
-                // API вызов: startTrip()
-                currentState = RideState.TO_DESTINATION
-                tvStatusTitle.text = "В дорозі"
-                tvDestinationLabel.text = currentOrder?.toAddress
-                btnAction.text = "ЗАВЕРШИТИ"
-                btnAction.backgroundTintList = ContextCompat.getColorStateList(this, R.color.driver_error) // Красная кнопка
+                // 1. Водитель нажал "НА МЕСТЕ"
+                btnAction.isEnabled = false // Блокируем, чтобы не нажал дважды
 
-                updateMapRouteToDestination()
+                ApiClient.getInstance().getApiService(this).notifyArrived(orderId).enqueue(object : Callback<Void> {
+                    override fun onResponse(call: Call<Void>, response: Response<Void>) {
+                        btnAction.isEnabled = true
+                        if (response.isSuccessful) {
+                            // Меняем состояние UI
+                            currentState = RideState.WAITING
+                            tvStatusTitle.text = "Очікування клієнта"
+                            tvDestinationLabel.text = "Клієнт скоро вийде..."
+                            btnAction.text = "ПОЧАТИ ПОЇЗДКУ"
+                            // Тут можно запустить таймер
+                        } else {
+                            Toast.makeText(this@OrderProgressActivity, "Помилка сервера", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                    override fun onFailure(call: Call<Void>, t: Throwable) {
+                        btnAction.isEnabled = true
+                        Toast.makeText(this@OrderProgressActivity, "Помилка мережі", Toast.LENGTH_SHORT).show()
+                    }
+                })
             }
+
+            RideState.WAITING -> {
+                // 2. Водитель нажал "НАЧАТЬ ПОЕЗДКУ"
+                btnAction.isEnabled = false
+
+                ApiClient.getInstance().getApiService(this).startTrip(orderId).enqueue(object : Callback<Void> {
+                    override fun onResponse(call: Call<Void>, response: Response<Void>) {
+                        btnAction.isEnabled = true
+                        if (response.isSuccessful) {
+                            // Меняем состояние UI
+                            currentState = RideState.TO_DESTINATION
+                            tvStatusTitle.text = "В дорозі"
+                            tvDestinationLabel.text = currentOrder?.toAddress
+                            btnAction.text = "ЗАВЕРШИТИ"
+                            btnAction.backgroundTintList = ContextCompat.getColorStateList(this@OrderProgressActivity, R.color.driver_error)
+
+                            // Перерисовываем маршрут до Точки Б
+                            updateMapRouteToDestination()
+                        } else {
+                            Toast.makeText(this@OrderProgressActivity, "Помилка сервера", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                    override fun onFailure(call: Call<Void>, t: Throwable) {
+                        btnAction.isEnabled = true
+                        Toast.makeText(this@OrderProgressActivity, "Помилка мережі", Toast.LENGTH_SHORT).show()
+                    }
+                })
+            }
+
             RideState.TO_DESTINATION -> {
-                // Водитель нажал "Завершить"
+                // 3. Водитель нажал "ЗАВЕРШИТЬ"
                 completeOrder()
             }
         }

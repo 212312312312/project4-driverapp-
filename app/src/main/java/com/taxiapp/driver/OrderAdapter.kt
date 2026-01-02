@@ -1,5 +1,7 @@
 package com.taxiapp.driver
 
+import android.content.res.ColorStateList
+import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -22,7 +24,6 @@ class OrderAdapter(
         notifyDataSetChanged()
     }
 
-    // Додаємо цей метод, щоб перевірити, чи список порожній (для EtherActivity)
     override fun getItemCount(): Int = orders.size
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): OrderViewHolder {
@@ -35,7 +36,11 @@ class OrderAdapter(
     }
 
     inner class OrderViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        // Отримуємо посилання на елементи
         private val tvPrice: TextView = itemView.findViewById(R.id.tv_price)
+        private val llPriceBg: LinearLayout = itemView.findViewById(R.id.ll_price_background) // Контейнер ціни
+        private val ivPaymentIcon: ImageView = itemView.findViewById(R.id.iv_payment_icon)   // Іконка оплати
+
         private val tvPricePerKm: TextView = itemView.findViewById(R.id.tv_price_per_km)
         private val tvFrom: TextView = itemView.findViewById(R.id.tv_address_from)
         private val tvTo: TextView = itemView.findViewById(R.id.tv_address_to)
@@ -51,36 +56,44 @@ class OrderAdapter(
             tvTariff.text = order.tariffName
             tvDistance.text = order.getFormattedDistance()
 
-            // --- ДИНАМІЧНІ ЗУПИНКИ В КАРТЦІ ---
-            stopsContainer.removeAllViews()
+            // --- ЛОГІКА ВІДОБРАЖЕННЯ ОПЛАТИ (CASH / CARD) ---
+            val method = order.paymentMethod ?: "CASH"
 
+            if (method == "CASH") {
+                // ЖОВТИЙ ФОН (Готівка)
+                llPriceBg.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#FFD600"))
+                ivPaymentIcon.setImageResource(R.drawable.ic_payment_cash)
+                tvPrice.setTextColor(Color.BLACK)
+                ivPaymentIcon.setColorFilter(Color.BLACK)
+            } else {
+                // СИНІЙ ФОН (Карта)
+                llPriceBg.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#2979FF"))
+                ivPaymentIcon.setImageResource(R.drawable.ic_payment_card)
+                tvPrice.setTextColor(Color.WHITE) // На синьому краще білий текст
+                ivPaymentIcon.setColorFilter(Color.WHITE)
+            }
+            // ------------------------------------------------
+
+            // Динамічні зупинки
+            stopsContainer.removeAllViews()
             if (!order.stops.isNullOrEmpty()) {
                 val inflater = LayoutInflater.from(itemView.context)
-
-                // Сортуємо зупинки
                 val sortedStops = order.stops.sortedBy { it.stopOrder }
 
                 for (stop in sortedStops) {
-                    // Використовуємо наш item_route_point.xml
                     val stopView = inflater.inflate(R.layout.item_route_point, stopsContainer, false)
-
                     val tvAddress = stopView.findViewById<TextView>(R.id.tv_point_address)
                     val ivIcon = stopView.findViewById<ImageView>(R.id.iv_point_icon)
                     val line = stopView.findViewById<View>(R.id.view_line)
 
                     tvAddress.text = stop.address
-
-                    // Фарбуємо іконку в жовтий/бірюзовий для проміжних точок
                     ivIcon.setImageResource(R.drawable.ic_circle_green)
                     ivIcon.setColorFilter(ContextCompat.getColor(itemView.context, R.color.driver_neon_teal))
-
-                    // Лінія завжди видима для проміжних точок, бо знизу ще є Точка Б
                     line.visibility = View.VISIBLE
 
                     stopsContainer.addView(stopView)
                 }
             }
-            // ----------------------------------
 
             itemView.setOnClickListener {
                 onItemClick(order)

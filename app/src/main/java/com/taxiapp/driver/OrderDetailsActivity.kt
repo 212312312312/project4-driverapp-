@@ -29,6 +29,8 @@ import com.google.maps.android.PolyUtil
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import android.content.res.ColorStateList
+import android.graphics.Color
 
 class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
 
@@ -83,13 +85,86 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun setupUI() {
-        // ... (код setupUI залишається без змін, він заповнює текстові поля)
+        // Базова інформація
         findViewById<TextView>(R.id.tv_order_id).text = "Замовлення #${currentOrder?.id}"
-        findViewById<TextView>(R.id.tv_price).text = currentOrder?.getFormattedPrice()
         findViewById<TextView>(R.id.tv_tariff).text = currentOrder?.tariffName
+
         val distInfo = "${currentOrder?.getFormattedDistance()} • ${currentOrder?.getPricePerKm()}"
         findViewById<TextView>(R.id.tv_distance_info).text = distInfo
+
+        // Ціна
+        findViewById<TextView>(R.id.tv_price).text = currentOrder?.getFormattedPrice()
+
+        // --- 1. ОПЛАТА (Готівка / Карта) ---
+        setupPaymentMethod()
+
+        // --- 2. МАРШРУТ ---
         buildRouteList()
+
+        // --- 3. ДОД. ПОСЛУГИ ---
+        setupServices()
+
+        // --- 4. КОМЕНТАР ---
+        setupComment()
+    }
+
+    private fun setupPaymentMethod() {
+        val llPriceBg = findViewById<LinearLayout>(R.id.ll_price_background)
+        val ivIcon = findViewById<ImageView>(R.id.iv_payment_icon)
+        val method = currentOrder?.paymentMethod ?: "CASH"
+
+        if (method == "CASH") {
+            // ЖОВТИЙ ФОН + ГАМАНЕЦЬ
+            // Колір #FFD600 (Жовтий)
+            llPriceBg.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#FFD600"))
+            ivIcon.setImageResource(R.drawable.ic_payment_cash)
+        } else {
+            // СИНІЙ ФОН + КАРТА
+            // Колір #2979FF (Синій)
+            llPriceBg.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#2979FF"))
+            ivIcon.setImageResource(R.drawable.ic_payment_card)
+        }
+    }
+
+    private fun setupServices() {
+        val servicesBlock = findViewById<LinearLayout>(R.id.ll_services_block)
+        val servicesList = findViewById<LinearLayout>(R.id.ll_services_list)
+        val services = currentOrder?.services
+
+        if (!services.isNullOrEmpty()) {
+            servicesBlock.visibility = View.VISIBLE
+            servicesList.removeAllViews()
+
+            for (service in services) {
+                val tv = TextView(this)
+
+                // --- ЗМІНА ТУТ ---
+                // Було: tv.text = "• ${service.name} (+${service.price.toInt()} ₴)"
+                // Стало (просто назва):
+                tv.text = "• ${service.name}"
+                // ----------------
+
+                tv.setTextColor(ContextCompat.getColor(this, R.color.driver_text_primary))
+                tv.textSize = 14f
+                tv.setPadding(0, 4, 0, 4)
+                servicesList.addView(tv)
+            }
+        } else {
+            servicesBlock.visibility = View.GONE
+        }
+    }
+
+    private fun setupComment() {
+        val commentBlock = findViewById<LinearLayout>(R.id.ll_comment_block)
+        val tvComment = findViewById<TextView>(R.id.tv_comment_text)
+        val comment = currentOrder?.comment
+
+        if (!comment.isNullOrEmpty()) {
+            commentBlock.visibility = View.VISIBLE
+            tvComment.text = comment
+        } else {
+            commentBlock.visibility = View.GONE
+        }
     }
 
     // ... (код buildRouteList та acceptOrder залишається без змін) ...
