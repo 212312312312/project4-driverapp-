@@ -56,8 +56,10 @@ class LocationService : Service() {
 
     @SuppressLint("MissingPermission")
     private fun requestLocationUpdates() {
-        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 10000)
-            .setMinUpdateDistanceMeters(10f)
+        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 10000) // 10 секунд
+            // Мы убрали ограничение по дистанции.
+            // Теперь телефон будет пытаться слать координаты каждые 10 секунд,
+            // даже если сдвиг 0 метров.
             .build()
 
         fusedLocationClient.requestLocationUpdates(
@@ -68,6 +70,9 @@ class LocationService : Service() {
     }
 
     private fun sendLocationToServer(lat: Double, lng: Double) {
+        // 1. ФИЛЬТР: Не отправляем мусорные координаты
+        if (lat == 0.0 && lng == 0.0) return
+
         val token = sessionManager.fetchAuthToken()
         if (token == null) {
             stopSelf()
@@ -77,7 +82,7 @@ class LocationService : Service() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val request = UpdateLocationRequest(lat, lng)
-                // Обычная отправка координат
+
                 val response = ApiClient.getInstance().getApiService(applicationContext)
                     .updateLocation(request)
 
