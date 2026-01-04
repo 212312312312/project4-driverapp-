@@ -15,6 +15,15 @@ android {
         versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        // IP адрес сервера. Обрати внимание, в конце нужен слеш /
+        buildConfigField "String", "BASE_URL", "\"http://192.168.0.104:8080/\""
+    }
+
+    // ВАЖНО: buildFeatures должен быть вне buildTypes
+    buildFeatures {
+        buildConfig = true
+        viewBinding = true
     }
 
     buildTypes {
@@ -39,6 +48,10 @@ dependencies {
     implementation("com.google.android.material:material:1.11.0")
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
 
+    // ViewModel и LiveData (ВАЖНО для шага 3)
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.2")
+    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.6.2")
+
     // Network (Retrofit & OkHttp)
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
@@ -46,8 +59,10 @@ dependencies {
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+
+    // Maps & Location
     implementation 'com.google.android.gms:play-services-maps:18.2.0'
     implementation 'com.google.android.gms:play-services-location:21.0.1'
     implementation 'com.google.maps.android:android-maps-utils:3.4.0'
-    implementation("com.google.android.gms:play-services-location:21.0.1")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
 }

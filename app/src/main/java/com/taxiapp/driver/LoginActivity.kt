@@ -3,85 +3,77 @@ package com.taxiapp.driver
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
-import android.widget.Button
-import android.widget.EditText
-import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.ViewModelProvider
+import com.taxiapp.driver.databinding.ActivityLoginBinding
 import com.taxiapp.driver.network.ApiClient
-import com.taxiapp.driver.network.LoginRequest
-import com.taxiapp.driver.network.LoginResponse
+import com.taxiapp.driver.ui.login.LoginViewModel
+import com.taxiapp.driver.ui.login.LoginViewModelFactory
 import com.taxiapp.driver.utils.SessionManager
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
 
 class LoginActivity : AppCompatActivity() {
 
-    private lateinit var sessionManager: SessionManager
+    private lateinit var binding: ActivityLoginBinding
+    private lateinit var viewModel: LoginViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_login)
 
-        sessionManager = SessionManager(this)
+        // Инициализация ViewBinding
+        binding = ActivityLoginBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-        // Якщо вже є токен - зразу йдемо на головний екран
-        if (sessionManager.fetchAuthToken() != null) {
-            startActivity(Intent(this, MainActivity::class.java))
-            finish()
-            return
+        setupViewModel()
+        setupObservers()
+        setupListeners()
+    }
+
+    private fun setupViewModel() {
+        val apiService = ApiClient.getInstance().getApiService(this)
+        val sessionManager = SessionManager(this)
+        val factory = LoginViewModelFactory(apiService, sessionManager)
+
+        viewModel = ViewModelProvider(this, factory)[LoginViewModel::class.java]
+    }
+
+    private fun setupObservers() {
+        // Следим за состоянием загрузки (ProgressBar из XML)
+        viewModel.isLoading.observe(this) { isLoading ->
+            // id: progress_bar -> binding.progressBar
+            binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
+            // id: btn_login -> binding.btnLogin
+            binding.btnLogin.isEnabled = !isLoading
+
+            // Если идет загрузка, можно менять текст кнопки
+            binding.btnLogin.text = if (isLoading) "ВХІД..." else "УВІЙТИ"
         }
 
-        // Знаходимо елементи по правильних ID з нового XML
-        val etPhone = findViewById<EditText>(R.id.et_phone) // Було et_login
-        val etPassword = findViewById<EditText>(R.id.et_password)
-        val btnLogin = findViewById<Button>(R.id.btn_login)
-        val progressBar = findViewById<ProgressBar>(R.id.progress_bar)
-
-        btnLogin.setOnClickListener {
-            val phone = etPhone.text.toString().trim()
-            val password = etPassword.text.toString().trim()
-
-            if (phone.isEmpty() || password.isEmpty()) {
-                Toast.makeText(this, "Заповніть всі поля", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
+        // Следим за результатом
+        viewModel.loginResult.observe(this) { result ->
+            result.onSuccess {
+                // Успешный вход -> идем на главную
+                val intent = Intent(this, MainActivity::class.java)
+                startActivity(intent)
+                finish()
             }
+            result.onFailure { error ->
+                Toast.makeText(this, error.message ?: "Помилка входу", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
 
-            // Показуємо завантаження
-            btnLogin.isEnabled = false
-            btnLogin.alpha = 0.5f
-            progressBar.visibility = View.VISIBLE
+    private fun setupListeners() {
+        // id: btn_login -> binding.btnLogin
+        binding.btnLogin.setOnClickListener {
+            // id: et_phone -> binding.etPhone
+            val phone = binding.etPhone.text.toString()
 
-            // Відправляємо запит
-            ApiClient.getInstance().getApiService(this)
-                .login(LoginRequest(phone, password))
-                .enqueue(object : Callback<LoginResponse> {
-                    override fun onResponse(call: Call<LoginResponse>, response: Response<LoginResponse>) {
-                        progressBar.visibility = View.GONE
-                        btnLogin.isEnabled = true
-                        btnLogin.alpha = 1.0f
+            // id: et_password -> binding.etPassword
+            val password = binding.etPassword.text.toString()
 
-                        if (response.isSuccessful && response.body() != null) {
-                            // Зберігаємо токен
-                            sessionManager.saveAuthToken(response.body()!!.token)
-
-                            Toast.makeText(this@LoginActivity, "Вхід виконано", Toast.LENGTH_SHORT).show()
-                            startActivity(Intent(this@LoginActivity, MainActivity::class.java))
-                            finish()
-                        } else {
-                            val errorMsg = if (response.code() == 401) "Невірний логін або пароль" else "Помилка сервера: ${response.code()}"
-                            Toast.makeText(this@LoginActivity, errorMsg, Toast.LENGTH_LONG).show()
-                        }
-                    }
-
-                    override fun onFailure(call: Call<LoginResponse>, t: Throwable) {
-                        progressBar.visibility = View.GONE
-                        btnLogin.isEnabled = true
-                        btnLogin.alpha = 1.0f
-                        Toast.makeText(this@LoginActivity, "Помилка мережі", Toast.LENGTH_SHORT).show()
-                    }
-                })
+            // Передаем данные во ViewModel
+            viewModel.login(phone, password)
         }
     }
 }

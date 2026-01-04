@@ -3,8 +3,13 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:allowBackup="true"
@@ -15,28 +20,25 @@
         android:theme="@style/Theme.TaxiAppDriver"
         android:usesCleartextTraffic="true">
 
-        <activity
-            android:name=".LoginActivity"
-            android:exported="true">
+        <activity android:name=".LoginActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity> <activity
-        android:name=".EtherActivity"
-        android:screenOrientation="portrait"/>
+        </activity>
 
+        <activity android:name=".MainActivity" />
+        <activity android:name=".EtherActivity" android:screenOrientation="portrait"/>
         <activity android:name=".OrderDetailsActivity" android:screenOrientation="portrait"/>
-        <activity android:name=".OrderProgressActivity" android:screenOrientation="portrait"/>
-
-        <activity
-            android:name=".MainActivity"
-            android:exported="false" />
 
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyCl5DccocpzluJxAX_RwTqC5baCHgB9ybA" />
 
+        <service
+            android:name=".service.LocationService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="location" />
     </application>
-
 </manifest>
