@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.PorterDuff
+import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -15,21 +16,17 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.lifecycleScope // ВАЖНО
+import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
-import com.google.android.gms.maps.model.BitmapDescriptorFactory
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.LatLngBounds
-import com.google.android.gms.maps.model.MarkerOptions
-import com.google.android.gms.maps.model.PolylineOptions
+import com.google.android.gms.maps.model.*
 import com.google.android.material.button.MaterialButton
 import com.google.maps.android.PolyUtil
 import com.taxiapp.driver.network.ApiClient
 import com.taxiapp.driver.network.Order
-import kotlinx.coroutines.launch // ВАЖНО
+import kotlinx.coroutines.launch
 
 class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
 
@@ -38,30 +35,20 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var btnAccept: MaterialButton
     private lateinit var routeContainer: LinearLayout
 
-    // --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ (БЕЗ ИЗМЕНЕНИЙ) ---
-    private fun createCustomMarkerBitmap(number: Int, colorResId: Int): Bitmap {
-        val inflater = LayoutInflater.from(this)
-        val view = inflater.inflate(R.layout.layout_custom_marker, null)
-        val tvNumber = view.findViewById<TextView>(R.id.tv_marker_number)
-        val ivBg = view.findViewById<ImageView>(R.id.iv_marker_bg)
-
-        tvNumber.text = number.toString()
-        ivBg.setColorFilter(ContextCompat.getColor(this, colorResId), PorterDuff.Mode.SRC_IN)
-
-        view.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
-        view.layout(0, 0, view.measuredWidth, view.measuredHeight)
-        val bitmap = Bitmap.createBitmap(view.measuredWidth, view.measuredHeight, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        view.draw(canvas)
-        return bitmap
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_order_details)
 
-        currentOrder = intent.getSerializableExtra("EXTRA_ORDER") as? Order
+        // БЕЗОПАСНОЕ ИЗВЛЕЧЕНИЕ ОБЪЕКТА (Fix deprecation)
+        currentOrder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            intent.getSerializableExtra("EXTRA_ORDER", Order::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            intent.getSerializableExtra("EXTRA_ORDER") as? Order
+        }
+
         if (currentOrder == null) {
+            Toast.makeText(this, "Помилка завантаження замовлення", Toast.LENGTH_SHORT).show()
             finish()
             return
         }
@@ -79,7 +66,7 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private fun setupUI() {
         findViewById<TextView>(R.id.tv_order_id).text = "Замовлення #${currentOrder?.id}"
-        findViewById<TextView>(R.id.tv_tariff).text = currentOrder?.tariffName
+        findViewById<TextView>(R.id.tv_tariff).text = currentOrder?.tariffName ?: "Стандарт"
 
         val distInfo = "${currentOrder?.getFormattedDistance()} • ${currentOrder?.getPricePerKm()}"
         findViewById<TextView>(R.id.tv_distance_info).text = distInfo
@@ -145,11 +132,14 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
         val order = currentOrder ?: return
         val allPoints = mutableListOf<RoutePoint>()
 
-        allPoints.add(RoutePoint(order.fromAddress, PointType.START))
+        // ИСПРАВЛЕНО: Добавлен ?: "" для обработки String?
+        allPoints.add(RoutePoint(order.fromAddress ?: "Адреса не вказана", PointType.START))
+
         order.stops?.sortedBy { it.stopOrder }?.forEach { stop ->
-            allPoints.add(RoutePoint(stop.address, PointType.WAYPOINT))
+            allPoints.add(RoutePoint(stop.address ?: "Проміжна точка", PointType.WAYPOINT))
         }
-        allPoints.add(RoutePoint(order.toAddress, PointType.END))
+
+        allPoints.add(RoutePoint(order.toAddress ?: "Кінцева точка", PointType.END))
 
         for (i in allPoints.indices) {
             val point = allPoints[i]
@@ -176,23 +166,23 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
     data class RoutePoint(val address: String, val type: PointType)
     enum class PointType { START, WAYPOINT, END }
 
-    // --- НОВАЯ ЛОГИКА ПРИНЯТИЯ ЗАКАЗА ---
     private fun acceptOrder() {
         val orderId = currentOrder?.id ?: return
-
         btnAccept.isEnabled = false
         btnAccept.text = "ОБРОБКА..."
 
         lifecycleScope.launch {
             try {
-                // Suspend вызов
                 val response = ApiClient.getInstance().getApiService(this@OrderDetailsActivity).acceptOrder(orderId)
 
-                if (response.isSuccessful) {
+                if (response.isSuccessful && response.body() != null) {
+                    val updatedOrder = response.body()!!
+
                     Toast.makeText(this@OrderDetailsActivity, "Замовлення прийнято!", Toast.LENGTH_SHORT).show()
 
                     val intent = Intent(this@OrderDetailsActivity, OrderProgressActivity::class.java)
-                    intent.putExtra("EXTRA_ORDER", currentOrder)
+                    intent.putExtra("EXTRA_ORDER", updatedOrder)
+                    intent.putExtra("EXTRA_ORDER_ID", orderId)
                     startActivity(intent)
                     finish()
                 } else {
@@ -211,10 +201,8 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
     override fun onMapReady(googleMap: GoogleMap) {
         map = googleMap
         map.uiSettings.apply {
-            isScrollGesturesEnabled = false
-            isZoomGesturesEnabled = false
-            isTiltGesturesEnabled = false
-            isRotateGesturesEnabled = false
+            isScrollGesturesEnabled = true // Разрешим скролл, чтобы водителю было удобнее
+            isZoomGesturesEnabled = true
             isMapToolbarEnabled = false
         }
 
@@ -251,8 +239,26 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
                 e.printStackTrace()
             }
         } else {
-            val kiev = LatLng(50.45, 30.52)
-            map.moveCamera(CameraUpdateFactory.newLatLngZoom(kiev, 12f))
+            // Если полилайна нет, пробуем поставить маркеры по координатам
+            val origin = LatLng(order.originLat ?: 50.45, order.originLng ?: 30.52)
+            map.moveCamera(CameraUpdateFactory.newLatLngZoom(origin, 14f))
         }
+    }
+
+    private fun createCustomMarkerBitmap(number: Int, colorResId: Int): Bitmap {
+        val inflater = LayoutInflater.from(this)
+        val view = inflater.inflate(R.layout.layout_custom_marker, null)
+        val tvNumber = view.findViewById<TextView>(R.id.tv_marker_number)
+        val ivBg = view.findViewById<ImageView>(R.id.iv_marker_bg)
+
+        tvNumber.text = number.toString()
+        ivBg.setColorFilter(ContextCompat.getColor(this, colorResId), PorterDuff.Mode.SRC_IN)
+
+        view.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
+        view.layout(0, 0, view.measuredWidth, view.measuredHeight)
+        val bitmap = Bitmap.createBitmap(view.measuredWidth, view.measuredHeight, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        view.draw(canvas)
+        return bitmap
     }
 }

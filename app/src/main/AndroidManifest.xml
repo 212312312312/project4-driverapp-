@@ -26,11 +26,20 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
+        <activity android:name=".LocationPickerActivity" />
         <activity android:name=".MainActivity" />
         <activity android:name=".EtherActivity" android:screenOrientation="portrait"/>
         <activity android:name=".OrderDetailsActivity" android:screenOrientation="portrait"/>
+        <activity
+            android:name=".OrdersActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"/>
 
+        <activity
+            android:name=".HistoryDetailsActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"/>
+        <activity android:name=".OrderProgressActivity" android:screenOrientation="portrait" />
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyCl5DccocpzluJxAX_RwTqC5baCHgB9ybA" />

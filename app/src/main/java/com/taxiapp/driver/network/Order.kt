@@ -5,38 +5,35 @@ import java.io.Serializable
 
 data class Order(
     @SerializedName("id") val id: Long,
-    @SerializedName("price") val price: Double,
-    @SerializedName("tariffName") val tariffName: String,
-    @SerializedName("fromAddress") val fromAddress: String,
-    @SerializedName("toAddress") val toAddress: String,
+    @SerializedName("price") val price: Double = 0.0,
+    @SerializedName("tariffName") val tariffName: String? = null, // Може бути null
+    @SerializedName("fromAddress") val fromAddress: String? = null,
+    @SerializedName("toAddress") val toAddress: String? = null,
     @SerializedName("googleRoutePolyline") val polyline: String? = null,
     @SerializedName("stops") val stops: List<OrderStop>? = null,
     @SerializedName("distanceMeters") val distanceMeters: Int? = 0,
     @SerializedName("status") val status: String? = null,
 
-    // --- НОВІ ПОЛЯ ---
-    @SerializedName("paymentMethod") val paymentMethod: String = "CASH", // "CASH" або "CARD"
+    @SerializedName("originLat") val originLat: Double? = 0.0,
+    @SerializedName("originLng") val originLng: Double? = 0.0,
+    @SerializedName("destLat") val destLat: Double? = 0.0,
+    @SerializedName("destLng") val destLng: Double? = 0.0,
+
+    @SerializedName("paymentMethod") val paymentMethod: String? = "CASH",
     @SerializedName("comment") val comment: String? = null,
-    @SerializedName("services") val services: List<TaxiService>? = null,
-    // -----------------
-
+    @SerializedName("services") val services: List<TaxiService>? = null
 ) : Serializable {
-    // ... ваші старі методи (getFormattedPrice і т.д.) ...
 
-    fun getFormattedPrice(): String {
-        return "${price.toInt()} ₴"
-    }
+    fun getFormattedPrice(): String = "${price.toInt()} ₴"
 
     fun getPricePerKm(): String {
         if (distanceMeters == null || distanceMeters == 0) return "—"
         val km = distanceMeters / 1000.0
-        val perKm = price / km
-        return String.format("%.0f грн/км", perKm)
+        return String.format("%.0f грн/км", price / km)
     }
 
     fun getFormattedDistance(): String {
-        if (distanceMeters == null) return ""
-        val km = distanceMeters / 1000.0
+        val km = (distanceMeters ?: 0) / 1000.0
         return String.format("%.1f км", km)
     }
 }

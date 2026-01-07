@@ -5,9 +5,11 @@ import android.os.Bundle
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat // Добавлено для запуска сервиса
 import androidx.lifecycle.ViewModelProvider
 import com.taxiapp.driver.databinding.ActivityLoginBinding
 import com.taxiapp.driver.network.ApiClient
+import com.taxiapp.driver.service.LocationService // Импорт твоего сервиса
 import com.taxiapp.driver.ui.login.LoginViewModel
 import com.taxiapp.driver.ui.login.LoginViewModelFactory
 import com.taxiapp.driver.utils.SessionManager
@@ -19,8 +21,6 @@ class LoginActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // Инициализация ViewBinding
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -33,26 +33,24 @@ class LoginActivity : AppCompatActivity() {
         val apiService = ApiClient.getInstance().getApiService(this)
         val sessionManager = SessionManager(this)
         val factory = LoginViewModelFactory(apiService, sessionManager)
-
         viewModel = ViewModelProvider(this, factory)[LoginViewModel::class.java]
     }
 
     private fun setupObservers() {
-        // Следим за состоянием загрузки (ProgressBar из XML)
         viewModel.isLoading.observe(this) { isLoading ->
-            // id: progress_bar -> binding.progressBar
             binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
-            // id: btn_login -> binding.btnLogin
             binding.btnLogin.isEnabled = !isLoading
-
-            // Если идет загрузка, можно менять текст кнопки
             binding.btnLogin.text = if (isLoading) "ВХІД..." else "УВІЙТИ"
         }
 
-        // Следим за результатом
         viewModel.loginResult.observe(this) { result ->
             result.onSuccess {
-                // Успешный вход -> идем на главную
+                // --- ГЛАВНОЕ ИЗМЕНЕНИЕ ---
+                // Запускаем сервис сразу после логина, чтобы водитель стал "Серым" на карте
+                val serviceIntent = Intent(this, LocationService::class.java)
+                ContextCompat.startForegroundService(this, serviceIntent)
+                // -------------------------
+
                 val intent = Intent(this, MainActivity::class.java)
                 startActivity(intent)
                 finish()
@@ -64,15 +62,9 @@ class LoginActivity : AppCompatActivity() {
     }
 
     private fun setupListeners() {
-        // id: btn_login -> binding.btnLogin
         binding.btnLogin.setOnClickListener {
-            // id: et_phone -> binding.etPhone
             val phone = binding.etPhone.text.toString()
-
-            // id: et_password -> binding.etPassword
             val password = binding.etPassword.text.toString()
-
-            // Передаем данные во ViewModel
             viewModel.login(phone, password)
         }
     }
