@@ -12,4 +12,5 @@
     <color name="taxi_yellow">#FFD600</color>
     <color name="marker_green">#00E676</color> <color name="marker_yellow">#FFD600</color>
     <color name="marker_red">#FF5252</color>
+    <color name="driver_error_red">#FF4444</color>
 </resources>

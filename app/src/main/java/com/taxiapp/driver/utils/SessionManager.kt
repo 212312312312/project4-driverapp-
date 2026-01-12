@@ -8,35 +8,61 @@ class SessionManager(context: Context) {
 
     companion object {
         const val USER_TOKEN = "user_token"
+        const val KEY_DRIVER_ID = "driver_id" // Новий ключ
         const val KEY_MANUAL_LAT = "manual_lat"
+        const val KEY_DRIVER_NAME = "driver_name"
         const val KEY_MANUAL_LNG = "manual_lng"
         const val KEY_IS_MANUAL_LOC = "is_manual_loc"
-        // Ключ для флага свернутого заказа
         const val KEY_WAS_ORDER_MINIMIZED = "was_order_minimized"
     }
 
-    // --- ЛОГИКА СВЕРНУТОГО ЗАКАЗА ---
+    // --- ЛОГІКА ID ВОДІЯ (Для WebSockets) ---
 
-    // Установить флаг (водитель сам вышел из экрана заказа)
+    fun saveDriverId(id: Long) {
+        prefs.edit().putLong(KEY_DRIVER_ID, id).apply()
+    }
+
+    fun getDriverId(): Long {
+        return prefs.getLong(KEY_DRIVER_ID, -1L)
+    }
+
+    // --- ЛОГІКА ЗГОРНУТОГО ЗАМОВЛЕННЯ ---
+
     fun setOrderMinimized(minimized: Boolean) {
         prefs.edit().putBoolean(KEY_WAS_ORDER_MINIMIZED, minimized).apply()
     }
 
-    // Проверить, был ли заказ свернут
     fun isOrderMinimized(): Boolean {
         return prefs.getBoolean(KEY_WAS_ORDER_MINIMIZED, false)
     }
 
-    // Очистить флаг (нужно вызывать, когда заказ завершен или принят новый)
     fun resetOrderMinimized() {
         setOrderMinimized(false)
     }
 
-    // --- ОСТАЛЬНЫЕ МЕТОДЫ (БЕЗ ИЗМЕНЕНИЙ) ---
-    fun saveAuthToken(token: String) = prefs.edit().putString(USER_TOKEN, token).apply()
-    fun fetchAuthToken(): String? = prefs.getString(USER_TOKEN, null)
-    fun clearSession() = prefs.edit().clear().apply()
+    // --- АВТОРИЗАЦІЯ ---
 
+    fun saveAuthToken(token: String) = prefs.edit().putString(USER_TOKEN, token).apply()
+
+    fun fetchAuthToken(): String? = prefs.getString(USER_TOKEN, null)
+
+    fun clearSession() {
+        prefs.edit().clear().apply()
+        val editor = prefs.edit()
+        editor.remove(USER_TOKEN) // Видаляємо токен
+        // editor.clear() // Можна використати це, якщо треба видалити ВСЕ (налаштування і т.д.)
+        editor.apply()
+    }
+
+    // --- ЛОГІКА ЛОКАЦІЇ ---
+    fun saveDriverName(name: String) {
+        prefs.edit().putString(KEY_DRIVER_NAME, name).apply()
+    }
+
+    // Получение имени
+    fun getDriverName(): String? {
+        return prefs.getString(KEY_DRIVER_NAME, null)
+    }
     fun setManualLocation(lat: Double, lng: Double) {
         val editor = prefs.edit()
         editor.putFloat(KEY_MANUAL_LAT, lat.toFloat())
@@ -54,6 +80,9 @@ class SessionManager(context: Context) {
 
     fun getManualLocation(): Pair<Double, Double>? {
         if (!isManualLocationActive()) return null
-        return Pair(prefs.getFloat(KEY_MANUAL_LAT, 0f).toDouble(), prefs.getFloat(KEY_MANUAL_LNG, 0f).toDouble())
+        return Pair(
+            prefs.getFloat(KEY_MANUAL_LAT, 0f).toDouble(),
+            prefs.getFloat(KEY_MANUAL_LNG, 0f).toDouble()
+        )
     }
 }

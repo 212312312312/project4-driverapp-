@@ -16,6 +16,9 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+
+        // --- ДОДАНО ДЛЯ ЗАВАНТАЖЕННЯ БІБЛІОТЕКИ STOMP ---
+        maven { url 'https://jitpack.io' }
     }
 }
 

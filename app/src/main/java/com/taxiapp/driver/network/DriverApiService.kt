@@ -10,8 +10,14 @@ interface DriverApiService {
     suspend fun login(@Body request: LoginRequest): Response<LoginResponse>
 
     // --- ЗАКАЗЫ ---
+
+    @GET("/api/v1/driver/me")
+    suspend fun getDriverProfile(): Response<DriverProfileDto>
     @GET("api/v1/driver/orders/available")
     suspend fun getAvailableOrders(): Response<List<Order>>
+
+    @GET("api/v1/driver/orders/heatmap")
+    suspend fun getHeatmap(): Response<List<HeatmapZoneDto>>
 
     @POST("api/v1/driver/orders/{id}/accept")
     suspend fun acceptOrder(@Path("id") orderId: Long): Response<Order>
@@ -43,4 +49,22 @@ interface DriverApiService {
 
     @GET("api/v1/driver/orders/history")
     suspend fun getOrderHistory(): Response<List<Order>>
+
+    @GET("api/v1/driver/sectors")
+    suspend fun getSectors(): Response<List<Sector>>
+
+    @GET("api/v1/driver/filters")
+    suspend fun getFilters(): Response<List<DriverFilter>>
+
+    @POST("api/v1/driver/filters")
+    suspend fun createFilter(@Body req: CreateFilterRequest): Response<DriverFilter>
+
+    @PATCH("api/v1/driver/filters/{id}/toggle")
+    suspend fun toggleFilter(@Path("id") id: Long): Response<Void>
+
+    @PATCH("api/v1/driver/filters/disable-all")
+    suspend fun disableAllFilters(): Response<Void>
+
+    @DELETE("api/v1/driver/filters/{id}")
+    suspend fun deleteFilter(@Path("id") id: Long): Response<Void>
 }
