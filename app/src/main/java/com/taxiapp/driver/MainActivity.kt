@@ -33,7 +33,6 @@ import com.taxiapp.driver.network.ApiClient
 import com.taxiapp.driver.network.HeatmapZoneDto
 import com.taxiapp.driver.network.UpdateDriverStatusRequest
 import com.taxiapp.driver.service.LocationService
-import com.taxiapp.driver.utils.HexagonUtils
 import com.taxiapp.driver.utils.SessionManager
 import kotlinx.coroutines.launch
 import androidx.core.view.GravityCompat
@@ -58,8 +57,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     // --- СТАН HEATMAP (Рибні місця) ---
     private var isHeatmapVisible = false
-    // Используем GroundOverlay для эффекта свечения (Glow)
-    private val heatmapOverlays = mutableListOf<com.google.android.gms.maps.model.GroundOverlay>()
+    // Використовуємо GroundOverlay для ефекту світіння (Glow)
+    private val heatmapOverlays = mutableListOf<GroundOverlay>()
 
     private var manualLocationMarker: Marker? = null
 
@@ -108,8 +107,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     @SuppressLint("MissingPermission")
     private fun centerMapOnUser() {
         if (!::map.isInitialized) return
-        // Якщо карта рухається водієм або увімкнено Heatmap/Сектори - не центруємо примусово,
-        // щоб не збивати перегляд
         if (isHeatmapVisible || isSectorsVisible) return
 
         if (sessionManager.isManualLocationActive()) {
@@ -127,8 +124,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     override fun onMapReady(googleMap: GoogleMap) {
         map = googleMap
-
-        // --- ЗАСТОСУВАННЯ СТИЛЮ ---
         try {
             val success = map.setMapStyle(
                 MapStyleOptions.loadRawResourceStyle(this, R.raw.map_style_dark)
@@ -139,29 +134,24 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         } catch (e: Exception) {
             Log.e("MapsActivity", "Can't find style. Error: ", e)
         }
-        // ---------------------------
-
         updateMapUI()
         centerMapOnUser()
     }
 
     private fun generateGlowBitmap(color: Int): BitmapDescriptor {
-        val size = 512 // Розмір текстури (чим більше, тим якісніше, але важче)
+        val size = 512
         val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
-
         val paint = android.graphics.Paint()
-        // Радіальний градієнт: Центр -> Колір, Край -> Прозорий
         val radius = size / 2f
         val gradient = android.graphics.RadialGradient(
             radius, radius, radius,
-            intArrayOf(color, color, Color.TRANSPARENT), // Центр густий, край прозорий
-            floatArrayOf(0f, 0.4f, 1f), // 0-40% радіусу колір тримається, потім зникає
+            intArrayOf(color, color, Color.TRANSPARENT),
+            floatArrayOf(0f, 0.4f, 1f),
             android.graphics.Shader.TileMode.CLAMP
         )
         paint.shader = gradient
         paint.isAntiAlias = true
-
         canvas.drawCircle(radius, radius, radius, paint)
         return BitmapDescriptorFactory.fromBitmap(bitmap)
     }
@@ -199,14 +189,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         btnHotspots = findViewById(R.id.btn_hotspots)
         btnHotspots.setOnClickListener { toggleHeatmap() }
 
-        findViewById<View>(R.id.btn_menu).setOnClickListener { drawerLayout.openDrawer(androidx.core.view.GravityCompat.START) }
+        findViewById<View>(R.id.btn_menu).setOnClickListener { drawerLayout.openDrawer(GravityCompat.START) }
 
 
-        // 3. ЛОГІКА ВСЕРЕДИНІ БОКОВОГО МЕНЮ (ІМ'Я + АВАТАР)
+        // 3. ЛОГІКА ВСЕРЕДИНІ БОКОВОГО МЕНЮ
         val tvDriverName = navView.findViewById<TextView>(R.id.tv_driver_name)
         val imgAvatar = navView.findViewById<android.widget.ImageView>(R.id.img_avatar)
 
-        // А. Завантажуємо з пам'яті (швидко)
         val savedName = sessionManager.getDriverName()
         if (savedName != null) {
             tvDriverName.text = extractFirstName(savedName)
@@ -218,55 +207,50 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val btnOpenProfile = navView.findViewById<View>(R.id.btn_open_profile)
         btnOpenProfile.setOnClickListener {
             startActivity(Intent(this, ProfileActivity::class.java))
-            // Не закриваємо меню, або закриваємо - як зручніше
-            // drawerLayout.closeDrawer(GravityCompat.START)
         }
 
         // Б. Запит на сервер (Оновлення даних)
         lifecycleScope.launch {
             try {
-                // ВАЖЛИВО: Перевір, що в ApiService стоїть @GET("/api/v1/driver/me")
                 val response = ApiClient.getInstance().getApiService(this@MainActivity).getDriverProfile()
-
                 if (response.isSuccessful && response.body() != null) {
                     val profile = response.body()!!
                     val serverName = profile.fullName ?: "Водій"
-
-                    // 1. Зберігаємо та оновлюємо ім'я
                     sessionManager.saveDriverName(serverName)
                     tvDriverName.text = extractFirstName(serverName)
 
-                    // 2. Завантажуємо АВАТАРКУ (якщо є посилання)
                     if (!profile.photoUrl.isNullOrEmpty()) {
                         com.bumptech.glide.Glide.with(this@MainActivity)
                             .load(profile.photoUrl)
-                            .placeholder(R.drawable.ic_driver_avatar_placeholder) // Поки вантажиться
-                            .error(R.drawable.ic_driver_avatar_placeholder) // Якщо помилка
-                            .circleCrop() // Робимо круглою
+                            .placeholder(R.drawable.ic_driver_avatar_placeholder)
+                            .error(R.drawable.ic_driver_avatar_placeholder)
+                            .circleCrop()
                             .into(imgAvatar)
                     }
-                } else {
-                    // ДІАГНОСТИКА: Якщо ти бачиш цей тост, значить сервер відповів помилкою
-                    Log.e("Profile", "Error: ${response.code()}")
-                    // Розкоментуй для тесту: Toast.makeText(this@MainActivity, "Помилка профілю: ${response.code()}", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
-                // Розкоментуй для тесту: Toast.makeText(this@MainActivity, "Немає зв'язку з сервером", Toast.LENGTH_SHORT).show()
             }
         }
 
-        // В. Кнопки меню
+        // --- КНОПКИ МЕНЮ (ВИПРАВЛЕНО ТУТ) ---
         navView.findViewById<View>(R.id.btn_menu_dispatcher).setOnClickListener {
             Toast.makeText(this, "Зв'язок з диспетчером...", Toast.LENGTH_SHORT).show()
-            drawerLayout.closeDrawer(androidx.core.view.GravityCompat.START)
+            drawerLayout.closeDrawer(GravityCompat.START)
         }
         navView.findViewById<View>(R.id.btn_menu_sos).setOnClickListener {
             Toast.makeText(this, "SOS сигнал відправлено!", Toast.LENGTH_LONG).show()
         }
 
+        // --- КНОПКА АВТОМОБІЛЬ ---
+        navView.findViewById<View>(R.id.menu_item_car).setOnClickListener {
+            startActivity(Intent(this, CarActivity::class.java))
+            drawerLayout.closeDrawer(GravityCompat.START)
+        }
+
+        // Інші кнопки
         val menuItems = mapOf(
-            R.id.menu_item_car to "Моє Авто",
+            // Car прибрано, бо він обробляється вище
             R.id.menu_item_balance to "Баланс",
             R.id.menu_item_activity to "Активність",
             R.id.menu_item_stats to "Статистика"
@@ -274,7 +258,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         for ((id, title) in menuItems) {
             navView.findViewById<View>(id).setOnClickListener {
                 Toast.makeText(this, "$title (В розробці)", Toast.LENGTH_SHORT).show()
-                drawerLayout.closeDrawer(androidx.core.view.GravityCompat.START)
+                drawerLayout.closeDrawer(GravityCompat.START)
             }
         }
 
@@ -297,26 +281,22 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
-    // --- ЛОГІКА HEATMAP (РИБНІ МІСЦЯ) ---
+    // --- ЛОГІКА HEATMAP ---
 
     private fun toggleHeatmap() {
-        // Якщо увімкнені сектори, вимикаємо їх, щоб не накладалися
         if (isSectorsVisible) {
             clearSectorsFromMap()
             isSectorsVisible = false
         }
 
         if (isHeatmapVisible) {
-            // Вимикаємо Heatmap
             clearHeatmapFromMap()
             isHeatmapVisible = false
-            btnHotspots.backgroundTintList = null // Повертаємо стандартний колір кнопки
+            btnHotspots.backgroundTintList = null
             Toast.makeText(this, "Рибні місця приховано", Toast.LENGTH_SHORT).show()
         } else {
-            // Вмикаємо Heatmap
             loadAndDrawHeatmap()
             isHeatmapVisible = true
-            // Підсвічуємо кнопку активним кольором (наприклад, teal)
             btnHotspots.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_neon_teal))
             btnHotspots.imageTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_black_bg))
         }
@@ -344,32 +324,24 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
-    // Метод малювання "Сяйва" (Glow)
     private fun drawHeatmapGlow(zones: List<HeatmapZoneDto>) {
         clearHeatmapFromMap()
-
         for (zone in zones) {
             val center = LatLng(zone.centerLat, zone.centerLng)
-
             val baseColor = when (zone.level) {
-                3 -> 0xCCFF3D00.toInt() // Гаряче
-                2 -> 0xCCFFD600.toInt() // Середньо
-                else -> 0xCC00BFA5.toInt() // Холодно
+                3 -> 0xCCFF3D00.toInt()
+                2 -> 0xCCFFD600.toInt()
+                else -> 0xCC00BFA5.toInt()
             }
-
             val imageDescriptor = generateGlowBitmap(baseColor)
-
-            val diameter = 2500f // 1.25 км радіус
-
+            val diameter = 2500f
             val overlayOptions = GroundOverlayOptions()
                 .position(center, diameter)
                 .image(imageDescriptor)
                 .transparency(0.3f)
                 .zIndex(100f)
-
             val overlay = map.addGroundOverlay(overlayOptions)
             overlay?.tag = zone.count
-
             overlay?.let { heatmapOverlays.add(it) }
         }
     }
@@ -420,24 +392,15 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         clearSectorsFromMap()
         for (sector in sectors) {
             if (sector.points.isEmpty()) continue
-
             val polygonOptions = PolygonOptions()
                 .addAll(sector.points.map { LatLng(it.lat, it.lng) })
                 .fillColor(Color.argb(45, 0, 255, 170))
                 .strokeColor(ContextCompat.getColor(this, R.color.driver_neon_teal))
                 .strokeWidth(4f)
-
             sectorPolygons.add(map.addPolygon(polygonOptions))
-
             val center = getPolygonCenter(sector.points)
             val textIcon = createTextIcon(sector.name)
-
-            val marker = map.addMarker(MarkerOptions()
-                .position(center)
-                .icon(textIcon)
-                .anchor(0.5f, 0.5f)
-                .flat(true))
-
+            val marker = map.addMarker(MarkerOptions().position(center).icon(textIcon).anchor(0.5f, 0.5f).flat(true))
             marker?.let { sectorMarkers.add(it) }
         }
     }
@@ -449,14 +412,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         textView.textSize = 14f
         textView.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
         textView.setShadowLayer(3f, 1f, 1f, Color.BLACK)
-
         textView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
         textView.layout(0, 0, textView.measuredWidth, textView.measuredHeight)
-
         val bitmap = Bitmap.createBitmap(textView.measuredWidth, textView.measuredHeight, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         textView.draw(canvas)
-
         return BitmapDescriptorFactory.fromBitmap(bitmap)
     }
 
@@ -486,10 +446,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             if (manualLoc != null) {
                 val latLng = LatLng(manualLoc.first, manualLoc.second)
                 if (manualLocationMarker == null) {
-                    manualLocationMarker = map.addMarker(MarkerOptions()
-                        .position(latLng)
-                        .title("Фіксована позиція")
-                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN)))
+                    manualLocationMarker = map.addMarker(MarkerOptions().position(latLng).title("Фіксована позиція").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN)))
                 } else {
                     manualLocationMarker?.position = latLng
                 }
@@ -590,12 +547,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
-    // Допоміжна функція для отримання Імені (Залишаємо ТІЛЬКИ ЦЮ одну в кінці)
     private fun extractFirstName(fullName: String): String {
         if (fullName.isBlank()) return "Водій"
         val parts = fullName.trim().split("\\s+".toRegex())
         return when {
-            parts.size >= 2 -> parts[1] // Беремо друге слово (Ім'я), якщо є Прізвище Ім'я
+            parts.size >= 2 -> parts[1]
             parts.isNotEmpty() -> parts[0]
             else -> "Водій"
         }

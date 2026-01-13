@@ -34,16 +34,17 @@ class ProfileActivity : AppCompatActivity() {
 
         // Кнопка Видалення акаунту
         findViewById<TextView>(R.id.btn_delete_account).setOnClickListener {
-            Toast.makeText(this, "Функція в розробці: Запит на видалення", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Щоб видалити акаунт, зверніться до диспетчера", Toast.LENGTH_LONG).show()
         }
 
-        // Кліки по полях
+        // Кліки по полях (інформативні повідомлення)
         findViewById<android.view.View>(R.id.btn_edit_phone).setOnClickListener {
             Toast.makeText(this, "Зміна телефону через диспетчера", Toast.LENGTH_SHORT).show()
         }
 
         findViewById<android.view.View>(R.id.btn_edit_ipn).setOnClickListener {
-            Toast.makeText(this, "Редагування РНОКПП (Скоро)", Toast.LENGTH_SHORT).show()
+            // Можна показувати повний номер у діалозі, якщо він обрізаний, або просто повідомлення
+            Toast.makeText(this, "Зміна РНОКПП через диспетчера", Toast.LENGTH_SHORT).show()
         }
 
         findViewById<android.view.View>(R.id.btn_disability_status).setOnClickListener {
@@ -56,12 +57,11 @@ class ProfileActivity : AppCompatActivity() {
         val tvPhone = findViewById<TextView>(R.id.tv_profile_phone)
         val imgAvatar = findViewById<ImageView>(R.id.img_profile_avatar)
 
-        // Поля, яких ще немає на сервері (заглушки)
         val tvEmail = findViewById<TextView>(R.id.tv_profile_email)
         val tvIpn = findViewById<TextView>(R.id.tv_profile_ipn)
         val tvLicense = findViewById<TextView>(R.id.tv_profile_license)
 
-        // 1. З кешу (ТІЛЬКИ ІМ'Я)
+        // 1. Спочатку показуємо ім'я з кешу (щоб не було порожньо)
         val savedName = sessionManager.getDriverName()
         if (savedName != null) {
             tvName.text = extractFirstName(savedName)
@@ -72,19 +72,24 @@ class ProfileActivity : AppCompatActivity() {
         // 2. Запит на сервер (Оновлення даних)
         lifecycleScope.launch {
             try {
+                // Виконуємо запит
                 val response = ApiClient.getInstance().getApiService(this@ProfileActivity).getDriverProfile()
 
                 if (response.isSuccessful && response.body() != null) {
                     val profile = response.body()!!
 
-                    val fullName = profile.fullName ?: "Водій"
-                    // Зберігаємо повне ім'я в кеш (для майбутнього)
-                    sessionManager.saveDriverName(fullName)
+                    // --- ОНОВЛЕННЯ ДАНИХ UI ---
 
-                    // А показуємо ТІЛЬКИ ІМ'Я (Конфіденційність)
+                    val fullName = profile.fullName ?: "Водій"
+                    sessionManager.saveDriverName(fullName) // Оновлюємо кеш
                     tvName.text = extractFirstName(fullName)
 
                     tvPhone.text = profile.phoneNumber ?: "Не вказано"
+
+                    // НОВІ ПОЛЯ (тепер реальні дані)
+                    tvEmail.text = profile.email ?: "Не вказано"
+                    tvIpn.text = profile.rnokpp ?: "Не вказано"
+                    tvLicense.text = profile.driverLicense ?: "Не вказано"
 
                     // Фото
                     if (!profile.photoUrl.isNullOrEmpty()) {
@@ -96,29 +101,23 @@ class ProfileActivity : AppCompatActivity() {
                             .into(imgAvatar)
                     }
 
-                    // --- Заглушки для нових полів ---
-                    tvEmail.text = "driver@example.com"
-                    tvIpn.text = "Не вказано"
-                    tvLicense.text = "Не вказано"
-
                 } else {
-                    Toast.makeText(this@ProfileActivity, "Не вдалося оновити дані", Toast.LENGTH_SHORT).show()
+                    // Якщо токен протух або помилка сервера
+                    Toast.makeText(this@ProfileActivity, "Не вдалося завантажити профіль", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
+                Toast.makeText(this@ProfileActivity, "Помилка з'єднання", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
-    // Метод для витягування імені (Такий самий, як у MainActivity)
+    // Метод для витягування імені
     private fun extractFirstName(fullName: String): String {
         if (fullName.isBlank()) return "Водій"
         val parts = fullName.trim().split("\\s+".toRegex())
-
-        // Припускаємо формат "Прізвище Ім'я По-батькові" -> беремо "Ім'я" (індекс 1)
-        // Якщо формат "Ім'я" -> беремо "Ім'я" (індекс 0)
         return when {
-            parts.size >= 2 -> parts[1]
+            parts.size >= 2 -> parts[1] // Якщо "Прізвище Ім'я", беремо Ім'я
             parts.isNotEmpty() -> parts[0]
             else -> "Водій"
         }
