@@ -45,19 +45,21 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var switchOnline: SwitchMaterial
     private lateinit var map: GoogleMap
     private lateinit var btnLockLocation: ImageButton
-    private lateinit var btnHotspots: ImageButton // Кнопка зірки (Heatmap)
+    private lateinit var btnHotspots: ImageButton
 
     private lateinit var btnNavOrders: LinearLayout
     private lateinit var orderBadgeDot: View
+
+    // Збережемо посилання на View в меню, щоб оновлювати їх
+    private lateinit var navViewContent: View
 
     // --- СТАН СЕКТОРІВ (Sectors) ---
     private var isSectorsVisible = false
     private val sectorPolygons = mutableListOf<Polygon>()
     private val sectorMarkers = mutableListOf<Marker>()
 
-    // --- СТАН HEATMAP (Рибні місця) ---
+    // --- СТАН HEATMAP ---
     private var isHeatmapVisible = false
-    // Використовуємо GroundOverlay для ефекту світіння (Glow)
     private val heatmapOverlays = mutableListOf<GroundOverlay>()
 
     private var manualLocationMarker: Marker? = null
@@ -90,6 +92,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         mapFragment.getMapAsync(this)
 
         setupUI()
+
+        // Викликаємо нову функцію завантаження профілю
+        loadUserProfile()
+
         checkPermissionsAndStart()
         checkActiveOrderOnStart()
     }
@@ -101,6 +107,138 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         if (::map.isInitialized) {
             updateMapUI()
             centerMapOnUser()
+        }
+        // Також можна оновлювати профіль при поверненні, якщо потрібно
+        // loadUserProfile()
+    }
+
+    private fun setupUI() {
+        drawerLayout = findViewById(R.id.drawer_layout)
+        navViewContent = findViewById(R.id.nav_view_content) // Зберігаємо посилання
+
+        val displayMetrics = resources.displayMetrics
+        val drawerWidth = (displayMetrics.widthPixels * 0.8).toInt()
+        navViewContent.layoutParams.width = drawerWidth
+
+        switchOnline = findViewById(R.id.switch_online)
+        switchOnline.setOnClickListener { updateDriverStatus(switchOnline.isChecked) }
+
+        findViewById<View>(R.id.btn_nav_ether).setOnClickListener { startActivity(Intent(this, EtherActivity::class.java)) }
+
+        btnNavOrders = findViewById(R.id.btn_nav_orders)
+        orderBadgeDot = findViewById(R.id.order_badge_dot)
+        btnNavOrders.setOnClickListener { startActivity(Intent(this, OrdersActivity::class.java)) }
+
+        findViewById<View>(R.id.btn_nav_filters).setOnClickListener { startActivity(Intent(this, FiltersActivity::class.java)) }
+
+        btnLockLocation = findViewById(R.id.btn_lock_location)
+        btnLockLocation.setOnClickListener { handleLockLocationClick() }
+
+        findViewById<View>(R.id.btn_my_location).setOnClickListener { centerMapOnUser() }
+        findViewById<View>(R.id.btn_sectors).setOnClickListener { toggleSectors() }
+
+        btnHotspots = findViewById(R.id.btn_hotspots)
+        btnHotspots.setOnClickListener { toggleHeatmap() }
+
+        findViewById<View>(R.id.btn_menu).setOnClickListener { drawerLayout.openDrawer(GravityCompat.START) }
+
+        // --- КНОПКИ МЕНЮ ---
+        navViewContent.findViewById<View>(R.id.btn_open_profile).setOnClickListener {
+            startActivity(Intent(this, ProfileActivity::class.java))
+        }
+
+        navViewContent.findViewById<View>(R.id.btn_menu_dispatcher).setOnClickListener {
+            Toast.makeText(this, "Зв'язок з диспетчером...", Toast.LENGTH_SHORT).show()
+            drawerLayout.closeDrawer(GravityCompat.START)
+        }
+        navViewContent.findViewById<View>(R.id.btn_menu_sos).setOnClickListener {
+            Toast.makeText(this, "SOS сигнал відправлено!", Toast.LENGTH_LONG).show()
+        }
+
+        navViewContent.findViewById<View>(R.id.menu_item_car).setOnClickListener {
+            startActivity(Intent(this, CarActivity::class.java))
+            drawerLayout.closeDrawer(GravityCompat.START)
+        }
+
+        val menuItems = mapOf(
+            R.id.menu_item_balance to "Баланс",
+            R.id.menu_item_activity to "Активність",
+            R.id.menu_item_stats to "Статистика"
+        )
+        for ((id, title) in menuItems) {
+            navViewContent.findViewById<View>(id).setOnClickListener {
+                Toast.makeText(this, "$title (В розробці)", Toast.LENGTH_SHORT).show()
+                drawerLayout.closeDrawer(GravityCompat.START)
+            }
+        }
+
+        navViewContent.findViewById<View>(R.id.btn_logout).setOnClickListener {
+            switchOnline.isChecked = false
+            lifecycleScope.launch {
+                try {
+                    ApiClient.getInstance().getApiService(this@MainActivity)
+                        .updateStatus(UpdateDriverStatusRequest(false, 0.0, 0.0))
+                } catch (e: Exception) { e.printStackTrace() }
+                finally {
+                    sessionManager.clearSession()
+                    val intent = Intent(this@MainActivity, LoginActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    startActivity(intent)
+                    finish()
+                }
+            }
+        }
+    }
+
+    // --- НОВА ФУНКЦІЯ ЗАВАНТАЖЕННЯ ПРОФІЛЮ ---
+    private fun loadUserProfile() {
+        val tvDriverName = navViewContent.findViewById<TextView>(R.id.tv_driver_name)
+        val imgAvatar = navViewContent.findViewById<android.widget.ImageView>(R.id.img_avatar)
+        // Шукаємо наше нове поле з номером
+        val tvPlateNumber = navViewContent.findViewById<TextView>(R.id.tv_menu_plate_number)
+
+        // Спочатку ставимо збережене ім'я
+        val savedName = sessionManager.getDriverName()
+        if (savedName != null) {
+            tvDriverName.text = extractFirstName(savedName)
+        } else {
+            val token = sessionManager.fetchAuthToken()
+            tvDriverName.text = if (token != null && token.length > 4) "ID ${token.takeLast(4)}" else "Водій"
+        }
+
+        lifecycleScope.launch {
+            try {
+                val response = ApiClient.getInstance().getApiService(this@MainActivity).getDriverProfile()
+                if (response.isSuccessful && response.body() != null) {
+                    val profile = response.body()!!
+
+                    // 1. Ім'я
+                    val serverName = profile.fullName ?: "Водій"
+                    sessionManager.saveDriverName(serverName)
+                    tvDriverName.text = extractFirstName(serverName)
+
+                    // 2. Аватарка
+                    if (!profile.photoUrl.isNullOrEmpty()) {
+                        com.bumptech.glide.Glide.with(this@MainActivity)
+                            .load(profile.photoUrl)
+                            .placeholder(R.drawable.ic_driver_avatar_placeholder)
+                            .error(R.drawable.ic_driver_avatar_placeholder)
+                            .circleCrop()
+                            .into(imgAvatar)
+                    }
+
+                    // 3. --- НОМЕР МАШИНИ В МЕНЮ ---
+                    if (profile.car != null && !profile.car.plateNumber.isNullOrEmpty()) {
+                        tvPlateNumber.text = profile.car.plateNumber
+                        tvPlateNumber.visibility = View.VISIBLE
+                    } else {
+                        tvPlateNumber.visibility = View.GONE
+                    }
+                    // -----------------------------
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
@@ -156,133 +294,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         return BitmapDescriptorFactory.fromBitmap(bitmap)
     }
 
-    private fun setupUI() {
-        // 1. Ініціалізація DrawerLayout
-        drawerLayout = findViewById(R.id.drawer_layout)
-
-        // --- ЛОГІКА ШИРИНИ МЕНЮ (4/5 ЕКРАНУ) ---
-        val navView = findViewById<View>(R.id.nav_view_content)
-        val displayMetrics = resources.displayMetrics
-        val drawerWidth = (displayMetrics.widthPixels * 0.8).toInt()
-        navView.layoutParams.width = drawerWidth
-        // ---------------------------------------
-
-        // 2. ЕЛЕМЕНТИ ГОЛОВНОГО ЕКРАНУ
-        switchOnline = findViewById(R.id.switch_online)
-        switchOnline.setOnClickListener { updateDriverStatus(switchOnline.isChecked) }
-
-        findViewById<View>(R.id.btn_nav_ether).setOnClickListener { startActivity(Intent(this, EtherActivity::class.java)) }
-
-        btnNavOrders = findViewById(R.id.btn_nav_orders)
-        orderBadgeDot = findViewById(R.id.order_badge_dot)
-        btnNavOrders.setOnClickListener { startActivity(Intent(this, OrdersActivity::class.java)) }
-
-        findViewById<View>(R.id.btn_nav_filters).setOnClickListener { startActivity(Intent(this, FiltersActivity::class.java)) }
-
-        btnLockLocation = findViewById(R.id.btn_lock_location)
-        btnLockLocation.setOnClickListener { handleLockLocationClick() }
-
-        findViewById<View>(R.id.btn_my_location).setOnClickListener { centerMapOnUser() }
-
-        findViewById<View>(R.id.btn_sectors).setOnClickListener { toggleSectors() }
-
-        btnHotspots = findViewById(R.id.btn_hotspots)
-        btnHotspots.setOnClickListener { toggleHeatmap() }
-
-        findViewById<View>(R.id.btn_menu).setOnClickListener { drawerLayout.openDrawer(GravityCompat.START) }
-
-
-        // 3. ЛОГІКА ВСЕРЕДИНІ БОКОВОГО МЕНЮ
-        val tvDriverName = navView.findViewById<TextView>(R.id.tv_driver_name)
-        val imgAvatar = navView.findViewById<android.widget.ImageView>(R.id.img_avatar)
-
-        val savedName = sessionManager.getDriverName()
-        if (savedName != null) {
-            tvDriverName.text = extractFirstName(savedName)
-        } else {
-            val token = sessionManager.fetchAuthToken()
-            tvDriverName.text = if (token != null && token.length > 4) "ID ${token.takeLast(4)}" else "Водій"
-        }
-
-        val btnOpenProfile = navView.findViewById<View>(R.id.btn_open_profile)
-        btnOpenProfile.setOnClickListener {
-            startActivity(Intent(this, ProfileActivity::class.java))
-        }
-
-        // Б. Запит на сервер (Оновлення даних)
-        lifecycleScope.launch {
-            try {
-                val response = ApiClient.getInstance().getApiService(this@MainActivity).getDriverProfile()
-                if (response.isSuccessful && response.body() != null) {
-                    val profile = response.body()!!
-                    val serverName = profile.fullName ?: "Водій"
-                    sessionManager.saveDriverName(serverName)
-                    tvDriverName.text = extractFirstName(serverName)
-
-                    if (!profile.photoUrl.isNullOrEmpty()) {
-                        com.bumptech.glide.Glide.with(this@MainActivity)
-                            .load(profile.photoUrl)
-                            .placeholder(R.drawable.ic_driver_avatar_placeholder)
-                            .error(R.drawable.ic_driver_avatar_placeholder)
-                            .circleCrop()
-                            .into(imgAvatar)
-                    }
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-
-        // --- КНОПКИ МЕНЮ (ВИПРАВЛЕНО ТУТ) ---
-        navView.findViewById<View>(R.id.btn_menu_dispatcher).setOnClickListener {
-            Toast.makeText(this, "Зв'язок з диспетчером...", Toast.LENGTH_SHORT).show()
-            drawerLayout.closeDrawer(GravityCompat.START)
-        }
-        navView.findViewById<View>(R.id.btn_menu_sos).setOnClickListener {
-            Toast.makeText(this, "SOS сигнал відправлено!", Toast.LENGTH_LONG).show()
-        }
-
-        // --- КНОПКА АВТОМОБІЛЬ ---
-        navView.findViewById<View>(R.id.menu_item_car).setOnClickListener {
-            startActivity(Intent(this, CarActivity::class.java))
-            drawerLayout.closeDrawer(GravityCompat.START)
-        }
-
-        // Інші кнопки
-        val menuItems = mapOf(
-            // Car прибрано, бо він обробляється вище
-            R.id.menu_item_balance to "Баланс",
-            R.id.menu_item_activity to "Активність",
-            R.id.menu_item_stats to "Статистика"
-        )
-        for ((id, title) in menuItems) {
-            navView.findViewById<View>(id).setOnClickListener {
-                Toast.makeText(this, "$title (В розробці)", Toast.LENGTH_SHORT).show()
-                drawerLayout.closeDrawer(GravityCompat.START)
-            }
-        }
-
-        // Г. Кнопка ВИХОДУ
-        navView.findViewById<View>(R.id.btn_logout).setOnClickListener {
-            switchOnline.isChecked = false
-            lifecycleScope.launch {
-                try {
-                    ApiClient.getInstance().getApiService(this@MainActivity)
-                        .updateStatus(UpdateDriverStatusRequest(false, 0.0, 0.0))
-                } catch (e: Exception) { e.printStackTrace() }
-                finally {
-                    sessionManager.clearSession()
-                    val intent = Intent(this@MainActivity, LoginActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                    startActivity(intent)
-                    finish()
-                }
-            }
-        }
-    }
-
     // --- ЛОГІКА HEATMAP ---
-
     private fun toggleHeatmap() {
         if (isSectorsVisible) {
             clearSectorsFromMap()
@@ -352,7 +364,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     // --- ЛОГІКА СЕКТОРІВ ---
-
     private fun toggleSectors() {
         if (isHeatmapVisible) {
             clearHeatmapFromMap()
@@ -432,8 +443,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         for (p in points) builder.include(LatLng(p.lat, p.lng))
         return builder.build().center
     }
-
-    // --- ОСТАЛЬНАЯ ЛОГИКА ---
 
     @SuppressLint("MissingPermission")
     private fun updateMapUI() {

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -189,9 +190,47 @@
                 android:id="@+id/menu_item_car"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                style="@style/MenuStyle">
-                <ImageView android:src="@drawable/ic_car" style="@style/MenuIconStyle"/>
-                <TextView android:text="Автомобіль" style="@style/MenuTextStyle"/>
+                android:paddingVertical="14dp"
+                android:paddingHorizontal="24dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true">
+                
+                <ImageView 
+                    android:layout_width="24dp" 
+                    android:layout_height="24dp" 
+                    android:src="@drawable/ic_car" 
+                    app:tint="#AAAAAA"/>
+                
+                <TextView 
+                    android:layout_width="0dp" 
+                    android:layout_height="wrap_content" 
+                    android:layout_weight="1"
+                    android:text="Автомобіль" 
+                    android:textColor="#DDDDDD" 
+                    android:textSize="16sp" 
+                    android:layout_marginStart="16dp"/>
+
+                <TextView
+                    android:id="@+id/tv_menu_plate_number"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    
+                    android:background="@drawable/bg_license_plate"
+                    
+                    android:textColor="#FFFFFF"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:fontFamily="sans-serif-medium"
+                    
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="4dp"
+                    
+                    android:visibility="gone"
+                    tools:visibility="visible"
+                    tools:text="AA 7777 AA"/>
             </LinearLayout>
             
             <LinearLayout
