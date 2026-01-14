@@ -21,6 +21,8 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.view.GravityCompat
+import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -29,16 +31,22 @@ import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
 import com.google.android.material.switchmaterial.SwitchMaterial
+import com.google.firebase.messaging.FirebaseMessaging // <--- ЦЕЙ ІМПОРТ МАЄ ЗАПРАЦЮВАТИ ПІСЛЯ КРОКУ 1
 import com.taxiapp.driver.network.ApiClient
 import com.taxiapp.driver.network.HeatmapZoneDto
 import com.taxiapp.driver.network.UpdateDriverStatusRequest
+import com.taxiapp.driver.network.DriverSearchMode
+import com.taxiapp.driver.network.DriverSearchSettingsDto
+import com.taxiapp.driver.network.FcmTokenDto 
 import com.taxiapp.driver.service.LocationService
 import com.taxiapp.driver.utils.SessionManager
 import kotlinx.coroutines.launch
-import androidx.core.view.GravityCompat
-import androidx.drawerlayout.widget.DrawerLayout
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback {
+
+    private lateinit var tvSearchModeTitle: TextView
+    private lateinit var tvSearchModeSubtitle: TextView
+    private lateinit var btnToggleSearchMode: LinearLayout
 
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var sessionManager: SessionManager
@@ -50,19 +58,22 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var btnNavOrders: LinearLayout
     private lateinit var orderBadgeDot: View
 
-    // Збережемо посилання на View в меню, щоб оновлювати їх
     private lateinit var navViewContent: View
 
-    // --- СТАН СЕКТОРІВ (Sectors) ---
     private var isSectorsVisible = false
     private val sectorPolygons = mutableListOf<Polygon>()
     private val sectorMarkers = mutableListOf<Marker>()
 
-    // --- СТАН HEATMAP ---
     private var isHeatmapVisible = false
     private val heatmapOverlays = mutableListOf<GroundOverlay>()
 
     private var manualLocationMarker: Marker? = null
+
+    private var isSearchActive = false
+
+    companion object {
+        private const val REQUEST_CODE_HOME_SECTOR = 1001
+    }
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -92,14 +103,39 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         mapFragment.getMapAsync(this)
 
         setupUI()
-
-        // Викликаємо нову функцію завантаження профілю
         loadUserProfile()
-
         checkPermissionsAndStart()
         checkActiveOrderOnStart()
+
+        // Викликаємо функцію оновлення токена
+        updateFcmToken()
+    } // <--- КІНЕЦЬ onCreate
+
+    // --- ФУНКЦІЯ ТЕПЕР ТУТ (Правильно) ---
+    private fun updateFcmToken() {
+        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+            if (!task.isSuccessful) {
+                Log.w("FCM", "Fetching FCM registration token failed", task.exception)
+                return@addOnCompleteListener
+            }
+
+            // Отримали новий токен
+            val token = task.result
+            Log.d("FCM", "Driver Token: $token")
+
+            // Відправляємо на сервер
+            lifecycleScope.launch {
+                try {
+                    ApiClient.getInstance().getApiService(this@MainActivity).updateFcmToken(FcmTokenDto(token))
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
     }
 
+    // ... Інші методи (onResume, onActivityResult, setupUI тощо) залишаються без змін ...
+    
     override fun onResume() {
         super.onResume()
         updateLockIconState()
@@ -108,17 +144,68 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             updateMapUI()
             centerMapOnUser()
         }
-        // Також можна оновлювати профіль при поверненні, якщо потрібно
-        // loadUserProfile()
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+
+        if (requestCode == REQUEST_CODE_HOME_SECTOR && resultCode == RESULT_OK) {
+            val selectedIdsArray = data?.getLongArrayExtra("SELECTED_IDS")
+            val selectedIdsList = selectedIdsArray?.toList()
+
+            if (!selectedIdsList.isNullOrEmpty()) {
+                updateHomeSectors(selectedIdsList)
+            }
+        }
+    }
+
+    private fun updateHomeSectors(sectorIds: List<Long>) {
+        lifecycleScope.launch {
+            try {
+                val currentResponse = ApiClient.getInstance().getApiService(this@MainActivity).getSearchSettings()
+                val currentRadius = currentResponse.body()?.radius ?: 3.0
+
+                val req = DriverSearchSettingsDto(
+                    mode = DriverSearchMode.HOME,
+                    radius = currentRadius,
+                    homeSectorIds = sectorIds 
+                )
+
+                val response = ApiClient.getInstance().getApiService(this@MainActivity).updateSearchSettings(req)
+                if (response.isSuccessful) {
+                    Toast.makeText(this@MainActivity, "Сектори 'Додому' збережено!", Toast.LENGTH_SHORT).show()
+                    updateSearchStatusUI()
+                } else {
+                    Toast.makeText(this@MainActivity, "Помилка: ${response.errorBody()?.string()}", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
     private fun setupUI() {
         drawerLayout = findViewById(R.id.drawer_layout)
-        navViewContent = findViewById(R.id.nav_view_content) // Зберігаємо посилання
+        navViewContent = findViewById(R.id.nav_view_content)
 
         val displayMetrics = resources.displayMetrics
         val drawerWidth = (displayMetrics.widthPixels * 0.8).toInt()
         navViewContent.layoutParams.width = drawerWidth
+
+        tvSearchModeTitle = findViewById(R.id.tvSearchModeTitle)
+        tvSearchModeSubtitle = findViewById(R.id.tvSearchModeSubtitle)
+        btnToggleSearchMode = findViewById(R.id.btnToggleSearchMode)
+
+        btnToggleSearchMode.setOnClickListener {
+            toggleSearchActivation()
+        }
+
+        findViewById<View>(R.id.btnSearchSettings).setOnClickListener {
+            val bottomSheet = SearchSettingsBottomSheet {
+                updateSearchStatusUI()
+            }
+            bottomSheet.show(supportFragmentManager, "SearchSettings")
+        }
 
         switchOnline = findViewById(R.id.switch_online)
         switchOnline.setOnClickListener { updateDriverStatus(switchOnline.isChecked) }
@@ -142,7 +229,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         findViewById<View>(R.id.btn_menu).setOnClickListener { drawerLayout.openDrawer(GravityCompat.START) }
 
-        // --- КНОПКИ МЕНЮ ---
         navViewContent.findViewById<View>(R.id.btn_open_profile).setOnClickListener {
             startActivity(Intent(this, ProfileActivity::class.java))
         }
@@ -160,9 +246,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             drawerLayout.closeDrawer(GravityCompat.START)
         }
 
+        navViewContent.findViewById<View>(R.id.menu_item_activity).setOnClickListener {
+            startActivity(Intent(this, DriverScoreActivity::class.java))
+            drawerLayout.closeDrawer(GravityCompat.START)
+        }
+
         val menuItems = mapOf(
             R.id.menu_item_balance to "Баланс",
-            R.id.menu_item_activity to "Активність",
             R.id.menu_item_stats to "Статистика"
         )
         for ((id, title) in menuItems) {
@@ -188,16 +278,84 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 }
             }
         }
+
+        updateSearchStatusUI()
     }
 
-    // --- НОВА ФУНКЦІЯ ЗАВАНТАЖЕННЯ ПРОФІЛЮ ---
+    private fun toggleSearchActivation() {
+        if (tvSearchModeTitle.text.contains("Ручний")) {
+            Toast.makeText(this, "Це режим Ефіру. Виберіть Ланцюг або Додому в налаштуваннях.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        isSearchActive = !isSearchActive
+        updateSearchBlockVisuals(isSearchActive)
+
+        if (isSearchActive) {
+            Toast.makeText(this, "Пошук замовлень розпочато...", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(this, "Пошук зупинено.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun updateSearchBlockVisuals(isActive: Boolean) {
+        if (isActive) {
+            btnToggleSearchMode.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_neon_teal))
+            tvSearchModeTitle.setTextColor(Color.BLACK)
+            tvSearchModeSubtitle.setTextColor(Color.DKGRAY)
+            tvSearchModeSubtitle.text = "Пошук замовлень..."
+        } else {
+            btnToggleSearchMode.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#CC1E1E1E"))
+            tvSearchModeTitle.setTextColor(ContextCompat.getColor(this, R.color.driver_neon_teal))
+            tvSearchModeSubtitle.setTextColor(ContextCompat.getColor(this, R.color.driver_text_secondary))
+            tvSearchModeSubtitle.text = "Натисніть для активації"
+        }
+    }
+
+    private fun updateSearchStatusUI() {
+        lifecycleScope.launch {
+            try {
+                val response = ApiClient.getInstance().getApiService(this@MainActivity).getSearchSettings()
+                if (response.isSuccessful && response.body() != null) {
+                    val state = response.body()!!
+
+                    when (state.mode) {
+                        DriverSearchMode.MANUAL -> {
+                            tvSearchModeTitle.text = "Ефір (Ручний пошук)"
+                            tvSearchModeTitle.setTextColor(Color.WHITE)
+                            isSearchActive = false
+                        }
+                        DriverSearchMode.CHAIN -> {
+                            tvSearchModeTitle.text = "⚡ Ланцюг замовлень"
+                        }
+                        DriverSearchMode.HOME -> {
+                            val sectorsText = if (state.homeSectorNames.isNullOrEmpty()) "?" else state.homeSectorNames
+                            tvSearchModeTitle.text = "🏠 Додому ($sectorsText)"
+                        }
+                    }
+
+                    if (!isSearchActive && state.mode != DriverSearchMode.MANUAL) {
+                        tvSearchModeSubtitle.text = "Радіус: ${state.radius} км • Натисніть для старту"
+                        tvSearchModeTitle.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.driver_neon_teal))
+                    } else if (state.mode == DriverSearchMode.MANUAL) {
+                        tvSearchModeSubtitle.text = "Радіус: ${state.radius} км"
+                    }
+
+                    if (isSearchActive) {
+                        updateSearchBlockVisuals(true)
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
     private fun loadUserProfile() {
         val tvDriverName = navViewContent.findViewById<TextView>(R.id.tv_driver_name)
         val imgAvatar = navViewContent.findViewById<android.widget.ImageView>(R.id.img_avatar)
-        // Шукаємо наше нове поле з номером
         val tvPlateNumber = navViewContent.findViewById<TextView>(R.id.tv_menu_plate_number)
 
-        // Спочатку ставимо збережене ім'я
         val savedName = sessionManager.getDriverName()
         if (savedName != null) {
             tvDriverName.text = extractFirstName(savedName)
@@ -211,13 +369,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 val response = ApiClient.getInstance().getApiService(this@MainActivity).getDriverProfile()
                 if (response.isSuccessful && response.body() != null) {
                     val profile = response.body()!!
-
-                    // 1. Ім'я
                     val serverName = profile.fullName ?: "Водій"
                     sessionManager.saveDriverName(serverName)
                     tvDriverName.text = extractFirstName(serverName)
 
-                    // 2. Аватарка
                     if (!profile.photoUrl.isNullOrEmpty()) {
                         com.bumptech.glide.Glide.with(this@MainActivity)
                             .load(profile.photoUrl)
@@ -227,14 +382,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                             .into(imgAvatar)
                     }
 
-                    // 3. --- НОМЕР МАШИНИ В МЕНЮ ---
                     if (profile.car != null && !profile.car.plateNumber.isNullOrEmpty()) {
                         tvPlateNumber.text = profile.car.plateNumber
                         tvPlateNumber.visibility = View.VISIBLE
                     } else {
                         tvPlateNumber.visibility = View.GONE
                     }
-                    // -----------------------------
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -294,7 +447,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         return BitmapDescriptorFactory.fromBitmap(bitmap)
     }
 
-    // --- ЛОГІКА HEATMAP ---
     private fun toggleHeatmap() {
         if (isSectorsVisible) {
             clearSectorsFromMap()
@@ -363,7 +515,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         heatmapOverlays.clear()
     }
 
-    // --- ЛОГІКА СЕКТОРІВ ---
     private fun toggleSectors() {
         if (isHeatmapVisible) {
             clearHeatmapFromMap()
@@ -444,7 +595,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         return builder.build().center
     }
 
-    @SuppressLint("MissingPermission")
     private fun updateMapUI() {
         if (!::map.isInitialized) return
         val hasPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED

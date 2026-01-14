@@ -10,9 +10,9 @@ interface DriverApiService {
     suspend fun login(@Body request: LoginRequest): Response<LoginResponse>
 
     // --- ЗАКАЗЫ ---
-
     @GET("/api/v1/driver/me")
     suspend fun getDriverProfile(): Response<DriverProfileDto>
+
     @GET("api/v1/driver/orders/available")
     suspend fun getAvailableOrders(): Response<List<Order>>
 
@@ -25,6 +25,9 @@ interface DriverApiService {
     @POST("api/v1/driver/orders/{id}/complete")
     suspend fun completeOrder(@Path("id") orderId: Long): Response<Void>
 
+    @POST("api/v1/driver/orders/{id}/cancel")
+    suspend fun cancelOrder(@Path("id") orderId: Long): Response<Void>
+
     // --- СТАТУС ---
     @PATCH("api/v1/driver/status")
     suspend fun updateStatus(@Body request: UpdateDriverStatusRequest): Response<Void>
@@ -33,7 +36,6 @@ interface DriverApiService {
     @POST("api/v1/driver/location")
     suspend fun updateLocation(@Body request: UpdateLocationRequest): Response<Void>
 
-    // --- НОВЫЙ МЕТОД ДЛЯ СВАЙПА ---
     @DELETE("api/v1/driver/location")
     suspend fun deleteLocation(): Response<Void>
 
@@ -53,6 +55,11 @@ interface DriverApiService {
     @GET("api/v1/driver/sectors")
     suspend fun getSectors(): Response<List<Sector>>
 
+    // --- АКТИВНІСТЬ (НОВЕ) ---
+    @GET("api/v1/driver/activity")
+    suspend fun getDriverActivity(): Response<DriverActivityDto>
+    // -------------------------
+
     @GET("api/v1/driver/filters")
     suspend fun getFilters(): Response<List<DriverFilter>>
 
@@ -67,4 +74,19 @@ interface DriverApiService {
 
     @DELETE("api/v1/driver/filters/{id}")
     suspend fun deleteFilter(@Path("id") id: Long): Response<Void>
+
+    @GET("api/v1/driver/search-settings")
+    suspend fun getSearchSettings(): Response<DriverSearchStateDto>
+
+    @POST("api/v1/driver/search-settings")
+    suspend fun updateSearchSettings(@Body settings: DriverSearchSettingsDto): Response<DriverSearchStateDto>
+
+    @POST("api/v1/driver/orders/{id}/reject")
+    suspend fun rejectOffer(@Path("id") orderId: Long): Response<Unit>
+
+    @POST("api/v1/auth/fcm-token")
+    suspend fun updateFcmToken(@Body request: FcmTokenDto): Response<Void>
+
+    @GET("api/v1/orders/{id}")
+    suspend fun getOrderById(@Path("id") id: Long): Response<Order>
 }

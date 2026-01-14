@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/driver_black_bg"
+    android:paddingTop="48dp"> <RelativeLayout
+        android:id="@+id/layoutHeader"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:layout_marginHorizontal="24dp">
+
+        <ImageView
+            android:id="@+id/btnBack"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:src="@drawable/ic_arrow_back_black"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:focusable="true"
+            app:tint="@color/driver_text_primary"
+            android:layout_centerVertical="true"
+            android:layout_alignParentStart="true"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Активність"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:textColor="@color/driver_text_primary"
+            android:layout_centerVertical="true"
+            android:layout_toEndOf="@id/btnBack"
+            android:layout_marginStart="16dp"/>
+    </RelativeLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="24dp"
+            android:paddingBottom="24dp"
+            android:gravity="center_horizontal">
+
+            <FrameLayout
+                android:layout_width="220dp"
+                android:layout_height="220dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="32dp">
+
+                <ProgressBar
+                    android:id="@+id/progressBarBackground"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:indeterminate="false"
+                    android:max="1000"
+                    android:progress="1000"
+                    android:progressDrawable="@drawable/circular_progress_bg"
+                    android:alpha="0.2"/>
+
+                <ProgressBar
+                    android:id="@+id/progressBarScore"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:indeterminate="false"
+                    android:max="1000"
+                    android:progress="750"
+                    android:progressDrawable="@drawable/circular_progress_fg" />
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:orientation="vertical"
+                    android:gravity="center">
+
+                    <TextView
+                        android:id="@+id/tvScoreValue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="1000"
+                        android:textSize="56sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/driver_text_primary"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="/ 1000"
+                        android:textSize="16sp"
+                        android:textColor="@color/driver_text_secondary"/>
+                </LinearLayout>
+            </FrameLayout>
+
+            <TextView
+                android:id="@+id/tvLevelTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Високий рівень"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:textColor="#4CAF50"
+                android:layout_marginBottom="12dp"/>
+
+            <TextView
+                android:id="@+id/tvLevelDesc"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Вам доступні всі методи пошуку замовлень."
+                android:textSize="16sp"
+                android:textAlignment="center"
+                android:textColor="@color/driver_text_secondary"
+                android:lineSpacingExtra="4dp"
+                android:layout_marginBottom="40dp"/>
+
+            <LinearLayout
+                android:id="@+id/btnInfoLevels"
+                style="@style/InfoButtonStyle">
+                <TextView style="@style/InfoButtonTextStyle" android:text="Які є рівні балів активності?"/>
+                <ImageView style="@style/InfoButtonIconStyle"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/btnInfoCalculation"
+                style="@style/InfoButtonStyle">
+                <TextView style="@style/InfoButtonTextStyle" android:text="Як нараховуються бали?"/>
+                <ImageView style="@style/InfoButtonIconStyle"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/btnInfoDistribution"
+                style="@style/InfoButtonStyle">
+                <TextView style="@style/InfoButtonTextStyle" android:text="Як розподіляються замовлення?"/>
+                <ImageView style="@style/InfoButtonIconStyle"/>
+            </LinearLayout>
+
+        </LinearLayout>
+    </ScrollView>
+
+    <LinearLayout
+        android:id="@+id/layoutFooter"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="24dp"
+        android:background="@color/driver_black_bg">
+
+        <TextView
+            android:id="@+id/btnOpenHistory"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:background="@drawable/bg_driver_btn"
+            android:text="Історія змін Активності"
+            android:textColor="@android:color/white"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackground"/>
+    </LinearLayout>
+
+</LinearLayout>

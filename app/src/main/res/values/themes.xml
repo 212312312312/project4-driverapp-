@@ -4,7 +4,8 @@
         <item name="colorPrimaryVariant">@color/driver_card_bg</item>
         <item name="colorOnPrimary">@color/driver_neon_teal</item>
         <item name="android:statusBarColor">@color/driver_black_bg</item>
-        <item name="android:windowLightStatusBar">false</item> </style>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
 
     <style name="Shape.Card.Top" parent="">
         <item name="cornerFamily">rounded</item>
@@ -13,6 +14,7 @@
         <item name="cornerSizeBottomLeft">4dp</item>
         <item name="cornerSizeBottomRight">4dp</item>
     </style>
+
     <style name="Shape.Card.FlatTop" parent="">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSizeTopLeft">0dp</item>
@@ -28,6 +30,7 @@
         <item name="cornerSizeBottomLeft">0dp</item>
         <item name="cornerSizeBottomRight">0dp</item>
     </style>
+
     <style name="Shape.Card.Middle" parent="">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">4dp</item>
@@ -53,7 +56,8 @@
     <style name="MenuIconStyle">
         <item name="android:layout_width">24dp</item>
         <item name="android:layout_height">24dp</item>
-        <item name="tint">@color/driver_text_secondary</item> </style>
+        <item name="tint">@color/driver_text_secondary</item>
+    </style>
 
     <style name="MenuStyle">
         <item name="android:orientation">horizontal</item>
@@ -64,4 +68,33 @@
         <item name="android:clickable">true</item>
         <item name="android:focusable">true</item>
     </style>
+
+    <style name="InfoButtonStyle">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:padding">16dp</item>
+        <item name="android:background">@drawable/bg_driver_input</item>
+        <item name="android:backgroundTint">#1AFFFFFF</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:layout_marginBottom">12dp</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+    </style>
+
+    <style name="InfoButtonTextStyle">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:textColor">@color/driver_text_primary</item>
+    </style>
+
+    <style name="InfoButtonIconStyle">
+        <item name="android:layout_width">24dp</item>
+        <item name="android:layout_height">24dp</item>
+        <item name="android:src">@drawable/ic_chevron</item>
+        <item name="tint">@color/driver_text_secondary</item>
+    </style>
+
 </resources>
