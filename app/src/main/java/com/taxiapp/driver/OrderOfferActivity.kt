@@ -1,16 +1,16 @@
 package com.taxiapp.driver
 
+import android.app.KeyguardManager
+import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
-import android.graphics.Bitmap
-import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.PorterDuff
 import android.os.Build
 import android.os.Bundle
 import android.os.CountDownTimer
 import android.view.LayoutInflater
 import android.view.View
+import android.view.WindowManager
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -40,10 +40,13 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var routeContainer: LinearLayout
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // 1. МАГИЯ ДЛЯ ВКЛЮЧЕНИЯ ЭКРАНА (Должно быть ДО super.onCreate)
+        turnScreenOnAndKeyguardOff()
+
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_order_offer)
 
-        // Отримання об'єкта замовлення
+        // Получение данных
         currentOrder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             intent.getSerializableExtra("EXTRA_ORDER", Order::class.java)
         } else {
@@ -64,26 +67,44 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
         mapFragment.getMapAsync(this)
     }
 
+    // --- ФУНКЦИЯ ПРОБУЖДЕНИЯ ТЕЛЕФОНА ---
+    private fun turnScreenOnAndKeyguardOff() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true)
+            setTurnScreenOn(true)
+        } else {
+            window.addFlags(
+                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+                        or WindowManager.LayoutParams.FLAG_ALLOW_LOCK_WHILE_SCREEN_ON
+            )
+        }
+
+        with(getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                requestDismissKeyguard(this@OrderOfferActivity, null)
+            }
+        }
+    }
+
     private fun initViews() {
         tvTimer = findViewById(R.id.tv_timer)
         btnAccept = findViewById(R.id.btn_accept)
         btnSkip = findViewById(R.id.btn_skip)
         routeContainer = findViewById(R.id.ll_route_container)
 
-        findViewById<View>(R.id.btn_back_card).visibility = View.GONE // Ховаємо кнопку назад, тут тільки Skip
+        findViewById<View>(R.id.btn_back_card).visibility = View.GONE
 
         btnAccept.setOnClickListener { acceptOrder() }
         btnSkip.setOnClickListener { rejectOrder() }
     }
 
     private fun startTimer() {
-        // 20 секунд
+        // Таймер на 20 секунд
         timer = object : CountDownTimer(20000, 1000) {
             override fun onTick(millisUntilFinished: Long) {
                 val seconds = millisUntilFinished / 1000
                 tvTimer.text = seconds.toString()
 
-                // Якщо залишилось мало часу - червоний колір
                 if (seconds <= 5) {
                     tvTimer.setTextColor(Color.RED)
                     tvTimer.backgroundTintList = ColorStateList.valueOf(Color.RED)
@@ -92,7 +113,7 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
 
             override fun onFinish() {
                 tvTimer.text = "0"
-                rejectOrder() // Час вийшов = відмова
+                rejectOrder()
             }
         }.start()
     }
@@ -106,7 +127,6 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
 
         lifecycleScope.launch {
             try {
-                // Використовуємо той самий API метод acceptOrder
                 val response = ApiClient.getInstance().getApiService(this@OrderOfferActivity).acceptOrder(orderId)
 
                 if (response.isSuccessful && response.body() != null) {
@@ -115,10 +135,11 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
 
                     val intent = Intent(this@OrderOfferActivity, OrderProgressActivity::class.java)
                     intent.putExtra("EXTRA_ORDER", updatedOrder)
+                    // Чистим стек, чтобы по кнопке Назад не вернуться в Offer
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                     startActivity(intent)
                     finish()
                 } else {
-                    // Якщо хтось перехопив або час вийшов на сервері
                     Toast.makeText(this@OrderOfferActivity, "Не вдалося прийняти: ${response.code()}", Toast.LENGTH_SHORT).show()
                     finish()
                 }
@@ -135,12 +156,15 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
 
         lifecycleScope.launch {
             try {
-                // Викликаємо новий метод rejectOffer (потрібно додати в ApiService)
                 ApiClient.getInstance().getApiService(this@OrderOfferActivity).rejectOffer(orderId)
             } catch (e: Exception) {
                 e.printStackTrace()
             } finally {
-                finish() // Закриваємо екран
+                // Возвращаемся на карту поиска
+                val intent = Intent(this@OrderOfferActivity, MainActivity::class.java)
+                intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                startActivity(intent)
+                finish()
             }
         }
     }
@@ -158,9 +182,6 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
         setupServices()
         setupComment()
     }
-
-    // --- (Методи setupPaymentMethod, setupServices, setupComment, buildRouteList ідентичні OrderDetailsActivity) ---
-    // Я їх скоротив тут для зручності, скопіюй їх з OrderDetailsActivity або використовуй спільний Helper
 
     private fun setupPaymentMethod() {
         val llPriceBg = findViewById<LinearLayout>(R.id.ll_price_background)
@@ -207,13 +228,10 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
         val inflater = LayoutInflater.from(this)
         val order = currentOrder ?: return
 
-        // Start
         addPointView(inflater, order.fromAddress ?: "Точка А", R.drawable.ic_circle_green, false)
-        // Stops
         order.stops?.sortedBy { it.stopOrder }?.forEach {
             addPointView(inflater, it.address ?: "Зупинка", R.drawable.ic_circle_green, false)
         }
-        // End
         addPointView(inflater, order.toAddress ?: "Точка Б", R.drawable.ic_circle_red, true)
     }
 
@@ -241,7 +259,6 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
             if (path.isNotEmpty()) {
                 val bounds = LatLngBounds.Builder()
                 path.forEach { bounds.include(it) }
-                // Трохи більше відступів, щоб влізло під таймер і нижню панель
                 map.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds.build(), 100))
             }
         }
@@ -253,8 +270,6 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     override fun onBackPressed() {
-        // Забороняємо вихід кнопкою назад, тільки Skip
-        // super.onBackPressed()
         Toast.makeText(this, "Натисніть 'Пропустити', щоб відхилити", Toast.LENGTH_SHORT).show()
     }
 }

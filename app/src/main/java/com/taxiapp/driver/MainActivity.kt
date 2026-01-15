@@ -24,6 +24,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.lifecycleScope
+import com.bumptech.glide.Glide
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -31,13 +32,13 @@ import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
 import com.google.android.material.switchmaterial.SwitchMaterial
-import com.google.firebase.messaging.FirebaseMessaging // <--- ЦЕЙ ІМПОРТ МАЄ ЗАПРАЦЮВАТИ ПІСЛЯ КРОКУ 1
+import com.google.firebase.messaging.FirebaseMessaging
 import com.taxiapp.driver.network.ApiClient
 import com.taxiapp.driver.network.HeatmapZoneDto
 import com.taxiapp.driver.network.UpdateDriverStatusRequest
 import com.taxiapp.driver.network.DriverSearchMode
 import com.taxiapp.driver.network.DriverSearchSettingsDto
-import com.taxiapp.driver.network.FcmTokenDto 
+import com.taxiapp.driver.network.FcmTokenDto
 import com.taxiapp.driver.service.LocationService
 import com.taxiapp.driver.utils.SessionManager
 import kotlinx.coroutines.launch
@@ -75,10 +76,22 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         private const val REQUEST_CODE_HOME_SECTOR = 1001
     }
 
+    // --- ОНОВЛЕНИЙ ЛАУНЧЕР ДОЗВОЛІВ ---
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
-        if (permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true) {
+        val fineLocation = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
+        val coarseLocation = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
+        
+        // Логіка для сповіщень (Android 13+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val postNotifs = permissions[Manifest.permission.POST_NOTIFICATIONS] ?: false
+            if (!postNotifs) {
+                Toast.makeText(this, "Увімкніть сповіщення, щоб бачити замовлення!", Toast.LENGTH_LONG).show()
+            }
+        }
+
+        if (fineLocation || coarseLocation) {
             updateMapUI()
             startLocationService()
             if (::map.isInitialized) centerMapOnUser()
@@ -104,14 +117,16 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         setupUI()
         loadUserProfile()
+        
+        // 1. Перевіряємо дозволи (Гео + Сповіщення)
         checkPermissionsAndStart()
+        
         checkActiveOrderOnStart()
 
-        // Викликаємо функцію оновлення токена
+        // 2. Оновлюємо токен FCM на сервері
         updateFcmToken()
-    } // <--- КІНЕЦЬ onCreate
+    }
 
-    // --- ФУНКЦІЯ ТЕПЕР ТУТ (Правильно) ---
     private fun updateFcmToken() {
         FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
             if (!task.isSuccessful) {
@@ -122,20 +137,26 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             // Отримали новий токен
             val token = task.result
             Log.d("FCM", "Driver Token: $token")
+            
+            // Зберігаємо локально (важливо для логіки виходу)
+            sessionManager.saveFcmToken(token)
 
             // Відправляємо на сервер
             lifecycleScope.launch {
                 try {
-                    ApiClient.getInstance().getApiService(this@MainActivity).updateFcmToken(FcmTokenDto(token))
+                    val response = ApiClient.getInstance().getApiService(this@MainActivity).updateFcmToken(FcmTokenDto(token))
+                    if (response.isSuccessful) {
+                        Log.d("FCM", "Token updated on server successfully")
+                    } else {
+                        Log.e("FCM", "Server error updating token: ${response.code()}")
+                    }
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    Log.e("FCM", "Network error updating token", e)
                 }
             }
         }
     }
 
-    // ... Інші методи (onResume, onActivityResult, setupUI тощо) залишаються без змін ...
-    
     override fun onResume() {
         super.onResume()
         updateLockIconState()
@@ -374,7 +395,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     tvDriverName.text = extractFirstName(serverName)
 
                     if (!profile.photoUrl.isNullOrEmpty()) {
-                        com.bumptech.glide.Glide.with(this@MainActivity)
+                        Glide.with(this@MainActivity)
                             .load(profile.photoUrl)
                             .placeholder(R.drawable.ic_driver_avatar_placeholder)
                             .error(R.drawable.ic_driver_avatar_placeholder)
@@ -658,21 +679,49 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun checkActiveOrderOnStart() {
+        Log.d("TAXIDEBUG", "--- checkActiveOrderOnStart: START ---")
+        
         lifecycleScope.launch {
             try {
+                Log.d("TAXIDEBUG", "Запит до сервера: getActiveOrder...")
                 val response = ApiClient.getInstance().getApiService(this@MainActivity).getActiveOrder()
+                
+                Log.d("TAXIDEBUG", "Response Code: ${response.code()}")
+
                 if (response.isSuccessful && response.body() != null) {
-                    if (!sessionManager.isOrderMinimized()) {
-                        val activeOrder = response.body()!!
-                        val intent = Intent(this@MainActivity, OrderProgressActivity::class.java)
-                        intent.putExtra("EXTRA_ORDER", activeOrder)
+                    val order = response.body()!!
+                    Log.d("TAXIDEBUG", "Отримано замовлення ID: ${order.id}, Status: ${order.status}")
+
+                    // --- ЛОГІКА МАРШРУТИЗАЦІЇ ---
+                    if (order.status == "OFFERING") {
+                        Log.d("TAXIDEBUG", "Статус OFFERING -> Відкриваємо OrderOfferActivity")
+                        val intent = Intent(this@MainActivity, OrderOfferActivity::class.java)
+                        intent.putExtra("EXTRA_ORDER", order)
+                        // Додаємо прапорці, щоб активність точно відкрилася
+                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
                         startActivity(intent)
+                    } 
+                    else if (order.status == "ACCEPTED" || order.status == "DRIVER_ARRIVED" || order.status == "IN_PROGRESS") {
+                        if (!sessionManager.isOrderMinimized()) {
+                            Log.d("TAXIDEBUG", "Статус ${order.status} -> Відкриваємо OrderProgressActivity")
+                            val intent = Intent(this@MainActivity, OrderProgressActivity::class.java)
+                            intent.putExtra("EXTRA_ORDER", order)
+                            startActivity(intent)
+                        } else {
+                            Log.d("TAXIDEBUG", "Замовлення активне, але згорнуте користувачем раніше.")
+                        }
+                    } else {
+                        Log.d("TAXIDEBUG", "Статус не обробляється автоматично: ${order.status}")
                     }
+                } else {
+                    Log.d("TAXIDEBUG", "Активних замовлень немає (Body is null or failed)")
                 }
-            } catch (e: Exception) { e.printStackTrace() }
+            } catch (e: Exception) {
+                Log.e("TAXIDEBUG", "Помилка при перевірці замовлення", e)
+                e.printStackTrace()
+            }
         }
     }
-
     private fun updateDriverStatus(isOnline: Boolean) {
         switchOnline.isEnabled = false
         LocationServices.getFusedLocationProviderClient(this).lastLocation.addOnSuccessListener { loc ->
@@ -699,10 +748,24 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun checkPermissionsAndStart() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+        val permissionsToRequest = mutableListOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        )
+
+        // ДОДАНО: Перевірка дозволу на сповіщення для Android 13+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+
+        val allGranted = permissionsToRequest.all {
+            ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
+        }
+
+        if (allGranted) {
             startLocationService()
         } else {
-            requestPermissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
+            requestPermissionLauncher.launch(permissionsToRequest.toTypedArray())
         }
     }
 

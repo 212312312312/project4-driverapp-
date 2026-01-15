@@ -4,20 +4,36 @@ import android.content.Context
 import android.content.SharedPreferences
 
 class SessionManager(context: Context) {
+    // Им'я файлу налаштувань залишене "DriverPrefs", щоб не втратити дані користувачів
     private var prefs: SharedPreferences = context.getSharedPreferences("DriverPrefs", Context.MODE_PRIVATE)
 
     companion object {
         const val USER_TOKEN = "user_token"
-        const val KEY_DRIVER_ID = "driver_id" // Новий ключ
-        const val KEY_MANUAL_LAT = "manual_lat"
+        const val KEY_DRIVER_ID = "driver_id"
         const val KEY_DRIVER_NAME = "driver_name"
+
+        // Ключі для FCM (Push-повідомлення)
+        const val KEY_FCM_TOKEN = "fcm_token"
+
+        // Логіка ручної локації
+        const val KEY_MANUAL_LAT = "manual_lat"
         const val KEY_MANUAL_LNG = "manual_lng"
         const val KEY_IS_MANUAL_LOC = "is_manual_loc"
+
+        // Стан додатку
         const val KEY_WAS_ORDER_MINIMIZED = "was_order_minimized"
     }
 
-    // --- ЛОГІКА ID ВОДІЯ (Для WebSockets) ---
+    // --- FCM TOKEN (ДОДАНО ДЛЯ ВИПРАВЛЕННЯ ПОМИЛКИ) ---
+    fun saveFcmToken(token: String) {
+        prefs.edit().putString(KEY_FCM_TOKEN, token).apply()
+    }
 
+    fun fetchFcmToken(): String? {
+        return prefs.getString(KEY_FCM_TOKEN, null)
+    }
+
+    // --- ЛОГІКА ID ВОДІЯ (Для WebSockets) ---
     fun saveDriverId(id: Long) {
         prefs.edit().putLong(KEY_DRIVER_ID, id).apply()
     }
@@ -26,8 +42,15 @@ class SessionManager(context: Context) {
         return prefs.getLong(KEY_DRIVER_ID, -1L)
     }
 
-    // --- ЛОГІКА ЗГОРНУТОГО ЗАМОВЛЕННЯ ---
+    fun saveDriverName(name: String) {
+        prefs.edit().putString(KEY_DRIVER_NAME, name).apply()
+    }
 
+    fun getDriverName(): String? {
+        return prefs.getString(KEY_DRIVER_NAME, null)
+    }
+
+    // --- ЛОГІКА ЗГОРНУТОГО ЗАМОВЛЕННЯ ---
     fun setOrderMinimized(minimized: Boolean) {
         prefs.edit().putBoolean(KEY_WAS_ORDER_MINIMIZED, minimized).apply()
     }
@@ -41,28 +64,27 @@ class SessionManager(context: Context) {
     }
 
     // --- АВТОРИЗАЦІЯ ---
+    fun saveAuthToken(token: String) {
+        prefs.edit().putString(USER_TOKEN, token).apply()
+    }
 
-    fun saveAuthToken(token: String) = prefs.edit().putString(USER_TOKEN, token).apply()
-
-    fun fetchAuthToken(): String? = prefs.getString(USER_TOKEN, null)
+    fun fetchAuthToken(): String? {
+        return prefs.getString(USER_TOKEN, null)
+    }
 
     fun clearSession() {
+        // Зберігаємо FCM токен перед очищенням, щоб при повторному вході він був доступний
+        val fcmToken = fetchFcmToken()
+
         prefs.edit().clear().apply()
-        val editor = prefs.edit()
-        editor.remove(USER_TOKEN) // Видаляємо токен
-        // editor.clear() // Можна використати це, якщо треба видалити ВСЕ (налаштування і т.д.)
-        editor.apply()
+
+        // Відновлюємо токен
+        if (fcmToken != null) {
+            saveFcmToken(fcmToken)
+        }
     }
 
-    // --- ЛОГІКА ЛОКАЦІЇ ---
-    fun saveDriverName(name: String) {
-        prefs.edit().putString(KEY_DRIVER_NAME, name).apply()
-    }
-
-    // Получение имени
-    fun getDriverName(): String? {
-        return prefs.getString(KEY_DRIVER_NAME, null)
-    }
+    // --- ЛОГІКА ЛОКАЦІЇ (ANTIGPS) ---
     fun setManualLocation(lat: Double, lng: Double) {
         val editor = prefs.edit()
         editor.putFloat(KEY_MANUAL_LAT, lat.toFloat())
