@@ -41,11 +41,16 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                     val order = response.body()!!
 
                     val intent = Intent(applicationContext, OrderOfferActivity::class.java)
-                    // Теперь это сработает, так как Order : Serializable
                     intent.putExtra("EXTRA_ORDER", order)
 
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                    startActivity(intent)
+                    // ДОДАЄМО ПРАПОРЦІ ДЛЯ ЗАПУСКУ З ФОНУ
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+
+                    try {
+                        startActivity(intent)
+                    } catch (e: Exception) {
+                        Log.e("FCM", "Error starting activity: ${e.message}")
+                    }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
