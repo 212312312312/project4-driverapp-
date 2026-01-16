@@ -6,6 +6,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.PowerManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.google.firebase.messaging.FirebaseMessagingService
@@ -22,11 +23,15 @@ import kotlinx.coroutines.launch
 class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
+        // Теперь этот метод будет вызываться ВСЕГДА, даже если приложение закрыто
         val data = remoteMessage.data
         val type = data["type"]
         Log.d("FCM", "Message received type: $type")
 
         if (type == "ORDER_OFFER") {
+            // Будим процессор на 10 секунд, чтобы успеть загрузить данные и показать экран
+            wakeUpScreen()
+
             val orderId = data["orderId"]?.toLongOrNull()
             if (orderId != null) {
                 fetchOrderAndShowNotification(orderId)
@@ -34,10 +39,16 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         }
     }
 
-    override fun onNewToken(token: String) {
-        super.onNewToken(token)
-        // Теперь метод saveFcmToken существует в SessionManager, ошибка уйдет
-        SessionManager(this).saveFcmToken(token)
+    private fun wakeUpScreen() {
+        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+        val isScreenOn = if (Build.VERSION.SDK_INT >= 20) pm.isInteractive else pm.isScreenOn
+        if (!isScreenOn) {
+            val wl = pm.newWakeLock(
+                PowerManager.FULL_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP or PowerManager.ON_AFTER_RELEASE,
+                "TaxiDriver:WakeUpLock"
+            )
+            wl.acquire(10000) // Держим 10 секунд
+        }
     }
 
     private fun fetchOrderAndShowNotification(orderId: Long) {
@@ -46,16 +57,15 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
         CoroutineScope(Dispatchers.Main).launch {
             try {
+                // Если API ответит быстро - экран появится быстро.
+                // Если интернет плохой, задержка будет здесь.
                 val response = ApiClient.getInstance().getApiService(applicationContext).getOrderById(orderId)
 
                 if (response.isSuccessful && response.body() != null) {
                     val order = response.body()!!
                     showFullScreenNotification(order)
-                } else {
-                    Log.e("FCM", "Не удалось загрузить заказ: ${response.code()}")
                 }
             } catch (e: Exception) {
-                Log.e("FCM", "Ошибка сети: ${e.message}")
                 e.printStackTrace()
             }
         }
@@ -68,44 +78,49 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 channelId,
-                "Нові замовлення",
-                NotificationManager.IMPORTANCE_HIGH
+                "Пропозиції замовлень", // Важно: название, которое видит юзер
+                NotificationManager.IMPORTANCE_HIGH // Обязательно HIGH
             ).apply {
-                description = "Повідомлення про пропозицію замовлення"
+                description = "Показує нові замовлення на весь екран"
                 enableVibration(true)
-                setSound(android.provider.Settings.System.DEFAULT_RINGTONE_URI, null)
+                // Звук лучше настраивать здесь, если нужен кастомный
                 lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
             }
             notificationManager.createNotificationChannel(channel)
         }
 
-        val intent = Intent(this, OrderOfferActivity::class.java).apply {
+        // Интент на открытие OrderOfferActivity
+        val fullScreenIntent = Intent(this, OrderOfferActivity::class.java).apply {
             putExtra("EXTRA_ORDER", order)
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            // Эти флаги критически важны, чтобы активити открылась поверх всего
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         }
 
         val fullScreenPendingIntent = PendingIntent.getActivity(
             this,
-            order.id.toInt(), // Уникальный ID запроса (важно!)
-            intent,
-            // Добавляем FLAG_ONE_SHOT или FLAG_UPDATE_CURRENT
+            order.id.toInt(),
+            fullScreenIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // ИСПРАВЛЕНИЕ ОШИБКИ 2: Безопасное деление
-        // Если distanceMeters == null, используем 0
-        val distanceKm = (order.distanceMeters ?: 0) / 1000.0
+        val distanceKm = "%.1f".format((order.distanceMeters ?: 0) / 1000.0)
 
         val notificationBuilder = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle("Нове замовлення!")
-            .setContentText("Ціна: ${order.price.toInt()} ₴ • $distanceKm км") // Используем переменную
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setCategory(NotificationCompat.CATEGORY_CALL)
+            .setContentTitle("Нове замовлення! (${order.tariffName})")
+            .setContentText("${order.price.toInt()} ₴ • $distanceKm км")
+            .setPriority(NotificationCompat.PRIORITY_MAX) // MAX для мгновенного показа
+            .setCategory(NotificationCompat.CATEGORY_CALL) // Категория звонка лучше всего будит
             .setAutoCancel(true)
-            .setFullScreenIntent(fullScreenPendingIntent, true)
+            .setFullScreenIntent(fullScreenPendingIntent, true) // TRUE - открывать сразу
             .setContentIntent(fullScreenPendingIntent)
+            .setTimeoutAfter(20000) // Убрать уведомление через 20 сек (таймаут сервера)
 
         notificationManager.notify(order.id.toInt(), notificationBuilder.build())
+    }
+
+    override fun onNewToken(token: String) {
+        super.onNewToken(token)
+        SessionManager(this).saveFcmToken(token)
     }
 }

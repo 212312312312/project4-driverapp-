@@ -161,6 +161,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         super.onResume()
         updateLockIconState()
         updateOrdersBadge()
+        
+        // ДОБАВИТЬ ЭТУ СТРОКУ:
+        // Проверяем статус заказа каждый раз, когда водитель возвращается на карту.
+        // Если висит OFFERING, экран предложения откроется сам.
+        checkActiveOrderOnStart() 
+
         if (::map.isInitialized) {
             updateMapUI()
             centerMapOnUser()
@@ -697,10 +703,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                         Log.d("TAXIDEBUG", "Статус OFFERING -> Відкриваємо OrderOfferActivity")
                         val intent = Intent(this@MainActivity, OrderOfferActivity::class.java)
                         intent.putExtra("EXTRA_ORDER", order)
-                        // Додаємо прапорці, щоб активність точно відкрилася
+                        // Эти флаги важны, чтобы не плодить окна
                         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
                         startActivity(intent)
-                    } 
+                    }
                     else if (order.status == "ACCEPTED" || order.status == "DRIVER_ARRIVED" || order.status == "IN_PROGRESS") {
                         if (!sessionManager.isOrderMinimized()) {
                             Log.d("TAXIDEBUG", "Статус ${order.status} -> Відкриваємо OrderProgressActivity")

@@ -75,9 +75,19 @@ class OrdersActivity : AppCompatActivity() {
 
         btnOpenActive.setOnClickListener {
             currentOrder?.let { order ->
-                val intent = Intent(this, OrderProgressActivity::class.java)
-                intent.putExtra("EXTRA_ORDER", order) // Передаем объект
-                startActivity(intent)
+                // ВАЖНОЕ ИСПРАВЛЕНИЕ:
+                // Проверяем статус. Если это Предложение -> Открываем OrderOfferActivity
+                if (order.status == "OFFERING") {
+                    val intent = Intent(this, OrderOfferActivity::class.java)
+                    intent.putExtra("EXTRA_ORDER", order)
+                    startActivity(intent)
+                    finish() // Закрываем список, чтобы не мешал
+                } else {
+                    // Если заказ уже принят -> Открываем OrderProgressActivity
+                    val intent = Intent(this, OrderProgressActivity::class.java)
+                    intent.putExtra("EXTRA_ORDER", order)
+                    startActivity(intent)
+                }
             }
         }
     }
@@ -123,7 +133,20 @@ class OrdersActivity : AppCompatActivity() {
                     currentOrder = response.body()
                     cardActive.visibility = View.VISIBLE
                     tvNoActive.visibility = View.GONE
-                    tvActiveRoute.text = "${currentOrder?.fromAddress} -> ${currentOrder?.toAddress}"
+
+                    // ВАЖНОЕ ИСПРАВЛЕНИЕ UI:
+                    if (currentOrder?.status == "OFFERING") {
+                        // Если это предложение, меняем текст, чтобы водитель понял
+                        tvActiveRoute.text = "⚡ Нова пропозиція! (${currentOrder?.tariffName})"
+                        tvActiveRoute.setTextColor(ContextCompat.getColor(this@OrdersActivity, R.color.driver_neon_teal))
+                        btnOpenActive.text = "Переглянути"
+                    } else {
+                        // Обычный режим
+                        tvActiveRoute.text = "${currentOrder?.fromAddress} -> ${currentOrder?.toAddress}"
+                        tvActiveRoute.setTextColor(ContextCompat.getColor(this@OrdersActivity, android.R.color.white))
+                        btnOpenActive.text = "Відкрити"
+                    }
+
                 } else {
                     cardActive.visibility = View.GONE
                     tvNoActive.visibility = View.VISIBLE
