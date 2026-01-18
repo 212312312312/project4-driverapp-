@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import android.widget.*
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
+import com.google.android.material.button.MaterialButton
 import com.taxiapp.driver.network.ApiClient
 import com.taxiapp.driver.network.DriverSearchMode
 import com.taxiapp.driver.network.DriverSearchSettingsDto
@@ -25,11 +26,11 @@ class SearchSettingsBottomSheet(
     private lateinit var tvHomeSector: TextView
     private lateinit var tvRadius: TextView
     private lateinit var seekBar: SeekBar
+    private lateinit var btnSave: MaterialButton // Кнопка зберегти
 
     private var currentMode = DriverSearchMode.CHAIN
     private var currentRadius = 3.0
-    private var selectedHomeSectorIds: List<Long>? = null // Змінено на List
-    private var isRadiusChanged = false
+    private var selectedHomeSectorIds: List<Long>? = null
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.bottom_sheet_search_settings, container, false)
@@ -44,6 +45,7 @@ class SearchSettingsBottomSheet(
         tvHomeSector = view.findViewById(R.id.tvHomeSectorName)
         tvRadius = view.findViewById(R.id.tvRadiusValue)
         seekBar = view.findViewById(R.id.seekBarRadius)
+        btnSave = view.findViewById(R.id.btnSaveSettings)
 
         val btnModeHome = view.findViewById<View>(R.id.btnModeHome)
         val btnModeChain = view.findViewById<View>(R.id.btnModeChain)
@@ -53,13 +55,13 @@ class SearchSettingsBottomSheet(
 
         loadSettings()
 
+        // Тільки змінюємо UI, не зберігаємо
         btnModeHome.setOnClickListener { selectMode(DriverSearchMode.HOME) }
         btnModeChain.setOnClickListener { selectMode(DriverSearchMode.CHAIN) }
 
         btnEditHomeSector.setOnClickListener {
             dismiss()
             val intent = Intent(requireContext(), SectorSelectionActivity::class.java)
-            // Передаємо список вже обраних ID
             if (selectedHomeSectorIds != null && selectedHomeSectorIds!!.isNotEmpty()) {
                 intent.putExtra("SELECTED_IDS", selectedHomeSectorIds!!.toLongArray())
             }
@@ -74,25 +76,25 @@ class SearchSettingsBottomSheet(
             }
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
             override fun onStopTrackingTouch(seekBar: SeekBar?) {
-                isRadiusChanged = true
-                saveSettings()
+                // Більше не зберігаємо тут автоматично
             }
         })
 
         btnMinus.setOnClickListener {
             if (seekBar.progress > 0) {
                 seekBar.progress -= 1
-                isRadiusChanged = true
-                saveSettings()
             }
         }
 
         btnPlus.setOnClickListener {
             if (seekBar.progress < seekBar.max) {
                 seekBar.progress += 1
-                isRadiusChanged = true
-                saveSettings()
             }
+        }
+
+        // КЛІК НА КНОПКУ "ЗБЕРЕГТИ" - Єдине місце відправки запиту
+        btnSave.setOnClickListener {
+            saveSettings()
         }
     }
 
@@ -105,7 +107,7 @@ class SearchSettingsBottomSheet(
 
                     currentMode = if (state.mode == DriverSearchMode.MANUAL) DriverSearchMode.CHAIN else state.mode
                     currentRadius = state.radius
-                    selectedHomeSectorIds = state.homeSectorIds // Зберігаємо список
+                    selectedHomeSectorIds = state.homeSectorIds
 
                     updateUI(state)
                 }
@@ -121,13 +123,12 @@ class SearchSettingsBottomSheet(
 
         tvHomeCounter.text = "(${state.homeRidesLeft}/2)"
 
-        // Відображаємо назви секторів
         tvHomeSector.text = state.homeSectorNames ?: "Сектори не обрано"
         if (state.homeSectorIds.isNullOrEmpty()) {
             tvHomeSector.text = "-"
         }
 
-        val progress = ((state.radius - 0.5) / 0.5).toInt()
+        val progress = ((currentRadius - 0.5) / 0.5).toInt()
         seekBar.progress = progress
         updateRadiusText()
     }
@@ -139,33 +140,37 @@ class SearchSettingsBottomSheet(
 
     private fun selectMode(newMode: DriverSearchMode) {
         if (currentMode == newMode) return
-
         currentMode = newMode
         radioHome.isChecked = currentMode == DriverSearchMode.HOME
         radioChain.isChecked = currentMode == DriverSearchMode.CHAIN
-
-        saveSettings()
+        // Видалено saveSettings()
     }
 
     private fun saveSettings() {
+        btnSave.isEnabled = false // Блокуємо кнопку, щоб не клацали
+        btnSave.text = "ЗБЕРЕЖЕННЯ..."
+
         lifecycleScope.launch {
             try {
                 val req = DriverSearchSettingsDto(
                     mode = currentMode,
                     radius = currentRadius,
-                    homeSectorIds = selectedHomeSectorIds // Передаємо список
+                    homeSectorIds = selectedHomeSectorIds
                 )
                 val response = ApiClient.getInstance().getApiService(requireContext()).updateSearchSettings(req)
 
                 if (response.isSuccessful && response.body() != null) {
-                    updateUI(response.body()!!)
-                    onSettingsChanged()
+                    onSettingsChanged() // Оновлюємо головний екран
+                    dismiss() // Закриваємо шторку тільки при успіху
                 } else {
                     Toast.makeText(context, "Помилка: ${response.errorBody()?.string()}", Toast.LENGTH_SHORT).show()
-                    loadSettings()
+                    loadSettings() // Відкатуємо назад
                 }
             } catch (e: Exception) {
                 Toast.makeText(context, "Помилка збереження", Toast.LENGTH_SHORT).show()
+            } finally {
+                btnSave.isEnabled = true
+                btnSave.text = "ЗБЕРЕГТИ"
             }
         }
     }

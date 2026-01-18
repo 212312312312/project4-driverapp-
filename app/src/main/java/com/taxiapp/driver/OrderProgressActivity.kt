@@ -1,7 +1,7 @@
 package com.taxiapp.driver
 
 import android.annotation.SuppressLint
-import android.graphics.Color
+import android.content.Intent // <-- Не забудь перевірити цей імпорт
 import android.location.Location
 import android.os.Build
 import android.os.Bundle
@@ -82,13 +82,13 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
         findViewById<View>(R.id.btn_back_progress).setOnClickListener {
             val session = com.taxiapp.driver.utils.SessionManager(this)
             session.setOrderMinimized(true)
+            // Тут ми просто звертаємо екран, це ОК
             finish()
         }
 
         btnAction.setOnClickListener { handleActionButton() }
     }
 
-    // Оновлення синьої мітки (без переміщення камери, якщо ми вже сфокусувались при старті)
     private fun updateDriverMarker(location: Location) {
         if (!::map.isInitialized) return
         val currentLatLng = LatLng(location.latitude, location.longitude)
@@ -145,9 +145,6 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
         updateMapVisuals()
     }
 
-    /**
-     * ГОЛОВНА ЛОГІКА МАЛЮВАННЯ ТА НАВЕДЕННЯ КАМЕРИ
-     */
     @SuppressLint("MissingPermission")
     private fun updateMapVisuals() {
         if (!::map.isInitialized || currentOrder == null) return
@@ -158,23 +155,17 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
 
         fusedLocationClient.lastLocation.addOnSuccessListener { location ->
             val driverLoc = if (location != null) LatLng(location.latitude, location.longitude) else LatLng(50.45, 30.52)
-
-            // Додаємо мітку водія
             updateDriverMarker(location ?: Location("").apply { latitude = 50.45; longitude = 30.52 })
 
             if (currentState == RideState.TO_CLIENT || currentState == RideState.WAITING) {
-                // --- ЇДЕМО ДО КЛІЄНТА ---
                 val originLoc = LatLng(order.originLat ?: 0.0, order.originLng ?: 0.0)
                 map.addMarker(MarkerOptions()
                     .position(originLoc)
                     .title("Клієнт")
                     .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)))
-
-                // Запускаємо побудову маршруту, яка сама наведе камеру по завершенню
                 drawRoadRoute(driverLoc, originLoc, R.color.driver_neon_teal)
 
             } else if (currentState == RideState.TO_DESTINATION) {
-                // --- В ДОРОЗІ ДО ФІНІШУ ---
                 val builder = LatLngBounds.Builder()
                 builder.include(driverLoc)
 
@@ -187,8 +178,6 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
                         .color(ContextCompat.getColor(this, R.color.driver_neon_teal))
                         .jointType(JointType.ROUND)
                         .endCap(RoundCap()))
-
-                    // Додаємо ВСІ точки дороги в огляд
                     roadPoints.forEach { builder.include(it) }
                 }
 
@@ -197,10 +186,8 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
                     .position(destLoc)
                     .title("Фініш")
                     .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)))
-
                 builder.include(destLoc)
 
-                // Фокусуємо камеру на маршруті А->Б
                 try {
                     val bounds = builder.build()
                     map.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 200))
@@ -230,19 +217,16 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
                             .color(ContextCompat.getColor(this@OrderProgressActivity, colorRes))
                             .jointType(JointType.ROUND))
 
-                        // НАВЕДЕННЯ КАМЕРИ НА ПОВНИЙ МАРШРУТ ДО КЛІЄНТА
                         val builder = LatLngBounds.Builder()
                         path.forEach { builder.include(it) }
                         builder.include(start)
                         builder.include(end)
-
                         val bounds = builder.build()
                         map.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 200))
                     }
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    // Якщо API не спрацював — просто наводимо на дві точки
                     val builder = LatLngBounds.Builder().include(start).include(end).build()
                     map.animateCamera(CameraUpdateFactory.newLatLngBounds(builder, 200))
                 }
@@ -250,23 +234,42 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
+    // --- ОСНОВНЕ ВИПРАВЛЕННЯ ТУТ ---
     private fun handleActionButton() {
         val orderId = currentOrder?.id ?: return
         btnAction.isEnabled = false
+
         lifecycleScope.launch {
             try {
                 val api = ApiClient.getInstance().getApiService(this@OrderProgressActivity)
                 when (currentState) {
-                    RideState.TO_CLIENT -> if (api.notifyArrived(orderId).isSuccessful) { currentState = RideState.WAITING; setupUiForWaiting(); updateMapVisuals() }
-                    RideState.WAITING -> if (api.startTrip(orderId).isSuccessful) { currentState = RideState.TO_DESTINATION; setupUiForInTrip(); updateMapVisuals() }
+                    RideState.TO_CLIENT -> if (api.notifyArrived(orderId).isSuccessful) {
+                        currentState = RideState.WAITING; setupUiForWaiting(); updateMapVisuals()
+                    }
+                    RideState.WAITING -> if (api.startTrip(orderId).isSuccessful) {
+                        currentState = RideState.TO_DESTINATION; setupUiForInTrip(); updateMapVisuals()
+                    }
                     RideState.TO_DESTINATION -> if (api.completeOrder(orderId).isSuccessful) {
                         com.taxiapp.driver.utils.SessionManager(this@OrderProgressActivity).resetOrderMinimized()
-                        finish()
+
+                        // ВАЖЛИВО: Явно запускаємо MainActivity (Карту)
+                        // Це відновлює скрін карти, оскільки він був видалений при прийомі замовлення
+                        val intent = Intent(this@OrderProgressActivity, MainActivity::class.java)
+                        // Очищаємо стек, щоб кнопка "Назад" не повертала нас на закрите замовлення
+                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        startActivity(intent)
+
+                        finish() // Закриваємо поточне вікно
                     }
                 }
-            } catch (e: Exception) { e.printStackTrace() } finally { btnAction.isEnabled = true }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                btnAction.isEnabled = true
+            }
         }
     }
+    // --------------------------------
 
     private fun loadActiveOrderFromServer() {
         lifecycleScope.launch {

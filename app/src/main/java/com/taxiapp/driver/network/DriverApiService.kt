@@ -19,6 +19,9 @@ interface DriverApiService {
     @GET("api/v1/driver/orders/heatmap")
     suspend fun getHeatmap(): Response<List<HeatmapZoneDto>>
 
+    @POST("api/v1/driver/sos")
+    suspend fun sendSos(@Body location: UpdateLocationRequest): Response<Void>
+
     @POST("api/v1/driver/orders/{id}/accept")
     suspend fun acceptOrder(@Path("id") orderId: Long): Response<Order>
 
