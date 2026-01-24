@@ -44,10 +44,10 @@ class OrderAdapter(
         private val tvFrom: TextView = itemView.findViewById(R.id.tv_address_from)
         private val tvTo: TextView = itemView.findViewById(R.id.tv_address_to)
 
-        // --- НОВЫЕ ПОЛЯ ИЗ item_order.xml ---
+        // --- ПОЛЯ ДЛЯ СЕКТОРОВ ---
         private val tvSectorFrom: TextView = itemView.findViewById(R.id.tv_sector_from)
         private val tvSectorTo: TextView = itemView.findViewById(R.id.tv_sector_to)
-        // -------------------------------------
+        // -------------------------
 
         private val tvTariff: TextView = itemView.findViewById(R.id.tv_tariff_badge)
         private val tvDistance: TextView = itemView.findViewById(R.id.tv_distance)
@@ -61,21 +61,23 @@ class OrderAdapter(
             tvTariff.text = order.tariffName
             tvDistance.text = order.getFormattedDistance()
 
-            // --- ЛОГИКА СЕКТОРОВ (БЕЗ ПРЕФИКСА) ---
+            // --- ЛОГИКА СЕКТОРОВ ---
+            // Сектор подачи (Откуда)
             if (!order.fromSector.isNullOrEmpty()) {
-                tvSectorFrom.text = order.fromSector // Просто название
+                tvSectorFrom.text = order.fromSector
                 tvSectorFrom.visibility = View.VISIBLE
             } else {
                 tvSectorFrom.visibility = View.GONE
             }
 
+            // Сектор назначения (Куда)
             if (!order.toSector.isNullOrEmpty()) {
-                tvSectorTo.text = order.toSector // Просто название
+                tvSectorTo.text = order.toSector
                 tvSectorTo.visibility = View.VISIBLE
             } else {
                 tvSectorTo.visibility = View.GONE
             }
-            // ---------------------------------------
+            // -----------------------
 
             // Оплата (Cash/Card)
             val method = order.paymentMethod ?: "CASH"
