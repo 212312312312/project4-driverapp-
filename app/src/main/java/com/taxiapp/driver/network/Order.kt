@@ -6,7 +6,7 @@ import java.io.Serializable
 data class Order(
     @SerializedName("id") val id: Long,
     @SerializedName("price") val price: Double = 0.0,
-    @SerializedName("tariffName") val tariffName: String? = null, // Може бути null
+    @SerializedName("tariffName") val tariffName: String? = null,
     @SerializedName("fromAddress") val fromAddress: String? = null,
     @SerializedName("toAddress") val toAddress: String? = null,
     @SerializedName("googleRoutePolyline") val polyline: String? = null,
@@ -21,7 +21,11 @@ data class Order(
 
     @SerializedName("paymentMethod") val paymentMethod: String? = "CASH",
     @SerializedName("comment") val comment: String? = null,
-    @SerializedName("services") val services: List<TaxiService>? = null
+    @SerializedName("services") val services: List<TaxiService>? = null,
+
+    // --- НОВЫЕ ПОЛЯ ДЛЯ СЕКТОРОВ ---
+    @SerializedName("fromSector") val fromSector: String? = null,
+    @SerializedName("toSector") val toSector: String? = null
 ) : Serializable {
 
     fun getFormattedPrice(): String = "${price.toInt()} ₴"

@@ -36,14 +36,19 @@ class OrderAdapter(
     }
 
     inner class OrderViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        // Отримуємо посилання на елементи
         private val tvPrice: TextView = itemView.findViewById(R.id.tv_price)
-        private val llPriceBg: LinearLayout = itemView.findViewById(R.id.ll_price_background) // Контейнер ціни
-        private val ivPaymentIcon: ImageView = itemView.findViewById(R.id.iv_payment_icon)   // Іконка оплати
+        private val llPriceBg: LinearLayout = itemView.findViewById(R.id.ll_price_background)
+        private val ivPaymentIcon: ImageView = itemView.findViewById(R.id.iv_payment_icon)
 
         private val tvPricePerKm: TextView = itemView.findViewById(R.id.tv_price_per_km)
         private val tvFrom: TextView = itemView.findViewById(R.id.tv_address_from)
         private val tvTo: TextView = itemView.findViewById(R.id.tv_address_to)
+
+        // --- НОВЫЕ ПОЛЯ ИЗ item_order.xml ---
+        private val tvSectorFrom: TextView = itemView.findViewById(R.id.tv_sector_from)
+        private val tvSectorTo: TextView = itemView.findViewById(R.id.tv_sector_to)
+        // -------------------------------------
+
         private val tvTariff: TextView = itemView.findViewById(R.id.tv_tariff_badge)
         private val tvDistance: TextView = itemView.findViewById(R.id.tv_distance)
         private val stopsContainer: LinearLayout = itemView.findViewById(R.id.ll_stops_container)
@@ -56,25 +61,37 @@ class OrderAdapter(
             tvTariff.text = order.tariffName
             tvDistance.text = order.getFormattedDistance()
 
-            // --- ЛОГІКА ВІДОБРАЖЕННЯ ОПЛАТИ (CASH / CARD) ---
-            val method = order.paymentMethod ?: "CASH"
+            // --- ЛОГИКА СЕКТОРОВ (БЕЗ ПРЕФИКСА) ---
+            if (!order.fromSector.isNullOrEmpty()) {
+                tvSectorFrom.text = order.fromSector // Просто название
+                tvSectorFrom.visibility = View.VISIBLE
+            } else {
+                tvSectorFrom.visibility = View.GONE
+            }
 
+            if (!order.toSector.isNullOrEmpty()) {
+                tvSectorTo.text = order.toSector // Просто название
+                tvSectorTo.visibility = View.VISIBLE
+            } else {
+                tvSectorTo.visibility = View.GONE
+            }
+            // ---------------------------------------
+
+            // Оплата (Cash/Card)
+            val method = order.paymentMethod ?: "CASH"
             if (method == "CASH") {
-                // ЖОВТИЙ ФОН (Готівка)
                 llPriceBg.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#FFD600"))
                 ivPaymentIcon.setImageResource(R.drawable.ic_payment_cash)
                 tvPrice.setTextColor(Color.BLACK)
                 ivPaymentIcon.setColorFilter(Color.BLACK)
             } else {
-                // СИНІЙ ФОН (Карта)
                 llPriceBg.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#2979FF"))
                 ivPaymentIcon.setImageResource(R.drawable.ic_payment_card)
-                tvPrice.setTextColor(Color.WHITE) // На синьому краще білий текст
+                tvPrice.setTextColor(Color.WHITE)
                 ivPaymentIcon.setColorFilter(Color.WHITE)
             }
-            // ------------------------------------------------
 
-            // Динамічні зупинки
+            // Остановки
             stopsContainer.removeAllViews()
             if (!order.stops.isNullOrEmpty()) {
                 val inflater = LayoutInflater.from(itemView.context)
