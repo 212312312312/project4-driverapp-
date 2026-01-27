@@ -1,12 +1,19 @@
 package com.taxiapp.driver
 
 import android.annotation.SuppressLint
-import android.content.Intent // <-- Не забудь перевірити цей імпорт
+import android.app.Dialog // <--- НОВЫЙ ИМПОРТ
+import android.content.Intent
+import android.graphics.Color // <--- НОВЫЙ ИМПОРТ
+import android.graphics.drawable.ColorDrawable // <--- НОВЫЙ ИМПОРТ
 import android.location.Location
 import android.os.Build
 import android.os.Bundle
 import android.os.Looper
 import android.view.View
+import android.view.ViewGroup // <--- НОВЫЙ ИМПОРТ
+import android.widget.Button // <--- НОВЫЙ ИМПОРТ
+import android.widget.EditText // <--- НОВЫЙ ИМПОРТ
+import android.widget.RatingBar // <--- НОВЫЙ ИМПОРТ
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -22,6 +29,7 @@ import com.google.android.material.button.MaterialButton
 import com.google.maps.android.PolyUtil
 import com.taxiapp.driver.network.ApiClient
 import com.taxiapp.driver.network.Order
+import com.taxiapp.driver.network.RateClientRequest // <--- ВАЖНО
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -43,7 +51,7 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var tvClientName: TextView
     private lateinit var tvOrderInfo: TextView
 
-    private enum class RideState { TO_CLIENT, WAITING, TO_DESTINATION }
+    private enum class RideState { TO_CLIENT, WAITING, TO_DESTINATION, COMPLETED } // <-- Добавил COMPLETED
     private var currentState = RideState.TO_CLIENT
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -82,7 +90,6 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
         findViewById<View>(R.id.btn_back_progress).setOnClickListener {
             val session = com.taxiapp.driver.utils.SessionManager(this)
             session.setOrderMinimized(true)
-            // Тут ми просто звертаємо екран, це ОК
             finish()
         }
 
@@ -109,6 +116,15 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
             "ACCEPTED" -> { currentState = RideState.TO_CLIENT; setupUiForToClient() }
             "DRIVER_ARRIVED" -> { currentState = RideState.WAITING; setupUiForWaiting() }
             "IN_PROGRESS" -> { currentState = RideState.TO_DESTINATION; setupUiForInTrip() }
+            "COMPLETED" -> {
+                currentState = RideState.COMPLETED
+                // Если заказ завершен, но не оценен -> Показываем диалог
+                if (currentOrder?.isRatedByDriver == false) {
+                    showRatingDialog()
+                } else {
+                    finishAndReturnToMap()
+                }
+            }
             else -> { currentState = RideState.TO_CLIENT; setupUiForToClient() }
         }
     }
@@ -234,7 +250,6 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
-    // --- ОСНОВНЕ ВИПРАВЛЕННЯ ТУТ ---
     private fun handleActionButton() {
         val orderId = currentOrder?.id ?: return
         btnAction.isEnabled = false
@@ -250,24 +265,70 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
                         currentState = RideState.TO_DESTINATION; setupUiForInTrip(); updateMapVisuals()
                     }
                     RideState.TO_DESTINATION -> if (api.completeOrder(orderId).isSuccessful) {
-                        com.taxiapp.driver.utils.SessionManager(this@OrderProgressActivity).resetOrderMinimized()
-
-                        // ВАЖЛИВО: Явно запускаємо MainActivity (Карту)
-                        // Це відновлює скрін карти, оскільки він був видалений при прийомі замовлення
-                        val intent = Intent(this@OrderProgressActivity, MainActivity::class.java)
-                        // Очищаємо стек, щоб кнопка "Назад" не повертала нас на закрите замовлення
-                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                        startActivity(intent)
-
-                        finish() // Закриваємо поточне вікно
+                        // Поездка завершена. Показываем диалог оценки!
+                        currentState = RideState.COMPLETED
+                        showRatingDialog()
                     }
+                    RideState.COMPLETED -> { /* Ничего не делаем */ }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
+                Toast.makeText(this@OrderProgressActivity, "Помилка: ${e.message}", Toast.LENGTH_SHORT).show()
             } finally {
                 btnAction.isEnabled = true
             }
         }
+    }
+
+    // --- ДИАЛОГ ОЦЕНКИ ПАССАЖИРА ---
+    private fun showRatingDialog() {
+        val dialog = Dialog(this)
+        dialog.setContentView(R.layout.dialog_rate_client) // Файл создадим ниже
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        dialog.setCancelable(false) // Нельзя закрыть без оценки
+
+        val ratingBar = dialog.findViewById<RatingBar>(R.id.rating_bar)
+        val etComment = dialog.findViewById<EditText>(R.id.et_comment)
+        val btnSubmit = dialog.findViewById<Button>(R.id.btn_submit_rating)
+
+        btnSubmit.setOnClickListener {
+            val score = ratingBar.rating.toInt()
+            if (score == 0) {
+                Toast.makeText(this, "Поставте оцінку", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            sendRating(score, etComment.text.toString(), dialog)
+        }
+
+        dialog.show()
+    }
+
+    private fun sendRating(score: Int, comment: String, dialog: Dialog) {
+        val orderId = currentOrder?.id ?: return
+        lifecycleScope.launch {
+            try {
+                val req = RateClientRequest(orderId, score, comment)
+                val response = ApiClient.getInstance().getApiService(this@OrderProgressActivity).rateClient(req)
+                if (response.isSuccessful) {
+                    Toast.makeText(this@OrderProgressActivity, "Оцінка збережена", Toast.LENGTH_SHORT).show()
+                    dialog.dismiss()
+                    finishAndReturnToMap()
+                } else {
+                    Toast.makeText(this@OrderProgressActivity, "Помилка сервера", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@OrderProgressActivity, "Помилка мережі", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun finishAndReturnToMap() {
+        com.taxiapp.driver.utils.SessionManager(this).resetOrderMinimized()
+        val intent = Intent(this, MainActivity::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        startActivity(intent)
+        finish()
     }
     // --------------------------------
 

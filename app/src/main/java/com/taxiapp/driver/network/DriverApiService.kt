@@ -3,6 +3,13 @@ package com.taxiapp.driver.network
 import retrofit2.Response
 import retrofit2.http.*
 
+// --- НОВОЕ DTO ДЛЯ ОЦЕНКИ ---
+data class RateClientRequest(
+    val orderId: Long,
+    val score: Int,
+    val comment: String?
+)
+
 interface DriverApiService {
 
     // --- ВХОД ---
@@ -58,10 +65,8 @@ interface DriverApiService {
     @GET("api/v1/driver/sectors")
     suspend fun getSectors(): Response<List<Sector>>
 
-    // --- АКТИВНІСТЬ (НОВЕ) ---
     @GET("api/v1/driver/activity")
     suspend fun getDriverActivity(): Response<DriverActivityDto>
-    // -------------------------
 
     @GET("api/v1/driver/filters")
     suspend fun getFilters(): Response<List<DriverFilter>>
@@ -92,4 +97,8 @@ interface DriverApiService {
 
     @GET("api/v1/orders/{id}")
     suspend fun getOrderById(@Path("id") id: Long): Response<Order>
+
+    // --- ОЦЕНКА (НОВЕ) ---
+    @POST("api/v1/driver/rate")
+    suspend fun rateClient(@Body request: RateClientRequest): Response<Void>
 }

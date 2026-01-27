@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="8dp"
+    app:cardBackgroundColor="@color/driver_card_bg">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp"
+        android:gravity="center_horizontal">
+
+        <TextView
+            android:id="@+id/tv_rating_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Оцініть пасажира"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="@color/driver_text_primary"
+            android:layout_marginBottom="24dp" />
+
+        <RatingBar
+            android:id="@+id/rating_bar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:numStars="5"
+            android:stepSize="1.0"
+            android:rating="0"
+            android:isIndicator="false"
+            android:clickable="true"
+            android:focusable="true"
+            style="?android:attr/ratingBarStyle"
+            android:theme="@style/RatingBarNoRipple"
+            android:progressTint="@color/taxi_yellow"
+            android:progressBackgroundTint="@color/driver_text_secondary"
+            android:secondaryProgressTint="@android:color/transparent"
+            android:background="@android:color/transparent"
+            android:layout_marginBottom="24dp" />
+
+        <EditText
+            android:id="@+id/et_comment"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Коментар (необов'язково)"
+            android:textColor="@color/driver_text_primary"
+            android:textColorHint="@color/driver_text_secondary"
+            android:background="@drawable/bg_driver_input"
+            android:backgroundTint="@color/driver_black_bg"
+            android:padding="16dp"
+            android:minHeight="100dp"
+            android:gravity="top|start"
+            android:layout_marginBottom="24dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_submit_rating"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="Завершити"
+            android:textColor="@color/driver_text_black"
+            android:textStyle="bold"
+            android:textSize="16sp"
+            app:backgroundTint="@color/driver_neon_teal"
+            app:cornerRadius="12dp" />
+
+    </LinearLayout>
+</androidx.cardview.widget.CardView>

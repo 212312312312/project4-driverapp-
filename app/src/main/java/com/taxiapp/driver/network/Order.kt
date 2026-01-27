@@ -23,9 +23,11 @@ data class Order(
     @SerializedName("comment") val comment: String? = null,
     @SerializedName("services") val services: List<TaxiService>? = null,
 
-    // --- НОВЫЕ ПОЛЯ ДЛЯ СЕКТОРОВ ---
     @SerializedName("fromSector") val fromSector: String? = null,
-    @SerializedName("toSector") val toSector: String? = null
+    @SerializedName("toSector") val toSector: String? = null,
+
+    // --- НОВОЕ ПОЛЕ ---
+    @SerializedName("isRatedByDriver") val isRatedByDriver: Boolean = false
 ) : Serializable {
 
     fun getFormattedPrice(): String = "${price.toInt()} ₴"
