@@ -10,6 +10,17 @@ data class RateClientRequest(
     val comment: String?
 )
 
+data class DriverStatsDto(
+    val totalIncome: Double,
+    val commission: Double,
+    val incomeCard: Double,
+    val incomeCash: Double,
+    val incomeBalance: Double,
+    val ordersCount: Int,
+    val totalDistanceKm: Double,
+    val avgPricePerKm: Double,
+    val totalHours: Double
+)
 interface DriverApiService {
 
     // --- ВХОД ---
@@ -101,4 +112,10 @@ interface DriverApiService {
     // --- ОЦЕНКА (НОВЕ) ---
     @POST("api/v1/driver/rate")
     suspend fun rateClient(@Body request: RateClientRequest): Response<Void>
+
+    @GET("api/v1/driver/stats")
+    suspend fun getStats(
+        @Query("from") from: String, // YYYY-MM-DD
+        @Query("to") to: String      // YYYY-MM-DD
+    ): Response<DriverStatsDto>
 }

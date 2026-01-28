@@ -11,7 +11,6 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.ImageView
-import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -22,24 +21,26 @@ import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
-import com.google.android.material.button.MaterialButton
 import com.google.maps.android.PolyUtil
+import com.taxiapp.driver.databinding.ActivityOrderDetailsBinding // ВАЖНО: Импорт Binding
 import com.taxiapp.driver.network.ApiClient
 import com.taxiapp.driver.network.Order
 import kotlinx.coroutines.launch
 
 class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
 
+    private lateinit var binding: ActivityOrderDetailsBinding // Объявляем Binding
     private lateinit var map: GoogleMap
     private var currentOrder: Order? = null
-    private lateinit var btnAccept: MaterialButton
-    private lateinit var routeContainer: LinearLayout
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_order_details)
 
-        // БЕЗОПАСНОЕ ИЗВЛЕЧЕНИЕ ОБЪЕКТА (Fix deprecation)
+        // 1. Инициализация ViewBinding
+        binding = ActivityOrderDetailsBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        // 2. Безопасное получение объекта заказа
         currentOrder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             intent.getSerializableExtra("EXTRA_ORDER", Order::class.java)
         } else {
@@ -53,24 +54,26 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
             return
         }
 
-        routeContainer = findViewById(R.id.ll_route_container)
         setupUI()
 
+        // 3. Инициализация карты
+        // Используем findFragmentById с R.id.map, так как это надежнее для фрагментов
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
 
-        findViewById<View>(R.id.btn_back_card).setOnClickListener { finish() }
-        btnAccept = findViewById(R.id.btn_accept)
-        btnAccept.setOnClickListener { acceptOrder() }
+        // 4. Обработчики кнопок через Binding
+        binding.btnBackCard.setOnClickListener { finish() }
+        binding.btnAccept.setOnClickListener { acceptOrder() }
     }
 
     private fun setupUI() {
-        findViewById<TextView>(R.id.tv_order_id).text = "Замовлення #${currentOrder?.id}"
-        findViewById<TextView>(R.id.tv_tariff).text = currentOrder?.tariffName ?: "Стандарт"
+        // Заполняем данные через binding (больше никаких findViewById!)
+        binding.tvOrderId.text = "Замовлення #${currentOrder?.id}"
+        binding.tvTariff.text = currentOrder?.tariffName ?: "Стандарт"
 
         val distInfo = "${currentOrder?.getFormattedDistance()} • ${currentOrder?.getPricePerKm()}"
-        findViewById<TextView>(R.id.tv_distance_info).text = distInfo
-        findViewById<TextView>(R.id.tv_price).text = currentOrder?.getFormattedPrice()
+        binding.tvDistanceInfo.text = distInfo
+        binding.tvPrice.text = currentOrder?.getFormattedPrice()
 
         setupPaymentMethod()
         buildRouteList()
@@ -79,60 +82,53 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun setupPaymentMethod() {
-        val llPriceBg = findViewById<LinearLayout>(R.id.ll_price_background)
-        val ivIcon = findViewById<ImageView>(R.id.iv_payment_icon)
         val method = currentOrder?.paymentMethod ?: "CASH"
 
         if (method == "CASH") {
-            llPriceBg.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#FFD600"))
-            ivIcon.setImageResource(R.drawable.ic_payment_cash)
+            binding.llPriceBackground.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#FFD600"))
+            binding.ivPaymentIcon.setImageResource(R.drawable.ic_payment_cash)
         } else {
-            llPriceBg.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#2979FF"))
-            ivIcon.setImageResource(R.drawable.ic_payment_card)
+            binding.llPriceBackground.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#2979FF"))
+            binding.ivPaymentIcon.setImageResource(R.drawable.ic_payment_card)
         }
     }
 
     private fun setupServices() {
-        val servicesBlock = findViewById<LinearLayout>(R.id.ll_services_block)
-        val servicesList = findViewById<LinearLayout>(R.id.ll_services_list)
         val services = currentOrder?.services
 
         if (!services.isNullOrEmpty()) {
-            servicesBlock.visibility = View.VISIBLE
-            servicesList.removeAllViews()
+            binding.llServicesBlock.visibility = View.VISIBLE
+            binding.llServicesList.removeAllViews()
             for (service in services) {
                 val tv = TextView(this)
                 tv.text = "• ${service.name}"
                 tv.setTextColor(ContextCompat.getColor(this, R.color.driver_text_primary))
                 tv.textSize = 14f
                 tv.setPadding(0, 4, 0, 4)
-                servicesList.addView(tv)
+                binding.llServicesList.addView(tv)
             }
         } else {
-            servicesBlock.visibility = View.GONE
+            binding.llServicesBlock.visibility = View.GONE
         }
     }
 
     private fun setupComment() {
-        val commentBlock = findViewById<LinearLayout>(R.id.ll_comment_block)
-        val tvComment = findViewById<TextView>(R.id.tv_comment_text)
         val comment = currentOrder?.comment
 
         if (!comment.isNullOrEmpty()) {
-            commentBlock.visibility = View.VISIBLE
-            tvComment.text = comment
+            binding.llCommentBlock.visibility = View.VISIBLE
+            binding.tvCommentText.text = comment
         } else {
-            commentBlock.visibility = View.GONE
+            binding.llCommentBlock.visibility = View.GONE
         }
     }
 
     private fun buildRouteList() {
-        routeContainer.removeAllViews()
+        binding.llRouteContainer.removeAllViews()
         val inflater = LayoutInflater.from(this)
         val order = currentOrder ?: return
         val allPoints = mutableListOf<RoutePoint>()
 
-        // ИСПРАВЛЕНО: Добавлен ?: "" для обработки String?
         allPoints.add(RoutePoint(order.fromAddress ?: "Адреса не вказана", PointType.START))
 
         order.stops?.sortedBy { it.stopOrder }?.forEach { stop ->
@@ -144,7 +140,10 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
         for (i in allPoints.indices) {
             val point = allPoints[i]
             val isLast = (i == allPoints.size - 1)
-            val view = inflater.inflate(R.layout.item_route_point, routeContainer, false)
+
+            // Здесь мы инфлейтим отдельный элемент списка, он не часть ActivityBinding
+            val view = inflater.inflate(R.layout.item_route_point, binding.llRouteContainer, false)
+
             val tvAddress = view.findViewById<TextView>(R.id.tv_point_address)
             val ivIcon = view.findViewById<ImageView>(R.id.iv_point_icon)
             val line = view.findViewById<View>(R.id.view_line)
@@ -159,7 +158,7 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
                 }
             }
             line.visibility = if (isLast) View.INVISIBLE else View.VISIBLE
-            routeContainer.addView(view)
+            binding.llRouteContainer.addView(view)
         }
     }
 
@@ -168,8 +167,8 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private fun acceptOrder() {
         val orderId = currentOrder?.id ?: return
-        btnAccept.isEnabled = false
-        btnAccept.text = "ОБРОБКА..."
+        binding.btnAccept.isEnabled = false
+        binding.btnAccept.text = "ОБРОБКА..."
 
         lifecycleScope.launch {
             try {
@@ -186,13 +185,13 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
                     startActivity(intent)
                     finish()
                 } else {
-                    btnAccept.isEnabled = true
-                    btnAccept.text = "ПРИЙНЯТИ ЗАМОВЛЕННЯ"
+                    binding.btnAccept.isEnabled = true
+                    binding.btnAccept.text = "ПРИЙНЯТИ ЗАМОВЛЕННЯ"
                     Toast.makeText(this@OrderDetailsActivity, "Помилка сервера: ${response.code()}", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
-                btnAccept.isEnabled = true
-                btnAccept.text = "ПРИЙНЯТИ ЗАМОВЛЕННЯ"
+                binding.btnAccept.isEnabled = true
+                binding.btnAccept.text = "ПРИЙНЯТИ ЗАМОВЛЕННЯ"
                 Toast.makeText(this@OrderDetailsActivity, "Помилка мережі", Toast.LENGTH_SHORT).show()
             }
         }
@@ -201,7 +200,7 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
     override fun onMapReady(googleMap: GoogleMap) {
         map = googleMap
         map.uiSettings.apply {
-            isScrollGesturesEnabled = true // Разрешим скролл, чтобы водителю было удобнее
+            isScrollGesturesEnabled = true
             isZoomGesturesEnabled = true
             isMapToolbarEnabled = false
         }
@@ -233,13 +232,19 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
 
                     val builder = LatLngBounds.Builder()
                     path.forEach { builder.include(it) }
-                    map.moveCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 150))
+
+                    // Безопасное перемещение камеры с проверкой размера экрана
+                    try {
+                        map.moveCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 150))
+                    } catch (e: Exception) {
+                        // Фолбек, если карта еще не готова по размеру
+                        map.moveCamera(CameraUpdateFactory.newLatLngZoom(path.first(), 14f))
+                    }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
         } else {
-            // Если полилайна нет, пробуем поставить маркеры по координатам
             val origin = LatLng(order.originLat ?: 50.45, order.originLng ?: 30.52)
             map.moveCamera(CameraUpdateFactory.newLatLngZoom(origin, 14f))
         }

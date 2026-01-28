@@ -8,6 +8,9 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.taxiapp.driver.network.Order
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 class HistoryOrderAdapter(private val onClick: (Order) -> Unit) :
     ListAdapter<Order, HistoryOrderAdapter.HistoryViewHolder>(HistoryDiffCallback()) {
@@ -26,14 +29,27 @@ class HistoryOrderAdapter(private val onClick: (Order) -> Unit) :
         private val tvTo: TextView = itemView.findViewById(R.id.tv_to)
         private val tvPrice: TextView = itemView.findViewById(R.id.tv_price)
         private val tvDate: TextView = itemView.findViewById(R.id.tv_date)
+        private val tvDistance: TextView = itemView.findViewById(R.id.tv_distance)
 
         fun bind(order: Order) {
-            tvFrom.text = order.fromAddress
-            tvTo.text = order.toAddress
-            tvPrice.text = "${order.price.toInt()} ₴"
+            tvFrom.text = order.fromAddress ?: "Адреса не вказана"
+            tvTo.text = order.toAddress ?: "Адреса не вказана"
+            tvPrice.text = order.getFormattedPrice()
+            tvDistance.text = order.getFormattedDistance()
 
-            // Здесь можно отформатировать дату из order.createdAt (если есть)
-            tvDate.text = "Замовлення #${order.id}"
+            // Форматирование даты: 12 січ. 14:30
+            if (order.arrivedAt != null) {
+                try {
+                    val parsedDate = LocalDateTime.parse(order.arrivedAt)
+                    // Используем Locale("uk") для украинских названий месяцев
+                    val formatter = DateTimeFormatter.ofPattern("dd MMM HH:mm", Locale("uk"))
+                    tvDate.text = parsedDate.format(formatter)
+                } catch (e: Exception) {
+                    tvDate.text = "---"
+                }
+            } else {
+                tvDate.text = "---"
+            }
 
             itemView.setOnClickListener { onClick(order) }
         }

@@ -95,6 +95,10 @@
             android:screenOrientation="portrait"
             android:showOnLockScreen="true"
             android:turnScreenOn="true" />
+        <activity
+            android:name=".StatsActivity"
+            android:screenOrientation="portrait"
+            android:exported="false" />
         <service
             android:name=".service.MyFirebaseMessagingService"
             android:exported="false">

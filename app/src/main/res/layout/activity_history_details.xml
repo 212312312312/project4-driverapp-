@@ -1,147 +1,271 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/driver_black_bg">
+    android:background="@color/driver_black_bg"
+    android:fillViewport="true">
 
-    <RelativeLayout
-        android:id="@+id/header"
+
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="16dp"
-        app:layout_constraintTop_toTopOf="parent">
+        android:orientation="vertical"
+        android:paddingBottom="32dp">
 
-        <ImageButton
-            android:id="@+id/btn_back"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:src="@drawable/ic_arrow_back_black"
-            android:background="@drawable/bg_round_button"
-            android:padding="8dp"
-            app:tint="@color/driver_text_primary"/>
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="16dp">
+
+
+            <ImageButton
+                android:id="@+id/btn_back"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@drawable/ic_arrow_back_black"
+                android:background="@drawable/bg_round_button"
+                android:padding="8dp"
+                app:tint="@color/driver_text_primary" />
+
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Деталі поїздки"
+                android:textColor="@color/driver_text_primary"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:layout_centerInParent="true" />
+
+        </RelativeLayout>
+
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@color/driver_card_bg"
+            android:padding="16dp"
+            android:layout_marginTop="8dp">
+
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <ImageView android:layout_width="12dp" android:layout_height="12dp"
+                    android:src="@drawable/bg_circle_white" android:layout_marginTop="4dp" />
+
+                <TextView
+                    android:id="@+id/tv_from_detail"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="..."
+                    android:textColor="@color/driver_text_primary"
+                    android:layout_marginStart="12dp"
+                    android:textSize="16sp" />
+
+            </LinearLayout>
+
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="12dp">
+
+                <ImageView android:layout_width="12dp" android:layout_height="12dp"
+                    android:src="@drawable/bg_circle_dark" app:tint="@color/driver_neon_teal"
+                    android:layout_marginTop="4dp" />
+
+                <TextView
+                    android:id="@+id/tv_to_detail"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="..."
+                    android:textColor="@color/driver_text_primary"
+                    android:layout_marginStart="12dp"
+                    android:textSize="16sp" />
+
+            </LinearLayout>
+
+
+            <View android:layout_width="match_parent" android:layout_height="1dp"
+                android:background="#333" android:layout_marginVertical="16dp" />
+
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+
+                <TextView
+                    android:id="@+id/tv_tariff_name"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Standard"
+                    android:textColor="@color/driver_text_secondary"
+                    android:background="@drawable/bg_status_pill"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="2dp"
+                    android:textSize="12sp" />
+
+
+                <View android:layout_width="0dp" android:layout_height="0dp"
+                    android:layout_weight="1" />
+
+
+                <TextView
+                    android:id="@+id/tv_distance_detail"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0.0 км"
+                    android:textColor="@color/driver_text_secondary"
+                    android:layout_marginEnd="12dp" />
+
+
+                <TextView
+                    android:id="@+id/tv_price_detail"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0 ₴"
+                    android:textColor="@color/driver_text_primary"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="200dp"
+            android:layout_marginTop="2dp"
+            app:cardBackgroundColor="@color/driver_black_bg"
+            app:cardCornerRadius="0dp">
+
+            <fragment
+                android:id="@+id/map_detail"
+                android:name="com.google.android.gms.maps.SupportMapFragment"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clickable="true"
+                android:focusable="true" />
+
+        </androidx.cardview.widget.CardView>
+
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Деталі поїздки"
-            android:textColor="@color/driver_text_primary"
-            android:textSize="20sp"
-            android:textStyle="bold"
-            android:layout_centerInParent="true"/>
-    </RelativeLayout>
+            android:text="Зміни активності"
+            android:textColor="@color/driver_text_secondary"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="24dp"
+            android:textSize="14sp" />
 
-    <LinearLayout
-        android:id="@+id/info_panel"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:paddingHorizontal="16dp"
-        android:paddingBottom="16dp"
-        app:layout_constraintTop_toBottomOf="@id/header">
 
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:background="@drawable/bg_driver_input"
-            android:padding="12dp"
-            android:layout_marginEnd="8dp">
-            
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Вартість"
-                android:textColor="@color/driver_text_secondary"
-                android:textSize="12sp"/>
-            
-            <TextView
-                android:id="@+id/tv_price_detail"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="0 ₴"
-                android:textColor="@color/driver_neon_teal"
-                android:textSize="20sp"
-                android:textStyle="bold"/>
-        </LinearLayout>
+            android:background="@color/driver_card_bg"
+            android:padding="16dp"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
 
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:background="@drawable/bg_driver_input"
-            android:padding="12dp"
-            android:layout_marginStart="8dp">
 
             <TextView
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="Дистанція"
-                android:textColor="@color/driver_text_secondary"
-                android:textSize="12sp"/>
-
-            <TextView
-                android:id="@+id/tv_distance_detail"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="0 км"
+                android:layout_weight="1"
+                android:text="Успішне замовлення"
                 android:textColor="@color/driver_text_primary"
-                android:textSize="20sp"
-                android:textStyle="bold"/>
+                android:textSize="16sp" />
+
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="+1"
+                android:textColor="@color/driver_neon_teal"
+                android:textStyle="bold"
+                android:textSize="16sp" />
+
         </LinearLayout>
+
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Автомобіль"
+            android:textColor="@color/driver_text_secondary"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="24dp"
+            android:textSize="14sp" />
+
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/driver_card_bg"
+            android:padding="16dp"
+            android:layout_marginTop="8dp"
+            android:orientation="vertical">
+
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+
+                <TextView
+                    android:id="@+id/tv_car_plate"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="AA 0000 AA"
+                    android:textColor="@color/driver_text_black"
+                    android:background="@drawable/bg_license_plate"
+                    android:paddingHorizontal="8dp"
+                    android:textStyle="bold" />
+
+
+                <TextView
+                    android:id="@+id/tv_car_model"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Toyota Camry"
+                    android:textColor="@color/driver_text_primary"
+                    android:layout_marginStart="16dp"
+                    android:textSize="16sp" />
+
+            </LinearLayout>
+
+
+            <TextView
+                android:id="@+id/tv_car_class"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Standard"
+                android:textColor="@color/driver_text_secondary"
+                android:layout_marginTop="8dp"
+                android:textSize="14sp" />
+
+        </LinearLayout>
+
+
     </LinearLayout>
 
-    <androidx.cardview.widget.CardView
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_margin="16dp"
-        app:cardCornerRadius="16dp"
-        app:cardBackgroundColor="@color/driver_black_bg"
-        app:layout_constraintTop_toBottomOf="@id/info_panel"
-        app:layout_constraintBottom_toBottomOf="parent">
-
-        <fragment
-            android:id="@+id/map_detail"
-            android:name="com.google.android.gms.maps.SupportMapFragment"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"/>
-        
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:background="#D9000000"
-            android:padding="16dp"
-            android:layout_gravity="bottom">
-            
-            <TextView
-                android:id="@+id/tv_from_detail"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="A: ..."
-                android:textColor="@color/driver_text_primary"
-                android:drawablePadding="8dp"
-                app:drawableStartCompat="@drawable/bg_circle_white"/>
-            
-            <View
-                android:layout_width="1dp"
-                android:layout_height="12dp"
-                android:background="@color/driver_text_secondary"
-                android:layout_marginStart="6dp"
-                android:layout_marginVertical="2dp"/>
-
-            <TextView
-                android:id="@+id/tv_to_detail"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="B: ..."
-                android:textColor="@color/driver_text_primary"
-                android:drawablePadding="8dp"
-                app:drawableStartCompat="@drawable/ic_place_small"/>
-        </LinearLayout>
-
-    </androidx.cardview.widget.CardView>
-
-</androidx.constraintlayout.widget.ConstraintLayout>
+</ScrollView>

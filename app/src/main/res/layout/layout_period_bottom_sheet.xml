@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_bottom_sheet_driver"
+    android:paddingBottom="24dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Період"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="@color/driver_text_primary"
+        android:gravity="center"
+        android:padding="16dp" />
+
+    <View android:layout_width="match_parent" android:layout_height="1dp"
+        android:background="@color/driver_card_bg" />
+
+    <LinearLayout
+        android:id="@+id/btn_today"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="16dp"
+        android:background="?attr/selectableItemBackground">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Сьогодні"
+            android:textSize="16sp"
+            android:textColor="@color/driver_text_primary" />
+
+        <ImageView
+            android:id="@+id/check_today"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_check_mark"
+            app:tint="@color/driver_neon_teal"
+            android:visibility="visible" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/btn_yesterday"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="16dp"
+        android:background="?attr/selectableItemBackground">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Вчора"
+            android:textSize="16sp"
+            android:textColor="@color/driver_text_primary" />
+
+        <ImageView
+            android:id="@+id/check_yesterday"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_check_mark"
+            app:tint="@color/driver_neon_teal"
+            android:visibility="invisible" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/btn_this_week"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="16dp"
+        android:background="?attr/selectableItemBackground">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Поточний тиждень"
+            android:textSize="16sp"
+            android:textColor="@color/driver_text_primary" />
+
+        <ImageView
+            android:id="@+id/check_this_week"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_check_mark"
+            app:tint="@color/driver_neon_teal"
+            android:visibility="invisible" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/btn_last_week"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="16dp"
+        android:background="?attr/selectableItemBackground">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Минулий тиждень"
+            android:textSize="16sp"
+            android:textColor="@color/driver_text_primary" />
+
+        <ImageView
+            android:id="@+id/check_last_week"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_check_mark"
+            app:tint="@color/driver_neon_teal"
+            android:visibility="invisible" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/btn_this_month"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="16dp"
+        android:background="?attr/selectableItemBackground">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Поточний місяць"
+            android:textSize="16sp"
+            android:textColor="@color/driver_text_primary" />
+
+        <ImageView
+            android:id="@+id/check_this_month"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_check_mark"
+            app:tint="@color/driver_neon_teal"
+            android:visibility="invisible" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/btn_last_month"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="16dp"
+        android:background="?attr/selectableItemBackground">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Минулий місяць"
+            android:textSize="16sp"
+            android:textColor="@color/driver_text_primary" />
+
+        <ImageView
+            android:id="@+id/check_last_month"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_check_mark"
+            app:tint="@color/driver_neon_teal"
+            android:visibility="invisible" />
+    </LinearLayout>
+
+</LinearLayout>

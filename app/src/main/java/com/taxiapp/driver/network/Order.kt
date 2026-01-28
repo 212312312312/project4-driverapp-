@@ -26,6 +26,11 @@ data class Order(
     @SerializedName("fromSector") val fromSector: String? = null,
     @SerializedName("toSector") val toSector: String? = null,
 
+    @SerializedName("arrivedAt") val arrivedAt: String? = null, // Приходит как ISO строка
+    @SerializedName("carModel") val carModel: String? = null,
+    @SerializedName("carPlate") val carPlate: String? = null,
+    @SerializedName("carColor") val carColor: String? = null,
+
     // --- НОВОЕ ПОЛЕ ---
     @SerializedName("isRatedByDriver") val isRatedByDriver: Boolean = false
 ) : Serializable {
