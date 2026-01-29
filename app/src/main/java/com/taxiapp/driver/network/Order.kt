@@ -31,8 +31,10 @@ data class Order(
     @SerializedName("carPlate") val carPlate: String? = null,
     @SerializedName("carColor") val carColor: String? = null,
 
+    @SerializedName("isRatedByDriver") val isRatedByDriver: Boolean = false,
+
     // --- НОВОЕ ПОЛЕ ---
-    @SerializedName("isRatedByDriver") val isRatedByDriver: Boolean = false
+    @SerializedName("scheduledAt") val scheduledAt: String? = null
 ) : Serializable {
 
     fun getFormattedPrice(): String = "${price.toInt()} ₴"
@@ -46,5 +48,9 @@ data class Order(
     fun getFormattedDistance(): String {
         val km = (distanceMeters ?: 0) / 1000.0
         return String.format("%.1f км", km)
+    }
+
+    fun isScheduled(): Boolean {
+        return status == "SCHEDULED" || !scheduledAt.isNullOrEmpty()
     }
 }

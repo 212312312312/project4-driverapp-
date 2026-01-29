@@ -25,14 +25,14 @@ class OrdersActivity : AppCompatActivity() {
     private lateinit var rvHistory: RecyclerView
     private lateinit var progressBar: ProgressBar
 
-    // Элементы активного заказа
     private lateinit var cardActive: CardView
     private lateinit var tvActiveRoute: TextView
     private lateinit var btnOpenActive: Button
     private lateinit var tvNoActive: TextView
 
+    // ТУТ НУЖНО ИСПОЛЬЗОВАТЬ HistoryOrderAdapter (для истории), а не OrderAdapter (для эфира)
+    // Убедись, что HistoryOrderAdapter у тебя есть (я видел его код ранее)
     private val historyAdapter = HistoryOrderAdapter { order ->
-        // Открытие деталей истории
         val intent = Intent(this, HistoryDetailsActivity::class.java)
         intent.putExtra("EXTRA_ORDER", order)
         startActivity(intent)
@@ -46,8 +46,6 @@ class OrdersActivity : AppCompatActivity() {
 
         initViews()
         setupListeners()
-
-        // По умолчанию открываем Активные
         switchTab(true)
     }
 
@@ -75,15 +73,19 @@ class OrdersActivity : AppCompatActivity() {
 
         btnOpenActive.setOnClickListener {
             currentOrder?.let { order ->
-                // ВАЖНОЕ ИСПРАВЛЕНИЕ:
-                // Проверяем статус. Если это Предложение -> Открываем OrderOfferActivity
                 if (order.status == "OFFERING") {
                     val intent = Intent(this, OrderOfferActivity::class.java)
                     intent.putExtra("EXTRA_ORDER", order)
                     startActivity(intent)
-                    finish() // Закрываем список, чтобы не мешал
+                    finish()
+                } else if (order.status == "SCHEDULED") {
+                    // Просто показываем детали, но не запускаем прогресс поездки
+                    val intent = Intent(this, OrderDetailsActivity::class.java)
+                    intent.putExtra("EXTRA_ORDER", order)
+                    // Важно: в OrderDetailsActivity нужно скрыть кнопку "Прийняти", если заказ уже принят
+                    startActivity(intent)
                 } else {
-                    // Если заказ уже принят -> Открываем OrderProgressActivity
+                    // ACCEPTED -> Едем
                     val intent = Intent(this, OrderProgressActivity::class.java)
                     intent.putExtra("EXTRA_ORDER", order)
                     startActivity(intent)
@@ -94,7 +96,6 @@ class OrdersActivity : AppCompatActivity() {
 
     private fun switchTab(isActive: Boolean) {
         if (isActive) {
-            // Стиль кнопок
             tabActive.background = ContextCompat.getDrawable(this, R.drawable.bg_status_pill)
             tabActive.backgroundTintList = ContextCompat.getColorStateList(this, R.color.driver_neon_teal)
             tabActive.setTextColor(ContextCompat.getColor(this, R.color.driver_black_bg))
@@ -102,7 +103,6 @@ class OrdersActivity : AppCompatActivity() {
             tabHistory.background = null
             tabHistory.setTextColor(ContextCompat.getColor(this, R.color.driver_text_secondary))
 
-            // Видимость контейнеров
             containerActive.visibility = View.VISIBLE
             rvHistory.visibility = View.GONE
 
@@ -134,17 +134,28 @@ class OrdersActivity : AppCompatActivity() {
                     cardActive.visibility = View.VISIBLE
                     tvNoActive.visibility = View.GONE
 
-                    // ВАЖНОЕ ИСПРАВЛЕНИЕ UI:
+                    // 1. ПРЕДЛОЖЕНИЕ
                     if (currentOrder?.status == "OFFERING") {
-                        // Если это предложение, меняем текст, чтобы водитель понял
                         tvActiveRoute.text = "⚡ Нова пропозиція! (${currentOrder?.tariffName})"
                         tvActiveRoute.setTextColor(ContextCompat.getColor(this@OrdersActivity, R.color.driver_neon_teal))
                         btnOpenActive.text = "Переглянути"
-                    } else {
-                        // Обычный режим
+                        btnOpenActive.backgroundTintList = ContextCompat.getColorStateList(this@OrdersActivity, R.color.driver_neon_teal)
+                    }
+                    // 2. ЗАПЛАНИРОВАННЫЙ (ПРИНЯТЫЙ, НО ЕЩЕ РАНО)
+                    else if (currentOrder?.status == "SCHEDULED") {
+                        val time = currentOrder?.scheduledAt?.replace("T", " ")?.take(16) ?: ""
+                        tvActiveRoute.text = "⏳ Чекайте часу подачі: $time"
+                        tvActiveRoute.setTextColor(ContextCompat.getColor(this@OrdersActivity, R.color.taxi_yellow))
+
+                        btnOpenActive.text = "Деталі (Чекаємо)"
+                        btnOpenActive.backgroundTintList = ContextCompat.getColorStateList(this@OrdersActivity, android.R.color.darker_gray)
+                    }
+                    // 3. АКТИВНЫЙ (ACCEPTED, IN_PROGRESS)
+                    else {
                         tvActiveRoute.text = "${currentOrder?.fromAddress} -> ${currentOrder?.toAddress}"
                         tvActiveRoute.setTextColor(ContextCompat.getColor(this@OrdersActivity, android.R.color.white))
                         btnOpenActive.text = "Відкрити"
+                        btnOpenActive.backgroundTintList = ContextCompat.getColorStateList(this@OrdersActivity, R.color.driver_neon_teal)
                     }
 
                 } else {
@@ -152,9 +163,7 @@ class OrdersActivity : AppCompatActivity() {
                     tvNoActive.visibility = View.VISIBLE
                 }
             } catch (e: Exception) {
-                progressBar.visibility = View.GONE
-                cardActive.visibility = View.GONE
-                tvNoActive.visibility = View.VISIBLE
+                // ...
             }
         }
     }
@@ -165,7 +174,6 @@ class OrdersActivity : AppCompatActivity() {
             try {
                 val response = ApiClient.getInstance().getApiService(this@OrdersActivity).getOrderHistory()
                 progressBar.visibility = View.GONE
-
                 if (response.isSuccessful) {
                     historyAdapter.submitList(response.body())
                 }

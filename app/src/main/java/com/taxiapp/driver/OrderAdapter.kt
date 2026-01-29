@@ -59,10 +59,22 @@ class OrderAdapter(
             tvFrom.text = order.fromAddress
             tvTo.text = order.toAddress
             tvTariff.text = order.tariffName
-            tvDistance.text = order.getFormattedDistance()
 
-            // --- ЛОГИКА СЕКТОРОВ ---
-            // Сектор подачи (Откуда)
+            // --- НОВАЯ ЛОГИКА: ВРЕМЯ ИЛИ ДИСТАНЦИЯ ---
+            if (order.isScheduled()) {
+                // Если заказ запланирован - показываем время подачи оранжевым цветом
+                val timeStr = order.scheduledAt?.replace("T", " ")?.take(16) ?: ""
+                tvDistance.text = "🕒 $timeStr"
+                tvDistance.setTextColor(Color.parseColor("#FF9800")) // Оранжевый
+            } else {
+                // Если обычный заказ - показываем дистанцию (как было)
+                tvDistance.text = order.getFormattedDistance()
+                // Возвращаем стандартный цвет (белый/серый), так как RecyclerView переиспользует View
+                tvDistance.setTextColor(ContextCompat.getColor(itemView.context, R.color.driver_text_secondary))
+            }
+            // ------------------------------------------
+
+            // --- ЛОГИКА СЕКТОРОВ (ТВОЯ) ---
             if (!order.fromSector.isNullOrEmpty()) {
                 tvSectorFrom.text = order.fromSector
                 tvSectorFrom.visibility = View.VISIBLE
@@ -70,7 +82,6 @@ class OrderAdapter(
                 tvSectorFrom.visibility = View.GONE
             }
 
-            // Сектор назначения (Куда)
             if (!order.toSector.isNullOrEmpty()) {
                 tvSectorTo.text = order.toSector
                 tvSectorTo.visibility = View.VISIBLE
@@ -79,7 +90,7 @@ class OrderAdapter(
             }
             // -----------------------
 
-            // Оплата (Cash/Card)
+            // --- ОПЛАТА (ТВОЯ) ---
             val method = order.paymentMethod ?: "CASH"
             if (method == "CASH") {
                 llPriceBg.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#FFD600"))
@@ -93,7 +104,7 @@ class OrderAdapter(
                 ivPaymentIcon.setColorFilter(Color.WHITE)
             }
 
-            // Остановки
+            // --- ОСТАНОВКИ (ТВОИ) ---
             stopsContainer.removeAllViews()
             if (!order.stops.isNullOrEmpty()) {
                 val inflater = LayoutInflater.from(itemView.context)

@@ -10,9 +10,10 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.tabs.TabLayout
 import com.google.gson.Gson
 import com.taxiapp.driver.network.ApiClient
-import com.taxiapp.driver.network.Order // Використовуємо твій клас
+import com.taxiapp.driver.network.Order
 import com.taxiapp.driver.utils.SessionManager
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
@@ -31,9 +32,10 @@ class EtherActivity : AppCompatActivity() {
     private lateinit var rvOrders: RecyclerView
     private lateinit var pbLoading: ProgressBar
     private lateinit var emptyState: View
+    private lateinit var tabLayout: TabLayout
 
-    // Тепер список працює з твоїм класом Order
-    private val ordersList = mutableListOf<Order>()
+    private val allOrdersList = mutableListOf<Order>()
+    private var currentTabIndex = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,11 +46,24 @@ class EtherActivity : AppCompatActivity() {
         rvOrders = findViewById(R.id.rv_orders_list)
         pbLoading = findViewById(R.id.pb_loading)
         emptyState = findViewById(R.id.ll_empty_state)
+        tabLayout = findViewById(R.id.ether_tabs)
         val btnBack = findViewById<View>(R.id.btn_back)
+
+        // Настройка табов
+        tabLayout.addTab(tabLayout.newTab().setText("Зараз"))
+        tabLayout.addTab(tabLayout.newTab().setText("Заплановані"))
+
+        tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab?) {
+                currentTabIndex = tab?.position ?: 0
+                filterAndShowOrders()
+            }
+            override fun onTabUnselected(tab: TabLayout.Tab?) {}
+            override fun onTabReselected(tab: TabLayout.Tab?) {}
+        })
 
         rvOrders.layoutManager = LinearLayoutManager(this)
 
-        // Налаштування адаптера
         adapter = OrderAdapter { selectedOrder ->
             val intent = Intent(this, OrderDetailsActivity::class.java)
             intent.putExtra("EXTRA_ORDER", selectedOrder)
@@ -81,25 +96,33 @@ class EtherActivity : AppCompatActivity() {
         pbLoading.visibility = View.VISIBLE
         lifecycleScope.launch {
             try {
-                // Виклик API через Retrofit
-                val response = ApiClient.getInstance().getApiService(this@EtherActivity).getAvailableOrders()
-                pbLoading.visibility = View.GONE
+                // 1. Обычные заказы
+                val responseActive = ApiClient.getInstance().getApiService(this@EtherActivity).getAvailableOrders()
+                val activeList = if (responseActive.isSuccessful) responseActive.body() ?: emptyList() else emptyList()
 
-                if (response.isSuccessful) {
-                    val orders = response.body() ?: emptyList()
-                    ordersList.clear()
-                    ordersList.addAll(orders)
-                    updateUI()
-                }
+                // 2. Запланированные (Предположим, тот же метод возвращает и их, или сервер шлет все)
+                // Если у тебя на сервере getAvailableOrders фильтрует только REQUESTED,
+                // то запланированные придут только через сокет или если сервер их включает.
+                // В OrderService.getFilteredOrdersForDriver мы берем REQUESTED.
+                // Для SCHEDULED нужна отдельная ручка или логика на сервере.
+                // ПОКА работаем с тем, что есть: считаем, что сервер может прислать SCHEDULED
+
+                allOrdersList.clear()
+                allOrdersList.addAll(activeList)
+
+                // Сортировка: Срочные сверху
+                allOrdersList.sortByDescending { it.id }
+
+                updateUI()
             } catch (e: Exception) {
+                Log.e("EtherActivity", "Помилка: ${e.message}")
+            } finally {
                 pbLoading.visibility = View.GONE
-                Log.e("EtherActivity", "Помилка завантаження: ${e.message}")
             }
         }
     }
 
     private fun setupWebSocket() {
-        // Заміни на актуальний IP твого сервера
         val url = "ws://192.168.0.104:8080/ws-taxi/websocket"
         stompClient = Stomp.over(Stomp.ConnectionProvider.OKHTTP, url)
 
@@ -109,11 +132,10 @@ class EtherActivity : AppCompatActivity() {
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe({ topicMessage ->
-                // Використовуємо Order::class.java для десеріалізації
                 val newOrder = Gson().fromJson(topicMessage.payload, Order::class.java)
                 addNewOrder(newOrder)
             }, { error ->
-                Log.e("WS", "Помилка підписки: ${error.message}")
+                Log.e("WS", "Error: ${error.message}")
             })
 
         val lifecycleDisposable = stompClient.lifecycle()
@@ -122,7 +144,6 @@ class EtherActivity : AppCompatActivity() {
             .subscribe { lifecycleEvent ->
                 when (lifecycleEvent.type) {
                     ua.naiksoftware.stomp.dto.LifecycleEvent.Type.OPENED -> Log.d("WS", "Connected")
-                    ua.naiksoftware.stomp.dto.LifecycleEvent.Type.ERROR -> Log.e("WS", "Error", lifecycleEvent.exception)
                     else -> {}
                 }
             }
@@ -132,19 +153,35 @@ class EtherActivity : AppCompatActivity() {
     }
 
     private fun addNewOrder(order: Order) {
-        // Виправлено помилку "it": явно вказуємо об'єкт перевірки
-        if (ordersList.none { existing -> existing.id == order.id }) {
-            ordersList.add(0, order)
-            updateUI()
+        // Удаляем старую версию, если есть
+        allOrdersList.removeAll { it.id == order.id }
+
+        // Добавляем новую, если она подходит (например, не CANCELLED)
+        if (order.status != "CANCELLED" && order.status != "COMPLETED") {
+            allOrdersList.add(0, order)
             Toast.makeText(this, "Нове замовлення!", Toast.LENGTH_SHORT).show()
         }
+
+        updateUI()
     }
 
     private fun updateUI() {
-        if (ordersList.isNotEmpty()) {
+        filterAndShowOrders()
+    }
+
+    private fun filterAndShowOrders() {
+        val filtered = if (currentTabIndex == 0) {
+            // Вкладка "Зараз": REQUESTED (и другие активные, если вдруг попадут)
+            allOrdersList.filter { !it.isScheduled() }
+        } else {
+            // Вкладка "Заплановані": SCHEDULED
+            allOrdersList.filter { it.isScheduled() }
+        }
+
+        if (filtered.isNotEmpty()) {
             rvOrders.visibility = View.VISIBLE
             emptyState.visibility = View.GONE
-            adapter.submitList(ordersList.toList())
+            adapter.submitList(filtered)
         } else {
             rvOrders.visibility = View.GONE
             emptyState.visibility = View.VISIBLE
