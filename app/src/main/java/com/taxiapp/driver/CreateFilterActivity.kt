@@ -10,7 +10,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.taxiapp.driver.network.ApiClient
 import com.taxiapp.driver.network.CreateFilterRequest
-import com.taxiapp.driver.network.Sector
+import com.taxiapp.driver.network.DriverFilter
 import kotlinx.coroutines.launch
 
 class CreateFilterActivity : AppCompatActivity() {
@@ -33,20 +33,21 @@ class CreateFilterActivity : AppCompatActivity() {
     private var selectedToIds = mutableListOf<Long>()
     private var selectedDistance = 5.0
 
-    // Змінна, щоб розуміти, для якого блоку ми зараз вибираємо сектори
+    // Для режима редактирования
+    private var editingFilterId: Long? = null
+    private var savedIsAuto: Boolean = false
+    private var savedIsCycle: Boolean = false
+
     private var isPickingFrom = true
 
-    // Лаунчер для відкриття екрана вибору секторів та обробки результату
     private val sectorPickerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             val ids = result.data?.getLongArrayExtra("SELECTED_IDS")?.toMutableList() ?: mutableListOf()
             if (isPickingFrom) {
                 selectedFromIds = ids
-                // Оновлюємо текст на кнопці "Звідки"
                 btnSelectFromSectors.text = "Вибрано секторів: ${ids.size}"
             } else {
                 selectedToIds = ids
-                // Оновлюємо текст лічильника "Куди"
                 tvSelectedToCount.text = "Вибрано секторів: ${ids.size}"
             }
         }
@@ -58,6 +59,13 @@ class CreateFilterActivity : AppCompatActivity() {
 
         initViews()
         setupListeners()
+
+        // ПРОВЕРКА НА РЕДАКТИРОВАНИЕ
+        // Если передали объект фильтра, включаем режим редактирования
+        val filter = intent.getSerializableExtra("FILTER_DATA") as? DriverFilter
+        if (filter != null) {
+            setupEditMode(filter)
+        }
     }
 
     private fun initViews() {
@@ -75,7 +83,6 @@ class CreateFilterActivity : AppCompatActivity() {
         spPayment = findViewById(R.id.sp_payment_type)
         btnCreate = findViewById(R.id.btn_create_filter)
 
-        // Налаштування спиннера оплати
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, arrayOf("Будь-який", "Готівка", "Картка"))
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         spPayment.adapter = adapter
@@ -84,7 +91,6 @@ class CreateFilterActivity : AppCompatActivity() {
     private fun setupListeners() {
         findViewById<View>(R.id.btn_back_create).setOnClickListener { finish() }
 
-        // Перемикач ЗВІДКИ (Радіус або Сектори)
         rgFromType.setOnCheckedChangeListener { _, checkedId ->
             if (checkedId == R.id.rb_distance) {
                 containerDistance.visibility = View.VISIBLE
@@ -95,9 +101,8 @@ class CreateFilterActivity : AppCompatActivity() {
             }
         }
 
-        // SeekBar відстані (від 0.5 до 30.0 км з кроком 0.5)
         sbDistance.max = 59
-        sbDistance.progress = 9 // 5.0 км
+        sbDistance.progress = 9
         sbDistance.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(s: SeekBar?, p: Int, f: Boolean) {
                 selectedDistance = (p / 2.0) + 0.5
@@ -107,7 +112,6 @@ class CreateFilterActivity : AppCompatActivity() {
             override fun onStopTrackingTouch(s: SeekBar?) {}
         })
 
-        // Перемикач ТАРИФУ (Простий або Складний)
         rgTariffType.setOnCheckedChangeListener { _, checkedId ->
             if (checkedId == R.id.rb_simple) {
                 containerSimple.visibility = View.VISIBLE
@@ -118,30 +122,67 @@ class CreateFilterActivity : AppCompatActivity() {
             }
         }
 
-        // Кнопка вибору секторів "Звідки" -> тепер відкриває екран з картою
-        btnSelectFromSectors.setOnClickListener {
-            openSectorPicker(true)
-        }
-
-        // Кнопка вибору секторів "Куди" -> тепер відкриває екран з картою
-        btnSelectToSectors.setOnClickListener {
-            openSectorPicker(false)
-        }
-
+        btnSelectFromSectors.setOnClickListener { openSectorPicker(true) }
+        btnSelectToSectors.setOnClickListener { openSectorPicker(false) }
         btnCreate.setOnClickListener { saveFilter() }
     }
 
-    /**
-     * Відкриває SectorSelectionActivity та передає поточний вибір
-     */
+    private fun setupEditMode(f: DriverFilter) {
+        editingFilterId = f.id
+        savedIsAuto = f.isAuto
+        savedIsCycle = f.isCycle
+
+        btnCreate.text = "ЗБЕРЕГТИ ЗМІНИ"
+        findViewById<TextView>(R.id.tv_header_title).text = "Редагування фільтра"
+
+        // Заполняем поля
+        etName.setText(f.name)
+
+        // Звідки
+        if (f.fromType == "DISTANCE") {
+            rgFromType.check(R.id.rb_distance)
+            selectedDistance = f.fromDistance ?: 5.0
+            sbDistance.progress = ((selectedDistance - 0.5) * 2).toInt()
+            tvDistanceVal.text = "Радіус: $selectedDistance км"
+        } else {
+            rgFromType.check(R.id.rb_from_sectors)
+            selectedFromIds = f.fromSectors.toMutableList()
+            btnSelectFromSectors.text = "Вибрано секторів: ${selectedFromIds.size}"
+        }
+
+        // Куди
+        selectedToIds = f.toSectors.toMutableList()
+        tvSelectedToCount.text = "Вибрано секторів: ${selectedToIds.size}"
+
+        // Тариф
+        if (f.tariffType == "SIMPLE") {
+            rgTariffType.check(R.id.rb_simple)
+            findViewById<EditText>(R.id.et_min_price).setText(f.minPrice?.toString() ?: "")
+            findViewById<EditText>(R.id.et_min_price_km).setText(f.minPricePerKm?.toString() ?: "")
+        } else {
+            rgTariffType.check(R.id.rb_complex)
+            findViewById<EditText>(R.id.et_complex_min_price).setText(f.complexMinPrice?.toString() ?: "")
+            findViewById<EditText>(R.id.et_complex_city).setText(f.complexPriceKmCity?.toString() ?: "")
+
+            // Заполняем новые поля, если они пришли с сервера
+            findViewById<EditText>(R.id.et_complex_km_in_min).setText(f.complexKmInMin?.toString() ?: "")
+            findViewById<EditText>(R.id.et_complex_suburbs).setText(f.complexPriceKmSuburbs?.toString() ?: "")
+        }
+
+        // Оплата
+        val paymentIdx = when (f.paymentType) {
+            "CASH" -> 1
+            "CARD" -> 2
+            else -> 0
+        }
+        spPayment.setSelection(paymentIdx)
+    }
+
     private fun openSectorPicker(pickingFrom: Boolean) {
         isPickingFrom = pickingFrom
         val intent = Intent(this, SectorSelectionActivity::class.java)
-
-        // Передаємо вже вибрані ID, щоб вони підсвітилися на карті відразу
         val currentSelection = if (isPickingFrom) selectedFromIds else selectedToIds
         intent.putExtra("SELECTED_IDS", currentSelection.toLongArray())
-
         sectorPickerLauncher.launch(intent)
     }
 
@@ -158,28 +199,51 @@ class CreateFilterActivity : AppCompatActivity() {
 
         val request = CreateFilterRequest(
             name = name,
+            // Если редактируем - сохраняем старые настройки режимов, если создаем - по умолчанию выкл
+            isAuto = if (editingFilterId != null) savedIsAuto else false,
+            isCycle = if (editingFilterId != null) savedIsCycle else false,
+
             fromType = if (rgFromType.checkedRadioButtonId == R.id.rb_distance) "DISTANCE" else "SECTORS",
             fromDistance = if (rgFromType.checkedRadioButtonId == R.id.rb_distance) selectedDistance else null,
             fromSectors = selectedFromIds,
             toSectors = selectedToIds,
             tariffType = if (rgTariffType.checkedRadioButtonId == R.id.rb_simple) "SIMPLE" else "COMPLEX",
+
+            // Простий
             minPrice = findViewById<EditText>(R.id.et_min_price).text.toString().toDoubleOrNull(),
             minPricePerKm = findViewById<EditText>(R.id.et_min_price_km).text.toString().toDoubleOrNull(),
+
+            // Складний
             complexMinPrice = findViewById<EditText>(R.id.et_complex_min_price).text.toString().toDoubleOrNull(),
+            complexKmInMin = findViewById<EditText>(R.id.et_complex_km_in_min).text.toString().toDoubleOrNull(),
             complexPriceKmCity = findViewById<EditText>(R.id.et_complex_city).text.toString().toDoubleOrNull(),
+            complexPriceKmSuburbs = findViewById<EditText>(R.id.et_complex_suburbs).text.toString().toDoubleOrNull(),
+
             paymentType = paymentType
         )
 
         lifecycleScope.launch {
             try {
-                val res = ApiClient.getInstance().getApiService(this@CreateFilterActivity).createFilter(request)
+                val api = ApiClient.getInstance().getApiService(this@CreateFilterActivity)
+
+                val res = if (editingFilterId != null) {
+                    // Вызываем UPDATE
+                    api.updateFilter(editingFilterId!!, request)
+                } else {
+                    // Вызываем CREATE
+                    api.createFilter(request)
+                }
+
                 if (res.isSuccessful) {
-                    Toast.makeText(this@CreateFilterActivity, "Фільтр створено!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@CreateFilterActivity,
+                        if (editingFilterId != null) "Зміни збережено!" else "Фільтр створено!",
+                        Toast.LENGTH_SHORT).show()
                     finish()
                 } else {
-                    Toast.makeText(this@CreateFilterActivity, "Помилка сервера", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@CreateFilterActivity, "Помилка сервера: ${res.code()}", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
+                e.printStackTrace()
                 Toast.makeText(this@CreateFilterActivity, "Помилка мережі", Toast.LENGTH_SHORT).show()
             }
         }

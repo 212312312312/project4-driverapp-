@@ -21,6 +21,7 @@ data class DriverStatsDto(
     val avgPricePerKm: Double,
     val totalHours: Double
 )
+
 interface DriverApiService {
 
     // --- ВХОД ---
@@ -60,7 +61,7 @@ interface DriverApiService {
     @DELETE("api/v1/driver/location")
     suspend fun deleteLocation(): Response<Void>
 
-    // --- УВЕДОМЛЕНИЯ О СТАТУСЕ ЗАКАЗА ---
+    // --- УВЕДОМЛЕНИЯ ---
     @POST("api/v1/driver/orders/{id}/arrive")
     suspend fun notifyArrived(@Path("id") orderId: Long): Response<Void>
 
@@ -79,6 +80,7 @@ interface DriverApiService {
     @GET("api/v1/driver/activity")
     suspend fun getDriverActivity(): Response<DriverActivityDto>
 
+    // --- ФИЛЬТРЫ ---
     @GET("api/v1/driver/filters")
     suspend fun getFilters(): Response<List<DriverFilter>>
 
@@ -87,6 +89,19 @@ interface DriverApiService {
 
     @PATCH("api/v1/driver/filters/{id}/toggle")
     suspend fun toggleFilter(@Path("id") id: Long): Response<Void>
+
+    // НОВИЙ МЕТОД: Оновлення режимів фільтра
+    @PATCH("api/v1/driver/filters/{id}/mode")
+    suspend fun updateFilterMode(
+        @Path("id") id: Long,
+        @Body req: UpdateFilterModeRequest
+    ): Response<DriverFilter>
+
+    @PUT("api/v1/driver/filters/{id}")
+    suspend fun updateFilter(
+        @Path("id") id: Long,
+        @Body req: CreateFilterRequest
+    ): Response<DriverFilter>
 
     @PATCH("api/v1/driver/filters/disable-all")
     suspend fun disableAllFilters(): Response<Void>
@@ -109,13 +124,12 @@ interface DriverApiService {
     @GET("api/v1/orders/{id}")
     suspend fun getOrderById(@Path("id") id: Long): Response<Order>
 
-    // --- ОЦЕНКА (НОВЕ) ---
     @POST("api/v1/driver/rate")
     suspend fun rateClient(@Body request: RateClientRequest): Response<Void>
 
     @GET("api/v1/driver/stats")
     suspend fun getStats(
-        @Query("from") from: String, // YYYY-MM-DD
-        @Query("to") to: String      // YYYY-MM-DD
+        @Query("from") from: String,
+        @Query("to") to: String
     ): Response<DriverStatsDto>
 }
