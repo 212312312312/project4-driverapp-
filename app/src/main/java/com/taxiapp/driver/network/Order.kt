@@ -23,17 +23,19 @@ data class Order(
     @SerializedName("comment") val comment: String? = null,
     @SerializedName("services") val services: List<TaxiService>? = null,
 
+    // ИСПРАВЛЕНО: Сектора приходят строками, так и оставляем
     @SerializedName("fromSector") val fromSector: String? = null,
     @SerializedName("toSector") val toSector: String? = null,
 
-    @SerializedName("arrivedAt") val arrivedAt: String? = null, // Приходит как ISO строка
+    // --- ДОБАВЛЕНО: Объект клиента для отображения рейтинга ---
+    @SerializedName("client") val client: OrderClient? = null,
+
+    @SerializedName("arrivedAt") val arrivedAt: String? = null,
     @SerializedName("carModel") val carModel: String? = null,
     @SerializedName("carPlate") val carPlate: String? = null,
     @SerializedName("carColor") val carColor: String? = null,
 
     @SerializedName("isRatedByDriver") val isRatedByDriver: Boolean = false,
-
-    // --- НОВОЕ ПОЛЕ ---
     @SerializedName("scheduledAt") val scheduledAt: String? = null
 ) : Serializable {
 
@@ -54,3 +56,11 @@ data class Order(
         return status == "SCHEDULED" || !scheduledAt.isNullOrEmpty()
     }
 }
+
+// Новый класс для данных клиента
+data class OrderClient(
+    @SerializedName("id") val id: Long,
+    @SerializedName("fullName") val fullName: String?,
+    @SerializedName("rating") val rating: Double = 5.0,
+    @SerializedName("completedRides") val completedRides: Int = 0 // Или другое поле, если сервер шлет tripsCount
+) : Serializable

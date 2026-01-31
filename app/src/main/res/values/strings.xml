@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Taxi Driver</string>
+    <string name="google_maps_key">AIzaSyCl5DccocpzluJxAX_RwTqC5baCHgB9ybA</string>
 </resources>
+
