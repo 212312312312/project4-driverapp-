@@ -1,6 +1,7 @@
 package com.taxiapp.driver.network
 
 import com.google.gson.annotations.SerializedName
+import java.io.Serializable
 
 data class CarDto(
     @SerializedName("id") val id: Long,
@@ -11,7 +12,7 @@ data class CarDto(
     @SerializedName("vin") val vin: String,
     @SerializedName("year") val year: Int,
     @SerializedName("carType") val carType: String?,
-    @SerializedName("photoUrl") val photoUrl: String?, // Главное фото
+    @SerializedName("photoUrl") val photoUrl: String?,
 
     // --- НОВЫЕ ПОЛЯ: ДОКУМЕНТЫ ---
     @SerializedName("techPassportFront") val techPassportFront: String?,
@@ -24,5 +25,9 @@ data class CarDto(
     @SerializedName("photoLeft") val photoLeft: String?,
     @SerializedName("photoRight") val photoRight: String?,
     @SerializedName("photoSeatsFront") val photoSeatsFront: String?,
-    @SerializedName("photoSeatsBack") val photoSeatsBack: String?
-)
+    @SerializedName("photoSeatsBack") val photoSeatsBack: String?,
+
+    // --- ВАЖНО: ДОБАВЛЯЕМ СТАТУС ---
+    @SerializedName("status") val status: String? = "PENDING",
+    @SerializedName("rejectionReason") val rejectionReason: String? = null
+) : Serializable

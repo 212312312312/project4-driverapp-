@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -31,7 +32,7 @@
             android:textColor="@color/white"
             android:textSize="20sp"
             android:textStyle="bold"
-            android:layout_marginStart="16dp"/>
+            android:layout_marginStart="16dp" />
     </LinearLayout>
 
     <LinearLayout
@@ -45,6 +46,7 @@
         app:layout_constraintTop_toBottomOf="@id/header">
 
         <TextView
+            android:id="@+id/tab_active"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
@@ -54,22 +56,25 @@
             android:background="@drawable/bg_round_button"
             android:backgroundTint="#333333"
             android:textColor="@color/white"
-            android:textStyle="bold"/>
+            android:textStyle="bold" />
 
         <TextView
+            android:id="@+id/tab_list"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="Список"
             android:gravity="center"
             android:paddingVertical="8dp"
-            android:textColor="#888888"/>
+            android:textColor="#888888" />
     </LinearLayout>
 
     <ScrollView
+        android:id="@+id/scroll_details"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_marginTop="16dp"
+        android:visibility="visible"
         app:layout_constraintTop_toBottomOf="@id/layout_switcher"
         app:layout_constraintBottom_toBottomOf="parent">
 
@@ -77,22 +82,21 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingBottom="40dp">
-
-           <androidx.cardview.widget.CardView
+            android:paddingBottom="80dp">
+            <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="200dp"
                 android:layout_marginHorizontal="16dp"
                 app:cardCornerRadius="12dp"
                 app:cardBackgroundColor="#1E1E1E"
                 app:cardElevation="0dp">
-                
+
                 <ImageView
                     android:id="@+id/img_car_photo"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:scaleType="centerCrop"
-                    android:src="@drawable/ic_car" /> 
+                    android:src="@drawable/ic_car" />
             </androidx.cardview.widget.CardView>
 
             <androidx.constraintlayout.widget.ConstraintLayout
@@ -112,26 +116,23 @@
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintEnd_toStartOf="@id/tv_plate_number"
                     app:layout_constraintTop_toTopOf="parent"
-                    android:layout_marginEnd="8dp"/> <TextView
+                    android:layout_marginEnd="8dp" />
+                <TextView
                     android:id="@+id/tv_plate_number"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="--------"
-                    
                     android:background="@drawable/bg_license_plate"
-                    
                     android:paddingHorizontal="10dp"
                     android:paddingVertical="4dp"
-                    
                     android:textColor="#FFFFFF"
                     android:textSize="15sp"
                     android:textStyle="bold"
                     android:fontFamily="sans-serif-medium"
-                    
                     android:layout_marginStart="8dp"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="@id/tv_car_model"
-                    app:layout_constraintBottom_toBottomOf="@id/tv_car_model"/>
+                    app:layout_constraintBottom_toBottomOf="@id/tv_car_model" />
 
                 <LinearLayout
                     android:id="@+id/layout_color_type"
@@ -148,7 +149,7 @@
                         android:layout_width="16dp"
                         android:layout_height="16dp"
                         android:background="@drawable/bg_round_button"
-                        android:backgroundTint="#CCCCCC"/>
+                        android:backgroundTint="#CCCCCC" />
 
                     <TextView
                         android:id="@+id/tv_car_type"
@@ -157,7 +158,7 @@
                         android:text="Тип авто"
                         android:textColor="#AAAAAA"
                         android:textSize="14sp"
-                        android:layout_marginStart="8dp"/>
+                        android:layout_marginStart="8dp" />
                 </LinearLayout>
 
                 <TextView
@@ -169,7 +170,7 @@
                     android:textSize="14sp"
                     android:layout_marginTop="4dp"
                     app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/tv_plate_number"/>
+                    app:layout_constraintTop_toBottomOf="@id/tv_plate_number" />
 
             </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -177,7 +178,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
                 android:background="#222222"
-                android:layout_marginVertical="20dp"/>
+                android:layout_marginVertical="20dp" />
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -201,12 +202,12 @@
                         android:layout_weight="1"
                         android:text="Додати брендування"
                         android:textColor="@color/white"
-                        android:textSize="16sp"/>
+                        android:textSize="16sp" />
                     <ImageView
                         android:layout_width="20dp"
                         android:layout_height="20dp"
                         android:src="@drawable/ic_chevron"
-                        app:tint="#666666"/>
+                        app:tint="#666666" />
                 </LinearLayout>
 
                 <LinearLayout
@@ -225,12 +226,12 @@
                         android:layout_weight="1"
                         android:text="Додати послуги"
                         android:textColor="@color/white"
-                        android:textSize="16sp"/>
+                        android:textSize="16sp" />
                     <ImageView
                         android:layout_width="20dp"
                         android:layout_height="20dp"
                         android:src="@drawable/ic_chevron"
-                        app:tint="#666666"/>
+                        app:tint="#666666" />
                 </LinearLayout>
             </LinearLayout>
 
@@ -241,7 +242,7 @@
                 android:textColor="#666666"
                 android:textSize="14sp"
                 android:layout_marginStart="20dp"
-                android:layout_marginBottom="8dp"/>
+                android:layout_marginBottom="8dp" />
 
             <LinearLayout
                 android:id="@+id/layout_tariffs_container"
@@ -268,14 +269,49 @@
                     android:layout_weight="1"
                     android:text="Фото документів та авто"
                     android:textColor="@color/white"
-                    android:textSize="16sp"/>
+                    android:textSize="16sp" />
                 <ImageView
                     android:layout_width="20dp"
                     android:layout_height="20dp"
                     android:src="@drawable/ic_chevron"
-                    app:tint="#666666"/>
+                    app:tint="#666666" />
             </LinearLayout>
 
         </LinearLayout>
     </ScrollView>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recycler_cars"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="16dp"
+        android:padding="8dp"
+        android:clipToPadding="false"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/layout_switcher"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/btn_add_car"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="24dp"
+        android:src="@android:drawable/ic_input_add"
+        android:contentDescription="Додати авто"
+        android:backgroundTint="#000000"
+        app:tint="#FFFFFF"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <ProgressBar
+        android:id="@+id/progress_bar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

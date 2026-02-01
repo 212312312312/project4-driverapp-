@@ -132,4 +132,10 @@ interface DriverApiService {
         @Query("from") from: String,
         @Query("to") to: String
     ): Response<DriverStatsDto>
+
+    @GET("api/v1/driver/cars")
+    suspend fun getMyCars(): Response<List<CarDto>>
+
+    @POST("api/v1/driver/cars/{id}/select")
+    suspend fun selectActiveCar(@Path("id") id: Long): Response<Void>
 }

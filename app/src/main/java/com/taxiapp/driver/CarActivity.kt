@@ -1,5 +1,6 @@
 package com.taxiapp.driver
 
+import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
@@ -12,20 +13,61 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.taxiapp.driver.network.ApiClient
+import com.taxiapp.driver.network.CarDto // Используем DTO
 import com.taxiapp.driver.network.CarTariffDto
+import com.taxiapp.driver.utils.SessionManager
 import kotlinx.coroutines.launch
 
 class CarActivity : AppCompatActivity() {
+
+    // Элементы переключения
+    private lateinit var tabActive: TextView
+    private lateinit var tabList: TextView
+    private lateinit var scrollViewDetails: View
+    private lateinit var recyclerCars: RecyclerView
+    private lateinit var btnAddCar: FloatingActionButton
+    private lateinit var progressBar: View
+
+    private lateinit var carAdapter: CarAdapter
+    private var activeCarId: Long? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_car)
 
+        initViews()
+        setupListeners()
+        setupRecyclerView()
+
+        // По умолчанию грузим детали активного авто
+        loadActiveCarData()
+    }
+
+    private fun initViews() {
+        tabActive = findViewById(R.id.tab_active)
+        tabList = findViewById(R.id.tab_list)
+        scrollViewDetails = findViewById(R.id.scroll_details)
+        recyclerCars = findViewById(R.id.recycler_cars)
+        btnAddCar = findViewById(R.id.btn_add_car)
+        progressBar = findViewById(R.id.progress_bar)
+    }
+
+    private fun setupListeners() {
         findViewById<ImageButton>(R.id.btn_back).setOnClickListener { finish() }
 
-        // Заглушки для кнопок меню
+        // Переключение вкладок
+        tabActive.setOnClickListener { switchTab(true) }
+        tabList.setOnClickListener { switchTab(false) }
+
+        // Кнопка добавить авто
+        btnAddCar.setOnClickListener { openAddCarForm() }
+
+        // Другие кнопки (заглушки или переходы)
         findViewById<View>(R.id.btn_branding).setOnClickListener {
             Toast.makeText(this, "Брендування: в розробці", Toast.LENGTH_SHORT).show()
         }
@@ -33,102 +75,180 @@ class CarActivity : AppCompatActivity() {
             Toast.makeText(this, "Послуги: в розробці", Toast.LENGTH_SHORT).show()
         }
         findViewById<View>(R.id.btn_documents).setOnClickListener {
-            // Переход на новый экран
-            val intent = android.content.Intent(this, CarDocumentsActivity::class.java)
+            val intent = Intent(this, CarDocumentsActivity::class.java)
             startActivity(intent)
         }
-
-        loadCarData()
     }
 
-    private fun loadCarData() {
+    private fun setupRecyclerView() {
+        carAdapter = CarAdapter { selectedCar ->
+            changeActiveCar(selectedCar)
+        }
+        recyclerCars.layoutManager = LinearLayoutManager(this)
+        recyclerCars.adapter = carAdapter
+    }
+
+    // --- ИСПРАВЛЕННЫЙ МЕТОД ПЕРЕКЛЮЧЕНИЯ ---
+    private fun switchTab(showActive: Boolean) {
+        if (showActive) {
+            // Вкладка "Активне"
+            tabActive.setTextColor(Color.WHITE)
+            // Сначала устанавливаем ресурс, потому что background мог быть null
+            tabActive.setBackgroundResource(R.drawable.bg_round_button)
+            tabActive.background.setTint(Color.parseColor("#333333"))
+
+            // Сбрасываем вторую вкладку
+            tabList.setTextColor(Color.parseColor("#888888"))
+            tabList.background = null
+
+            scrollViewDetails.visibility = View.VISIBLE
+            recyclerCars.visibility = View.GONE
+            btnAddCar.visibility = View.GONE
+
+            loadActiveCarData()
+        } else {
+            // Вкладка "Список"
+            tabList.setTextColor(Color.WHITE)
+            // Сначала устанавливаем ресурс
+            tabList.setBackgroundResource(R.drawable.bg_round_button)
+            tabList.background.setTint(Color.parseColor("#333333"))
+
+            // Сбрасываем первую вкладку
+            tabActive.setTextColor(Color.parseColor("#888888"))
+            tabActive.background = null
+
+            scrollViewDetails.visibility = View.GONE
+            recyclerCars.visibility = View.VISIBLE
+            btnAddCar.visibility = View.VISIBLE
+
+            loadCarList()
+        }
+    }
+
+    // --- ЗАГРУЗКА АКТИВНОГО АВТО ---
+    private fun loadActiveCarData() {
         lifecycleScope.launch {
             try {
                 val response = ApiClient.getInstance().getApiService(this@CarActivity).getDriverProfile()
 
                 if (response.isSuccessful && response.body() != null) {
                     val profile = response.body()!!
-                    val car = profile.car
-
-                    // ЛОГ ССЫЛКИ (Если ссылка есть тут - сервер молодец)
-                    Log.d("CarDebug", "CAR URL: ${car?.photoUrl}")
+                    val car = profile.car // CarDto
+                    activeCarId = car?.id
 
                     if (car != null) {
-                        findViewById<TextView>(R.id.tv_car_model).text = "${car.make} ${car.model}"
-                        findViewById<TextView>(R.id.tv_plate_number).text = car.plateNumber
-                        findViewById<TextView>(R.id.tv_car_year).text = car.year.toString()
-                        findViewById<TextView>(R.id.tv_car_type).text = car.carType ?: "Седан"
-
-                        // Цвет авто
-                        val colorView = findViewById<View>(R.id.view_car_color)
-                        try {
-                            if (car.color.startsWith("#")) {
-                                colorView.setBackgroundColor(Color.parseColor(car.color))
-                            } else {
-                                colorView.setBackgroundColor(parseColorName(car.color))
-                            }
-                        } catch (e: Exception) {
-                            colorView.setBackgroundColor(Color.LTGRAY)
-                        }
-
-                        // --- ЗАГРУЗКА ФОТО (КАК АВАТАРКА) ---
-                        val imgCar = findViewById<ImageView>(R.id.img_car_photo)
-
-                        if (!car.photoUrl.isNullOrEmpty()) {
-                            // 1. Убираем фильтр (хотя мы убрали его и в XML, тут для надежности)
-                            imgCar.clearColorFilter()
-
-                            // 2. Glide как в MainActivity
-                            Glide.with(this@CarActivity)
-                                .load(car.photoUrl)
-                                .centerCrop()
-                                .placeholder(R.drawable.ic_car) // Пока грузим - машинка
-                                .error(R.drawable.ic_car)       // Если ошибка - машинка
-                                .into(imgCar)
-                        } else {
-                            // Если фото нет вообще - ставим заглушку и серый цвет
-                            imgCar.setImageResource(R.drawable.ic_car)
-                            imgCar.setColorFilter(Color.parseColor("#444444"))
-                        }
-                        // ------------------------------------
-
+                        bindCarDetails(car)
                     } else {
                         findViewById<TextView>(R.id.tv_car_model).text = "Авто не призначено"
+                        findViewById<TextView>(R.id.tv_plate_number).text = "---"
+                        val imgCar = findViewById<ImageView>(R.id.img_car_photo)
+                        imgCar.setImageResource(R.drawable.ic_car)
+                        imgCar.setColorFilter(Color.parseColor("#444444"))
                     }
                     setupTariffs(profile.allowedTariffs)
-
-                } else {
-                    Toast.makeText(this@CarActivity, "Не вдалося завантажити дані", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
-                Toast.makeText(this@CarActivity, "Помилка з'єднання", Toast.LENGTH_SHORT).show()
             }
         }
-    }   
+    }
+
+    private fun bindCarDetails(car: CarDto) {
+        findViewById<TextView>(R.id.tv_car_model).text = "${car.make} ${car.model}"
+        findViewById<TextView>(R.id.tv_plate_number).text = car.plateNumber
+        findViewById<TextView>(R.id.tv_car_year).text = car.year.toString()
+        findViewById<TextView>(R.id.tv_car_type).text = car.carType ?: "Седан"
+
+        val colorView = findViewById<View>(R.id.view_car_color)
+        try {
+            if (car.color.startsWith("#")) {
+                colorView.setBackgroundColor(Color.parseColor(car.color))
+            } else {
+                colorView.setBackgroundColor(parseColorName(car.color))
+            }
+        } catch (e: Exception) {
+            colorView.setBackgroundColor(Color.LTGRAY)
+        }
+
+        val imgCar = findViewById<ImageView>(R.id.img_car_photo)
+        if (!car.photoUrl.isNullOrEmpty()) {
+            imgCar.clearColorFilter()
+            Glide.with(this).load(car.photoUrl).centerCrop().into(imgCar)
+        } else {
+            imgCar.setImageResource(R.drawable.ic_car)
+            imgCar.setColorFilter(Color.parseColor("#444444"))
+        }
+    }
+
+    // --- ЗАГРУЗКА СПИСКА ---
+    private fun loadCarList() {
+        progressBar.visibility = View.VISIBLE
+        lifecycleScope.launch {
+            try {
+                // Сначала узнаем ID активного
+                val profileResp = ApiClient.getInstance().getApiService(this@CarActivity).getDriverProfile()
+                activeCarId = profileResp.body()?.car?.id
+
+                // Теперь список
+                val listResp = ApiClient.getInstance().getApiService(this@CarActivity).getMyCars()
+                if (listResp.isSuccessful && listResp.body() != null) {
+                    carAdapter.submitList(listResp.body()!!, activeCarId)
+                } else {
+                    Toast.makeText(this@CarActivity, "Список порожній", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@CarActivity, "Помилка завантаження списку", Toast.LENGTH_SHORT).show()
+            } finally {
+                progressBar.visibility = View.GONE
+            }
+        }
+    }
+
+    // --- СМЕНА АКТИВНОГО АВТО ---
+    private fun changeActiveCar(car: CarDto) {
+        progressBar.visibility = View.VISIBLE
+        lifecycleScope.launch {
+            try {
+                val response = ApiClient.getInstance().getApiService(this@CarActivity).selectActiveCar(car.id)
+                if (response.isSuccessful) {
+                    Toast.makeText(this@CarActivity, "Авто успішно змінено!", Toast.LENGTH_SHORT).show()
+                    loadCarList()
+                } else {
+                    val errorMsg = response.errorBody()?.string() ?: "Помилка"
+                    Toast.makeText(this@CarActivity, "Не вдалося змінити: $errorMsg", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@CarActivity, "Помилка мережі", Toast.LENGTH_SHORT).show()
+            } finally {
+                progressBar.visibility = View.GONE
+            }
+        }
+    }
+
+    private fun openAddCarForm() {
+        val token = SessionManager(this).fetchAuthToken()
+        if (token.isNullOrEmpty()) return
+
+        // Убираем лишний слэш и формируем URL
+        val baseUrl = BuildConfig.BASE_URL.trimEnd('/')
+        val fullUrl = "$baseUrl/api/v1/driver/forms/add-car?token=$token"
+
+        Log.d("CarActivity", "Opening Form: $fullUrl")
+
+        val intent = Intent(this, WebViewActivity::class.java)
+        intent.putExtra("URL", fullUrl)
+        startActivity(intent)
+    }
 
     private fun setupTariffs(tariffs: List<CarTariffDto>?) {
         val container = findViewById<LinearLayout>(R.id.layout_tariffs_container)
         container.removeAllViews()
-
-        if (tariffs.isNullOrEmpty()) {
-            val emptyTv = TextView(this)
-            emptyTv.text = "Немає доступних тарифів"
-            emptyTv.setTextColor(Color.GRAY)
-            container.addView(emptyTv)
-            return
-        }
+        if (tariffs.isNullOrEmpty()) return
 
         for (tariff in tariffs) {
             val tariffView = LayoutInflater.from(this).inflate(R.layout.item_filter, container, false)
             val tvName = tariffView.findViewById<TextView>(R.id.tv_filter_name)
-            if (tvName != null) {
-                tvName.text = tariff.name
-                tvName.append("\nУвімкнено")
-            }
-            tariffView.setOnClickListener {
-                Toast.makeText(this, "Зміна статусу тарифу ${tariff.name}", Toast.LENGTH_SHORT).show()
-            }
+            tvName.text = "${tariff.name}\nУвімкнено"
             container.addView(tariffView)
         }
     }
