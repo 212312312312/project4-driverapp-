@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/driver_black_bg"
+    android:paddingTop="48dp">
+
+    <RelativeLayout
+        android:id="@+id/layoutHeader"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:layout_marginHorizontal="24dp">
+
+        <ImageView
+            android:id="@+id/btnBack"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:src="@drawable/ic_arrow_back_black"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:focusable="true"
+            app:tint="@color/driver_text_primary"
+            android:layout_centerVertical="true"
+            android:layout_alignParentStart="true" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Розподіл замовлень"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:textColor="@color/driver_text_primary"
+            android:layout_centerVertical="true"
+            android:layout_toEndOf="@id/btnBack"
+            android:layout_marginStart="16dp" />
+    </RelativeLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="16dp"
+            android:paddingBottom="24dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_marginBottom="8dp"
+                android:text="Основний принцип"
+                android:textColor="@color/driver_text_primary"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                android:background="@drawable/bg_bottom_nav_floating"
+                android:backgroundTint="#1E1E1E"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:text="Ви маєте найбільші шанси отримати замовлення, якщо знаходитеся найближче до пасажира."
+                    android:textColor="@color/driver_text_primary"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:drawablePadding="8dp"
+                    android:text="Вам це вигідно, адже ви витрачаєте менше часу і пального на дорогу."
+                    android:textColor="@color/driver_text_secondary"
+                    android:textSize="14sp"
+                    app:drawableStartCompat="@drawable/ic_list_dot"
+                    app:drawableTint="@color/driver_text_secondary" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:drawablePadding="8dp"
+                    android:text="А пасажири отримують авто швидше, адже чекають менше."
+                    android:textColor="@color/driver_text_secondary"
+                    android:textSize="14sp"
+                    app:drawableStartCompat="@drawable/ic_list_dot"
+                    app:drawableTint="@color/driver_text_secondary" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_marginBottom="8dp"
+                android:text="Що впливає на розподіл?"
+                android:textColor="@color/driver_text_primary"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                android:background="@drawable/bg_bottom_nav_floating"
+                android:backgroundTint="#1E1E1E"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:text="Відстань — основний, проте не єдиний фактор. Також впливають:"
+                    android:textColor="@color/driver_text_primary"
+                    android:textSize="16sp" />
+
+                <TextView
+                    style="@style/ListTextStyle"
+                    android:text="Активний ланцюг замовлень" />
+
+                <TextView
+                    style="@style/ListTextStyle"
+                    android:text="Ваш час без замовлень" />
+
+                <TextView
+                    style="@style/ListTextStyle"
+                    android:text="Ваш рівень Активності" />
+
+                <TextView
+                    style="@style/ListTextStyle"
+                    android:text="Брендування авто" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_marginBottom="8dp"
+                android:text="Етапи розподілу"
+                android:textColor="@color/driver_text_primary"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_bottom_nav_floating"
+                android:backgroundTint="#1E1E1E"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:text="Кожне замовлення проходить 4 етапи:"
+                    android:textColor="@color/driver_text_primary"
+                    android:textSize="16sp" />
+
+                <TextView
+                    style="@style/ListTextStyle"
+                    android:text="Пошук водіїв, які відповідають параметрам." />
+
+                <TextView
+                    style="@style/ListTextStyle"
+                    android:text="Формування черги водіїв." />
+
+                <TextView
+                    style="@style/ListTextStyle"
+                    android:text="Надсилання замовлення водіям у черзі." />
+
+                <TextView
+                    style="@style/ListTextStyle"
+                    android:text="Відображення в Ефірі (радіус 3 км), якщо замовлення не взяли раніше." />
+            </LinearLayout>
+
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

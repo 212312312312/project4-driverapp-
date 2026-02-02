@@ -108,6 +108,18 @@
             android:screenOrientation="portrait"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".ActivityLevelsActivity"
+            android:screenOrientation="portrait"
+            android:exported="false" />
+        <activity
+            android:name=".ActivityCalculationInfo"
+            android:screenOrientation="portrait"
+            android:exported="false" />
+        <activity
+            android:name=".ActivityDistributionInfo"
+            android:screenOrientation="portrait"
+            android:exported="false" />
         <service
             android:name=".service.MyFirebaseMessagingService"
             android:exported="false">
