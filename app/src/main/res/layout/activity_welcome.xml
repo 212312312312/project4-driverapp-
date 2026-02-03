@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/driver_black_bg"
+    android:padding="24dp">
+
+    <TextView
+        android:id="@+id/tv_logo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="DRIVER\nAPP"
+        android:textSize="48sp"
+        android:textStyle="bold"
+        android:textColor="@color/driver_neon_teal"
+        android:gravity="center"
+        android:letterSpacing="0.1"
+        app:layout_constraintBottom_toTopOf="@+id/btn_login_nav"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintVertical_bias="0.4" />
+
+    <Button
+        android:id="@+id/btn_login_nav"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:text="УВІЙТИ"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="@color/driver_text_black"
+        android:background="@drawable/bg_driver_btn"
+        app:backgroundTint="@color/driver_neon_teal"
+        android:layout_marginBottom="16dp"
+        app:layout_constraintBottom_toTopOf="@+id/btn_register_nav"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <Button
+        android:id="@+id/btn_register_nav"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:text="ЗАРЕЄСТРУВАТИСЯ"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="#FFFFFF"
+        android:background="@drawable/bg_driver_btn"
+        app:backgroundTint="#333333"
+        android:layout_marginBottom="40dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

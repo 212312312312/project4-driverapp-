@@ -26,12 +26,33 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.TaxiAppDriver"
         android:usesCleartextTraffic="true">
-        <activity android:name=".LoginActivity" android:exported="true">
+
+        <activity
+            android:name=".WelcomeActivity"
+            android:exported="true"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.TaxiAppDriver">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".LoginActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize"/>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
         <activity android:name=".LocationPickerActivity" />
         <activity android:name=".MainActivity" />
@@ -103,11 +124,13 @@
             android:name=".StatsActivity"
             android:screenOrientation="portrait"
             android:exported="false" />
+
         <activity
             android:name=".WebViewActivity"
             android:screenOrientation="portrait"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
+
         <activity
             android:name=".ActivityLevelsActivity"
             android:screenOrientation="portrait"
