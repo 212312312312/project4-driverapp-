@@ -3,7 +3,7 @@ package com.taxiapp.driver.network
 import retrofit2.Response
 import retrofit2.http.*
 
-// --- НОВОЕ DTO ДЛЯ ОЦЕНКИ ---
+// --- DTO ---
 data class RateClientRequest(
     val orderId: Long,
     val score: Int,
@@ -22,11 +22,31 @@ data class DriverStatsDto(
     val totalHours: Double
 )
 
+data class SmsRequestDto(
+    val phoneNumber: String
+)
+
+data class SmsVerifyDto(
+    val phoneNumber: String,
+    val code: String
+)
+
+data class MessageResponse(
+    val message: String
+)
+
 interface DriverApiService {
 
-    // --- ВХОД ---
+    // --- ВХОД (ПАРОЛЬ) ---
     @POST("api/v1/auth/login")
     suspend fun login(@Body request: LoginRequest): Response<LoginResponse>
+
+    // --- ВХОД (SMS) - НОВЫЕ МЕТОДЫ ---
+    @POST("api/v1/auth/driver/login/sms/request")
+    suspend fun requestDriverLoginSms(@Body request: SmsRequestDto): Response<MessageResponse>
+
+    @POST("api/v1/auth/driver/login/sms/verify")
+    suspend fun verifyDriverLoginSms(@Body request: SmsVerifyDto): Response<LoginResponse>
 
     // --- ЗАКАЗЫ ---
     @GET("/api/v1/driver/me")
@@ -90,7 +110,6 @@ interface DriverApiService {
     @PATCH("api/v1/driver/filters/{id}/toggle")
     suspend fun toggleFilter(@Path("id") id: Long): Response<Void>
 
-    // НОВИЙ МЕТОД: Оновлення режимів фільтра
     @PATCH("api/v1/driver/filters/{id}/mode")
     suspend fun updateFilterMode(
         @Path("id") id: Long,

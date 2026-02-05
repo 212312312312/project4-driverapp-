@@ -143,6 +143,9 @@
             android:name=".ActivityDistributionInfo"
             android:screenOrientation="portrait"
             android:exported="false" />
+
+        <activity android:name=".AccountSelectionActivity" />
+        <activity android:name=".LoginPasswordActivity" />
         <service
             android:name=".service.MyFirebaseMessagingService"
             android:exported="false">

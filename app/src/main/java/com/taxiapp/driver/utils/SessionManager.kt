@@ -10,6 +10,7 @@ class SessionManager(context: Context) {
         const val USER_TOKEN = "user_token"
         const val KEY_DRIVER_ID = "driver_id"
         const val KEY_DRIVER_NAME = "driver_name"
+        const val KEY_DRIVER_PHONE = "driver_phone" // NEW
         const val KEY_FCM_TOKEN = "fcm_token"
 
         // Логіка ручної локації
@@ -48,6 +49,15 @@ class SessionManager(context: Context) {
         return prefs.getString(KEY_DRIVER_NAME, null)
     }
 
+    // --- PHONE (NEW) ---
+    fun saveDriverPhone(phone: String) {
+        prefs.edit().putString(KEY_DRIVER_PHONE, phone).apply()
+    }
+
+    fun getDriverPhone(): String? {
+        return prefs.getString(KEY_DRIVER_PHONE, null)
+    }
+
     // --- ЛОГІКА ЗГОРНУТОГО ЗАМОВЛЕННЯ ---
     fun setOrderMinimized(minimized: Boolean) {
         prefs.edit().putBoolean(KEY_WAS_ORDER_MINIMIZED, minimized).apply()
@@ -57,11 +67,9 @@ class SessionManager(context: Context) {
         return prefs.getBoolean(KEY_WAS_ORDER_MINIMIZED, false)
     }
 
-    // --- ОСЬ ЦЕЙ МЕТОД БУВ ПРОПУЩЕНИЙ ---
     fun resetOrderMinimized() {
         setOrderMinimized(false)
     }
-    // ------------------------------------
 
     fun saveAuthToken(token: String) {
         prefs.edit().putString(USER_TOKEN, token).apply()
