@@ -1,7 +1,7 @@
 package com.taxiapp.driver.network
 
 import android.content.Context
-import com.taxiapp.driver.BuildConfig // Импорт настроек из Gradle
+import com.taxiapp.driver.BuildConfig // Убедись, что пакет правильный
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -13,24 +13,28 @@ import java.util.concurrent.TimeUnit
 class ApiClient private constructor() {
 
     private var apiService: DriverApiService? = null
-    private var googleMapsApi: GoogleMapsApi? = null // Кешируем клиент для Google
+    private var googleMapsApi: GoogleMapsApi? = null
 
-    // Клиент для твоего сервера
+    // Клиент для сервера
     fun getApiService(context: Context): DriverApiService {
         if (apiService == null) {
             val logging = HttpLoggingInterceptor().apply {
                 level = HttpLoggingInterceptor.Level.BODY
             }
 
+            // Создаем AuthInterceptor, передавая applicationContext, чтобы избежать утечек памяти
+            val authInterceptor = AuthInterceptor(context.applicationContext)
+
             val client = OkHttpClient.Builder()
-                .addInterceptor(AuthInterceptor(context)) // Твой интерсептор с Context
+                .addInterceptor(authInterceptor) // Интерцептор подставляет токен из SessionManager
                 .addInterceptor(logging)
                 .connectTimeout(30, TimeUnit.SECONDS)
                 .readTimeout(30, TimeUnit.SECONDS)
+                .writeTimeout(30, TimeUnit.SECONDS)
                 .build()
 
             val retrofit = Retrofit.Builder()
-                .baseUrl(BuildConfig.BASE_URL) // Бэйс URL из build.gradle
+                .baseUrl(BuildConfig.BASE_URL) // Твой URL из build.gradle
                 .addConverterFactory(GsonConverterFactory.create())
                 .client(client)
                 .build()
@@ -40,7 +44,7 @@ class ApiClient private constructor() {
         return apiService!!
     }
 
-    // Клиент для Google Maps (не требует авторизации через AuthInterceptor)
+    // Клиент для Google Maps
     fun getGoogleMapsApi(): GoogleMapsApi {
         if (googleMapsApi == null) {
             val retrofit = Retrofit.Builder()
@@ -51,6 +55,12 @@ class ApiClient private constructor() {
             googleMapsApi = retrofit.create(GoogleMapsApi::class.java)
         }
         return googleMapsApi!!
+    }
+
+    // Метод для СБРОСА клиента (вызывать при смене токена/телефона)
+    fun reset() {
+        apiService = null
+        // googleMapsApi сбрасывать не нужно, он без токена
     }
 
     companion object {

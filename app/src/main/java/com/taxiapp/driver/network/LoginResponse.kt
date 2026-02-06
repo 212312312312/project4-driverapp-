@@ -9,8 +9,8 @@ data class LoginResponse(
     @SerializedName("userId") // Сервер шлет "userId"
     val userId: Long,
 
-    @SerializedName("phoneNumber") // Сервер шлет "phoneNumber"
-    val userPhone: String, // В коде приложения оставляем имя userPhone, чтобы не ломать логику
+    @SerializedName("phoneNumber")
+    val phoneNumber: String? = null,
 
     @SerializedName("fullName")
     val fullName: String,

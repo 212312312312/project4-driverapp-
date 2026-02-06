@@ -1,5 +1,6 @@
 package com.taxiapp.driver
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.ImageButton
 import android.widget.ImageView
@@ -16,6 +17,9 @@ class ProfileActivity : AppCompatActivity() {
 
     private lateinit var sessionManager: SessionManager
 
+    // Сохраняем данные, чтобы передать их в экраны редактирования
+    private var currentRnokpp: String? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_profile)
@@ -26,25 +30,35 @@ class ProfileActivity : AppCompatActivity() {
         loadProfileData()
     }
 
+    override fun onResume() {
+        super.onResume()
+        // Перезагружаем данные при возвращении (например, после смены РНОКПП или телефона)
+        loadProfileData()
+    }
+
     private fun setupUI() {
-        // Кнопка Назад
         findViewById<ImageButton>(R.id.btn_back).setOnClickListener {
             finish()
         }
 
-        // Кнопка Видалення акаунту
         findViewById<TextView>(R.id.btn_delete_account).setOnClickListener {
             Toast.makeText(this, "Щоб видалити акаунт, зверніться до диспетчера", Toast.LENGTH_LONG).show()
         }
 
-        // Кліки по полях (інформативні повідомлення)
+        // --- НОВАЯ ЛОГИКА ---
+
+        // 1. Смена телефона
         findViewById<android.view.View>(R.id.btn_edit_phone).setOnClickListener {
-            Toast.makeText(this, "Зміна телефону через диспетчера", Toast.LENGTH_SHORT).show()
+            val intent = Intent(this, ChangePhoneActivity::class.java)
+            startActivity(intent)
         }
 
+        // 2. Смена РНОКПП
         findViewById<android.view.View>(R.id.btn_edit_ipn).setOnClickListener {
-            // Можна показувати повний номер у діалозі, якщо він обрізаний, або просто повідомлення
-            Toast.makeText(this, "Зміна РНОКПП через диспетчера", Toast.LENGTH_SHORT).show()
+            val intent = Intent(this, ChangeRnokppActivity::class.java)
+            // Передаем текущий (возможно маскированный или полный) ИПН, если он есть
+            intent.putExtra("CURRENT_RNOKPP", currentRnokpp)
+            startActivity(intent)
         }
 
         findViewById<android.view.View>(R.id.btn_disability_status).setOnClickListener {
@@ -61,37 +75,39 @@ class ProfileActivity : AppCompatActivity() {
         val tvIpn = findViewById<TextView>(R.id.tv_profile_ipn)
         val tvLicense = findViewById<TextView>(R.id.tv_profile_license)
 
-        // 1. Спочатку показуємо ім'я з кешу (щоб не було порожньо)
+        // Предзагрузка из кэша для быстрого отображения
         val savedName = sessionManager.getDriverName()
         if (savedName != null) {
             tvName.text = extractFirstName(savedName)
-        } else {
-            tvName.text = "Водій"
         }
 
-        // 2. Запит на сервер (Оновлення даних)
         lifecycleScope.launch {
             try {
-                // Виконуємо запит
                 val response = ApiClient.getInstance().getApiService(this@ProfileActivity).getDriverProfile()
 
                 if (response.isSuccessful && response.body() != null) {
                     val profile = response.body()!!
 
-                    // --- ОНОВЛЕННЯ ДАНИХ UI ---
-
                     val fullName = profile.fullName ?: "Водій"
-                    sessionManager.saveDriverName(fullName) // Оновлюємо кеш
+                    sessionManager.saveDriverName(fullName)
                     tvName.text = extractFirstName(fullName)
 
                     tvPhone.text = profile.phoneNumber ?: "Не вказано"
-
-                    // НОВІ ПОЛЯ (тепер реальні дані)
                     tvEmail.text = profile.email ?: "Не вказано"
-                    tvIpn.text = profile.rnokpp ?: "Не вказано"
+
+                    // Сохраняем реальный РНОКПП в переменную для Intent
+                    currentRnokpp = profile.rnokpp
+
+                    // Маскируем в UI (показываем только звездочки или часть)
+                    if (!profile.rnokpp.isNullOrEmpty() && profile.rnokpp.length == 10) {
+                        // Показываем первые 2 и последние 2 цифры
+                        tvIpn.text = profile.rnokpp.substring(0, 2) + "******" + profile.rnokpp.substring(8, 10)
+                    } else {
+                        tvIpn.text = "Додати"
+                    }
+
                     tvLicense.text = profile.driverLicense ?: "Не вказано"
 
-                    // Фото
                     if (!profile.photoUrl.isNullOrEmpty()) {
                         Glide.with(this@ProfileActivity)
                             .load(profile.photoUrl)
@@ -100,24 +116,19 @@ class ProfileActivity : AppCompatActivity() {
                             .circleCrop()
                             .into(imgAvatar)
                     }
-
-                } else {
-                    // Якщо токен протух або помилка сервера
-                    Toast.makeText(this@ProfileActivity, "Не вдалося завантажити профіль", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
-                Toast.makeText(this@ProfileActivity, "Помилка з'єднання", Toast.LENGTH_SHORT).show()
+                // Можно добавить Toast при ошибке загрузки, если нужно
             }
         }
     }
 
-    // Метод для витягування імені
     private fun extractFirstName(fullName: String): String {
         if (fullName.isBlank()) return "Водій"
         val parts = fullName.trim().split("\\s+".toRegex())
         return when {
-            parts.size >= 2 -> parts[1] // Якщо "Прізвище Ім'я", беремо Ім'я
+            parts.size >= 2 -> parts[1]
             parts.isNotEmpty() -> parts[0]
             else -> "Водій"
         }

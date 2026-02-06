@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/driver_card_bg"
+    android:padding="20dp">
+
+    <ImageButton
+        android:id="@+id/btn_back"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:background="@null"
+        android:src="@drawable/ic_arrow_back_black"
+        android:tint="@color/white" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Зміна номера"
+        android:textColor="@color/white"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:layout_marginTop="20dp"
+        android:layout_marginBottom="30dp" />
+
+    <ViewFlipper
+        android:id="@+id/view_flipper"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical">
+            <TextView android:text="Для безпеки ми відправимо код на ваш ПОТОЧНИЙ номер."
+                android:textColor="#AAA" android:layout_marginBottom="20dp"
+                android:layout_width="match_parent" android:layout_height="wrap_content" />
+            <Button android:id="@+id/btn_send_current" android:text="Надіслати код"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:backgroundTint="@color/driver_neon_teal" />
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical">
+            <TextView android:text="Введіть код з SMS (поточний номер):" android:textColor="#AAA"
+                android:layout_marginBottom="10dp" android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+            <EditText android:id="@+id/et_current_code" android:inputType="number"
+                android:hint="Kod" android:textColor="@color/white"
+                android:background="@drawable/bg_driver_input" android:padding="16dp"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginBottom="20dp" />
+            <Button android:id="@+id/btn_verify_current" android:text="Підтвердити"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:backgroundTint="@color/driver_neon_teal" />
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical">
+            <TextView android:text="Введіть НОВИЙ номер телефону:" android:textColor="#AAA"
+                android:layout_marginBottom="10dp" android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+            <EditText android:id="@+id/et_new_phone" android:inputType="phone"
+                android:hint="+380..." android:textColor="@color/white"
+                android:background="@drawable/bg_driver_input" android:padding="16dp"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginBottom="20dp" />
+            <Button android:id="@+id/btn_send_new" android:text="Далі"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:backgroundTint="@color/driver_neon_teal" />
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical">
+            <TextView android:text="Введіть код, який прийшов на НОВИЙ номер:"
+                android:textColor="#AAA" android:layout_marginBottom="10dp"
+                android:layout_width="match_parent" android:layout_height="wrap_content" />
+            <EditText android:id="@+id/et_new_code" android:inputType="number" android:hint="Kod"
+                android:textColor="@color/white" android:background="@drawable/bg_driver_input"
+                android:padding="16dp" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:layout_marginBottom="20dp" />
+            <Button android:id="@+id/btn_confirm_all" android:text="Змінити номер"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:backgroundTint="@color/driver_neon_teal" />
+        </LinearLayout>
+
+    </ViewFlipper>
+</LinearLayout>

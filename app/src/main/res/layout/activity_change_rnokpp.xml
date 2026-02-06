@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/driver_card_bg"
+    android:padding="20dp">
+
+    <ImageButton
+        android:id="@+id/btn_back"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:background="@null"
+        android:src="@drawable/ic_arrow_back_black"
+        android:tint="@color/white" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Зміна РНОКПП"
+        android:textColor="@color/white"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:layout_marginTop="20dp"
+        android:layout_marginBottom="30dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Введіть 10 цифр вашого ІПН"
+        android:textColor="#AAAAAA"
+        android:layout_marginBottom="8dp" />
+
+    <EditText
+        android:id="@+id/et_rnokpp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_driver_input"
+        android:textColor="@color/white"
+        android:padding="16dp"
+        android:maxLength="10"
+        android:inputType="number"
+        android:hint="XXXXXXXXXX"
+        android:textColorHint="#666666" />
+
+    <View android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
+
+    <TextView
+        android:id="@+id/btn_save_rnokpp"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:text="Зберегти"
+        android:gravity="center"
+        android:textColor="@color/white"
+        android:textStyle="bold"
+        android:textSize="16sp"
+        android:background="@drawable/bg_round_button_gray"
+        android:enabled="false" />
+
+</LinearLayout>

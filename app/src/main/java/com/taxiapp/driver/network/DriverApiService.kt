@@ -1,9 +1,11 @@
 package com.taxiapp.driver.network
 
+import com.google.gson.annotations.SerializedName
 import retrofit2.Response
 import retrofit2.http.*
 
-// --- DTO ---
+// --- DTO КЛАССЫ ---
+
 data class RateClientRequest(
     val orderId: Long,
     val score: Int,
@@ -22,13 +24,33 @@ data class DriverStatsDto(
     val totalHours: Double
 )
 
+// Используем @SerializedName, чтобы на сервер уходило поле "phone",
+// даже если в Android оно называется phoneNumber
 data class SmsRequestDto(
-    val phoneNumber: String
+    @SerializedName("phoneNumber") val phoneNumber: String
 )
 
 data class SmsVerifyDto(
-    val phoneNumber: String,
+    @SerializedName("phoneNumber") val phoneNumber: String,
     val code: String
+)
+
+// Специальный DTO для подтверждения только кодом (без телефона)
+data class CodeVerifyRequest(
+    val code: String
+)
+
+data class ChangePhoneConfirmRequest(
+    val newPhone: String,
+    val code: String,
+    val changeToken: String
+)
+
+data class UpdateDriverRequest(
+    val firstName: String? = null,
+    val lastName: String? = null,
+    val email: String? = null,
+    val rnokpp: String? = null
 )
 
 data class MessageResponse(
@@ -41,17 +63,40 @@ interface DriverApiService {
     @POST("api/v1/auth/login")
     suspend fun login(@Body request: LoginRequest): Response<LoginResponse>
 
-    // --- ВХОД (SMS) - НОВЫЕ МЕТОДЫ ---
+    // --- ВХОД (SMS) ---
     @POST("api/v1/auth/driver/login/sms/request")
     suspend fun requestDriverLoginSms(@Body request: SmsRequestDto): Response<MessageResponse>
 
     @POST("api/v1/auth/driver/login/sms/verify")
     suspend fun verifyDriverLoginSms(@Body request: SmsVerifyDto): Response<LoginResponse>
 
-    // --- ЗАКАЗЫ ---
-    @GET("/api/v1/driver/me")
+    // --- ПРОФИЛЬ И НАСТРОЙКИ (НОВОЕ) ---
+
+    @GET("api/v1/driver/me")
     suspend fun getDriverProfile(): Response<DriverProfileDto>
 
+    // 1. Смена телефона: Запрос кода на текущий номер
+    @POST("api/v1/driver/profile/change-phone/request-current")
+    suspend fun requestCodeForCurrentPhone(): Response<MessageResponse>
+
+    // 2. Смена телефона: Проверка кода текущего номера
+    @POST("api/v1/driver/profile/change-phone/verify-current")
+    suspend fun verifyCurrentPhoneCode(@Body request: CodeVerifyRequest): Response<Map<String, String>>
+
+    // 3. Смена телефона: Запрос кода на НОВЫЙ номер
+    @POST("api/v1/driver/profile/change-phone/request-new")
+    suspend fun requestCodeForNewPhone(@Body request: SmsRequestDto): Response<MessageResponse>
+
+    // 4. Смена телефона: Финальное подтверждение
+    @POST("api/v1/driver/profile/change-phone/confirm-new")
+    suspend fun confirmNewPhone(@Body request: ChangePhoneConfirmRequest): Response<LoginResponse>
+
+    // Смена РНОКПП
+    @PUT("api/v1/driver/profile/rnokpp")
+    suspend fun updateRnokpp(@Body request: UpdateDriverRequest): Response<MessageResponse>
+
+
+    // --- ЗАКАЗЫ ---
     @GET("api/v1/driver/orders/available")
     suspend fun getAvailableOrders(): Response<List<Order>>
 
@@ -69,6 +114,9 @@ interface DriverApiService {
 
     @POST("api/v1/driver/orders/{id}/cancel")
     suspend fun cancelOrder(@Path("id") orderId: Long): Response<Void>
+
+    @POST("api/v1/driver/orders/{id}/reject")
+    suspend fun rejectOffer(@Path("id") orderId: Long): Response<Unit>
 
     // --- СТАТУС ---
     @PATCH("api/v1/driver/status")
@@ -133,9 +181,6 @@ interface DriverApiService {
 
     @POST("api/v1/driver/search-settings")
     suspend fun updateSearchSettings(@Body settings: DriverSearchSettingsDto): Response<DriverSearchStateDto>
-
-    @POST("api/v1/driver/orders/{id}/reject")
-    suspend fun rejectOffer(@Path("id") orderId: Long): Response<Unit>
 
     @POST("api/v1/auth/fcm-token")
     suspend fun updateFcmToken(@Body request: FcmTokenDto): Response<Void>

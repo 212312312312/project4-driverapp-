@@ -6,25 +6,36 @@ import okhttp3.Interceptor
 import okhttp3.Response
 
 class AuthInterceptor(context: Context) : Interceptor {
-    private val sessionManager = SessionManager(context)
+    // Используем applicationContext, чтобы избежать утечек памяти Activity
+    private val sessionManager = SessionManager(context.applicationContext)
 
     override fun intercept(chain: Interceptor.Chain): Response {
         val originalRequest = chain.request()
         val url = originalRequest.url.toString()
 
-        // Проверка: Если мы пытаемся войти или зарегистрироваться,
-        // то старый токен нам не нужен (он только мешает серверу).
-        if (url.contains("auth/login") || url.contains("auth/register")) {
+        // 1. Пропускаем добавление токена для входа и регистрации,
+        // чтобы не отправлять старый/протухший токен.
+        if (url.contains("auth/login") ||
+            url.contains("auth/register") ||
+            url.contains("auth/driver/login")) {
             return chain.proceed(originalRequest)
         }
 
         val requestBuilder = originalRequest.newBuilder()
 
-        // В остальных случаях добавляем токен
-        sessionManager.fetchAuthToken()?.let { token ->
-            if (token.isNotBlank()) {
-                requestBuilder.addHeader("Authorization", "Bearer $token")
+        // 2. Достаем токен
+        val token = sessionManager.fetchAuthToken()
+
+        if (!token.isNullOrBlank()) {
+            // Защита: если в SessionManager уже сохранен "Bearer ...", не добавляем второй раз.
+            // Если сохранен чистый токен, добавляем префикс.
+            val finalHeader = if (token.startsWith("Bearer ")) {
+                token
+            } else {
+                "Bearer $token"
             }
+
+            requestBuilder.header("Authorization", finalHeader)
         }
 
         return chain.proceed(requestBuilder.build())

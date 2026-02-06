@@ -320,8 +320,11 @@ class LoginActivity : AppCompatActivity() {
     private fun saveSession(data: com.taxiapp.driver.network.LoginResponse) {
         sessionManager.saveAuthToken(data.token)
         sessionManager.saveDriverId(data.userId)
-        sessionManager.saveDriverName(data.fullName)
-        sessionManager.saveDriverPhone(data.userPhone)
+
+        // ИСПРАВЛЕНО: используем phoneNumber вместо userPhone
+        // И добавляем ?: "", так как поле может быть null
+        sessionManager.saveDriverName(data.fullName ?: "Водій")
+        sessionManager.saveDriverPhone(data.phoneNumber ?: "")
 
         val intent = Intent(this, AccountSelectionActivity::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK

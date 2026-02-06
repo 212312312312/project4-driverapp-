@@ -10,27 +10,27 @@ class SessionManager(context: Context) {
         const val USER_TOKEN = "user_token"
         const val KEY_DRIVER_ID = "driver_id"
         const val KEY_DRIVER_NAME = "driver_name"
-        const val KEY_DRIVER_PHONE = "driver_phone" // NEW
+        const val KEY_DRIVER_PHONE = "driver_phone"
         const val KEY_FCM_TOKEN = "fcm_token"
 
-        // Логіка ручної локації
         const val KEY_MANUAL_LAT = "manual_lat"
         const val KEY_MANUAL_LNG = "manual_lng"
         const val KEY_IS_MANUAL_LOC = "is_manual_loc"
         const val KEY_WAS_ORDER_MINIMIZED = "was_order_minimized"
     }
 
-    // --- ГОЛОВНА ПЕРЕВІРКА: ЧИ АВТОРИЗОВАНИЙ? ---
     fun isLoggedIn(): Boolean {
         return fetchAuthToken() != null
     }
 
-    fun saveFcmToken(token: String) {
-        prefs.edit().putString(KEY_FCM_TOKEN, token).apply()
+    // ИСПРАВЛЕНО: Сохраняем ТОЛЬКО чистый токен, без "Bearer" и пробелов
+    fun saveAuthToken(token: String) {
+        val cleanToken = token.replace("Bearer", "").trim()
+        prefs.edit().putString(USER_TOKEN, cleanToken).apply()
     }
 
-    fun fetchFcmToken(): String? {
-        return prefs.getString(KEY_FCM_TOKEN, null)
+    fun fetchAuthToken(): String? {
+        return prefs.getString(USER_TOKEN, null)
     }
 
     fun saveDriverId(id: Long) {
@@ -49,7 +49,6 @@ class SessionManager(context: Context) {
         return prefs.getString(KEY_DRIVER_NAME, null)
     }
 
-    // --- PHONE (NEW) ---
     fun saveDriverPhone(phone: String) {
         prefs.edit().putString(KEY_DRIVER_PHONE, phone).apply()
     }
@@ -58,7 +57,14 @@ class SessionManager(context: Context) {
         return prefs.getString(KEY_DRIVER_PHONE, null)
     }
 
-    // --- ЛОГІКА ЗГОРНУТОГО ЗАМОВЛЕННЯ ---
+    fun saveFcmToken(token: String) {
+        prefs.edit().putString(KEY_FCM_TOKEN, token).apply()
+    }
+
+    fun fetchFcmToken(): String? {
+        return prefs.getString(KEY_FCM_TOKEN, null)
+    }
+
     fun setOrderMinimized(minimized: Boolean) {
         prefs.edit().putBoolean(KEY_WAS_ORDER_MINIMIZED, minimized).apply()
     }
@@ -71,14 +77,6 @@ class SessionManager(context: Context) {
         setOrderMinimized(false)
     }
 
-    fun saveAuthToken(token: String) {
-        prefs.edit().putString(USER_TOKEN, token).apply()
-    }
-
-    fun fetchAuthToken(): String? {
-        return prefs.getString(USER_TOKEN, null)
-    }
-
     fun clearSession() {
         val fcmToken = fetchFcmToken()
         prefs.edit().clear().apply()
@@ -87,6 +85,7 @@ class SessionManager(context: Context) {
         }
     }
 
+    // Manual location methods...
     fun setManualLocation(lat: Double, lng: Double) {
         val editor = prefs.edit()
         editor.putFloat(KEY_MANUAL_LAT, lat.toFloat())

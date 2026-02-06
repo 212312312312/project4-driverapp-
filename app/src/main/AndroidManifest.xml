@@ -144,6 +144,17 @@
             android:screenOrientation="portrait"
             android:exported="false" />
 
+        <activity
+            android:name=".ChangePhoneActivity"
+            android:screenOrientation="portrait"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name=".ChangeRnokppActivity"
+            android:screenOrientation="portrait"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
         <activity android:name=".AccountSelectionActivity" />
         <activity android:name=".LoginPasswordActivity" />
         <service
