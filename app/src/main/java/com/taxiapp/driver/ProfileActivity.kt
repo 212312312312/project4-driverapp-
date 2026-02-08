@@ -61,8 +61,10 @@ class ProfileActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
+        // 3. Статус инвалидности (ОБНОВЛЕНО)
         findViewById<android.view.View>(R.id.btn_disability_status).setOnClickListener {
-            Toast.makeText(this, "Статус інвалідності (Скоро)", Toast.LENGTH_SHORT).show()
+            val intent = Intent(this, DisabilityStatusActivity::class.java)
+            startActivity(intent)
         }
     }
 
@@ -98,9 +100,8 @@ class ProfileActivity : AppCompatActivity() {
                     // Сохраняем реальный РНОКПП в переменную для Intent
                     currentRnokpp = profile.rnokpp
 
-                    // Маскируем в UI (показываем только звездочки или часть)
+                    // Маскируем в UI
                     if (!profile.rnokpp.isNullOrEmpty() && profile.rnokpp.length == 10) {
-                        // Показываем первые 2 и последние 2 цифры
                         tvIpn.text = profile.rnokpp.substring(0, 2) + "******" + profile.rnokpp.substring(8, 10)
                     } else {
                         tvIpn.text = "Додати"
@@ -119,7 +120,6 @@ class ProfileActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
-                // Можно добавить Toast при ошибке загрузки, если нужно
             }
         }
     }

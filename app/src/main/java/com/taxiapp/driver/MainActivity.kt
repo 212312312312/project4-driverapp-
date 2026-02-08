@@ -316,6 +316,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             showSosConfirmationDialog()
         }
         navViewContent.findViewById<View>(R.id.menu_item_car).setOnClickListener { startActivity(Intent(this, CarActivity::class.java)); drawerLayout.closeDrawer(GravityCompat.START) }
+        navViewContent.findViewById<View>(R.id.menu_item_news).setOnClickListener {
+            startActivity(Intent(this, NewsActivity::class.java))
+            drawerLayout.closeDrawer(GravityCompat.START)
+        }
         navViewContent.findViewById<View>(R.id.menu_item_activity).setOnClickListener { startActivity(Intent(this, DriverScoreActivity::class.java)); drawerLayout.closeDrawer(GravityCompat.START) }
         navViewContent.findViewById<View>(R.id.menu_item_stats)?.setOnClickListener {
             startActivity(Intent(this, StatsActivity::class.java))

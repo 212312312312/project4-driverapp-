@@ -157,6 +157,19 @@
             android:windowSoftInputMode="adjustResize" />
         <activity android:name=".AccountSelectionActivity" />
         <activity android:name=".LoginPasswordActivity" />
+        <activity
+            android:name=".DisabilityStatusActivity"
+            android:screenOrientation="portrait"
+            android:exported="false" />
+        <activity
+            android:name=".NewsActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".NewsDetailsActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
         <service
             android:name=".service.MyFirebaseMessagingService"
             android:exported="false">

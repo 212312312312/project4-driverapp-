@@ -13,7 +13,13 @@ data class DriverProfileDto(
     @SerializedName("rnokpp") val rnokpp: String?,
     @SerializedName("driverLicense") val driverLicense: String?,
 
-    // Ссылка на объекты в других файлах
+    // Медицинские данные (Добавлено)
+    @SerializedName("hasMovementIssue") val hasMovementIssue: Boolean = false,
+    @SerializedName("hasHearingIssue") val hasHearingIssue: Boolean = false,
+    @SerializedName("isDeaf") val isDeaf: Boolean = false,
+    @SerializedName("hasSpeechIssue") val hasSpeechIssue: Boolean = false,
+
+    // Ссылка на объекты
     @SerializedName("car") val car: CarDto?,
     @SerializedName("allowedTariffs") val allowedTariffs: List<CarTariffDto>?
 )
