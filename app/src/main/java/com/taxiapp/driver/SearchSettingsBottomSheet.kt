@@ -13,6 +13,7 @@ import com.taxiapp.driver.network.ApiClient
 import com.taxiapp.driver.network.DriverSearchMode
 import com.taxiapp.driver.network.DriverSearchSettingsDto
 import com.taxiapp.driver.network.DriverSearchStateDto
+import com.taxiapp.driver.utils.SessionManager
 import kotlinx.coroutines.launch
 import java.text.DecimalFormat
 
@@ -26,7 +27,7 @@ class SearchSettingsBottomSheet(
     private lateinit var tvHomeSector: TextView
     private lateinit var tvRadius: TextView
     private lateinit var seekBar: SeekBar
-    private lateinit var btnSave: MaterialButton // Кнопка зберегти
+    private lateinit var btnSave: MaterialButton
 
     private var currentMode = DriverSearchMode.CHAIN
     private var currentRadius = 3.0
@@ -53,9 +54,16 @@ class SearchSettingsBottomSheet(
         val btnMinus = view.findViewById<View>(R.id.btnRadiusMinus)
         val btnPlus = view.findViewById<View>(R.id.btnRadiusPlus)
 
+        // 1. Сразу берем из сессии, чтобы галочка появилась МОМЕНТАЛЬНО
+        val session = SessionManager(requireContext())
+        currentMode = session.getSearchMode()
+
+        // 2. Рисуем UI до запроса к серверу (чтобы юзер видел выбор сразу)
+        updateLocalUI()
+
+        // 3. Загружаем данные с сервера (радиус, лимиты, сектора)
         loadSettings()
 
-        // Тільки змінюємо UI, не зберігаємо
         btnModeHome.setOnClickListener { selectMode(DriverSearchMode.HOME) }
         btnModeChain.setOnClickListener { selectMode(DriverSearchMode.CHAIN) }
 
@@ -75,9 +83,7 @@ class SearchSettingsBottomSheet(
                 updateRadiusText()
             }
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {
-                // Більше не зберігаємо тут автоматично
-            }
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
 
         btnMinus.setOnClickListener {
@@ -92,10 +98,16 @@ class SearchSettingsBottomSheet(
             }
         }
 
-        // КЛІК НА КНОПКУ "ЗБЕРЕГТИ" - Єдине місце відправки запиту
         btnSave.setOnClickListener {
             saveSettings()
         }
+    }
+
+    private fun updateLocalUI() {
+        // Просто ставим галочки по текущему режиму (из сессии)
+        radioHome.isChecked = currentMode == DriverSearchMode.HOME
+        radioChain.isChecked = currentMode == DriverSearchMode.CHAIN
+        updateRadiusText()
     }
 
     private fun loadSettings() {
@@ -105,7 +117,15 @@ class SearchSettingsBottomSheet(
                 if (response.isSuccessful && response.body() != null) {
                     val state = response.body()!!
 
-                    currentMode = if (state.mode == DriverSearchMode.MANUAL) DriverSearchMode.CHAIN else state.mode
+                    // ИСПРАВЛЕНО: Логика обработки статуса от сервера
+                    // Если сервер прислал OFFLINE, MANUAL или BUSY -> мы считаем, что выбрана настройка "Ланцюг"
+                    // Только если сервер явно прислал HOME, мы ставим "Додому".
+                    currentMode = if (state.mode == DriverSearchMode.HOME) {
+                        DriverSearchMode.HOME
+                    } else {
+                        DriverSearchMode.CHAIN
+                    }
+
                     currentRadius = state.radius
                     selectedHomeSectorIds = state.homeSectorIds
 
@@ -118,6 +138,7 @@ class SearchSettingsBottomSheet(
     }
 
     private fun updateUI(state: DriverSearchStateDto) {
+        // Обновляем галочки (теперь currentMode точно либо CHAIN, либо HOME)
         radioHome.isChecked = currentMode == DriverSearchMode.HOME
         radioChain.isChecked = currentMode == DriverSearchMode.CHAIN
 
@@ -143,11 +164,10 @@ class SearchSettingsBottomSheet(
         currentMode = newMode
         radioHome.isChecked = currentMode == DriverSearchMode.HOME
         radioChain.isChecked = currentMode == DriverSearchMode.CHAIN
-        // Видалено saveSettings()
     }
 
     private fun saveSettings() {
-        btnSave.isEnabled = false // Блокуємо кнопку, щоб не клацали
+        btnSave.isEnabled = false
         btnSave.text = "ЗБЕРЕЖЕННЯ..."
 
         lifecycleScope.launch {
@@ -160,11 +180,13 @@ class SearchSettingsBottomSheet(
                 val response = ApiClient.getInstance().getApiService(requireContext()).updateSearchSettings(req)
 
                 if (response.isSuccessful && response.body() != null) {
-                    onSettingsChanged() // Оновлюємо головний екран
-                    dismiss() // Закриваємо шторку тільки при успіху
+                    // Зберігаємо в сесію, щоб наступного разу відкрилось миттєво правильно
+                    SessionManager(requireContext()).saveSearchMode(currentMode)
+                    onSettingsChanged()
+                    dismiss()
                 } else {
                     Toast.makeText(context, "Помилка: ${response.errorBody()?.string()}", Toast.LENGTH_SHORT).show()
-                    loadSettings() // Відкатуємо назад
+                    loadSettings()
                 }
             } catch (e: Exception) {
                 Toast.makeText(context, "Помилка збереження", Toast.LENGTH_SHORT).show()

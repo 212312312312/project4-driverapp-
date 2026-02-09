@@ -2,6 +2,7 @@ package com.taxiapp.driver.utils
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.taxiapp.driver.network.DriverSearchMode
 
 class SessionManager(context: Context) {
     private var prefs: SharedPreferences = context.getSharedPreferences("DriverPrefs", Context.MODE_PRIVATE)
@@ -13,6 +14,8 @@ class SessionManager(context: Context) {
         const val KEY_DRIVER_PHONE = "driver_phone"
         const val KEY_FCM_TOKEN = "fcm_token"
 
+        const val KEY_SEARCH_MODE = "search_mode" // Новий ключ
+
         const val KEY_MANUAL_LAT = "manual_lat"
         const val KEY_MANUAL_LNG = "manual_lng"
         const val KEY_IS_MANUAL_LOC = "is_manual_loc"
@@ -23,7 +26,7 @@ class SessionManager(context: Context) {
         return fetchAuthToken() != null
     }
 
-    // ИСПРАВЛЕНО: Сохраняем ТОЛЬКО чистый токен, без "Bearer" и пробелов
+    // Зберігаємо чистий токен
     fun saveAuthToken(token: String) {
         val cleanToken = token.replace("Bearer", "").trim()
         prefs.edit().putString(USER_TOKEN, cleanToken).apply()
@@ -64,6 +67,21 @@ class SessionManager(context: Context) {
     fun fetchFcmToken(): String? {
         return prefs.getString(KEY_FCM_TOKEN, null)
     }
+
+    // --- Search Mode Management ---
+    fun saveSearchMode(mode: DriverSearchMode) {
+        prefs.edit().putString(KEY_SEARCH_MODE, mode.name).apply()
+    }
+
+    fun getSearchMode(): DriverSearchMode {
+        val modeStr = prefs.getString(KEY_SEARCH_MODE, DriverSearchMode.CHAIN.name) // За замовчуванням CHAIN
+        return try {
+            DriverSearchMode.valueOf(modeStr!!)
+        } catch (e: Exception) {
+            DriverSearchMode.CHAIN // Якщо помилка - вертаємо CHAIN
+        }
+    }
+    // ------------------------------
 
     fun setOrderMinimized(minimized: Boolean) {
         prefs.edit().putBoolean(KEY_WAS_ORDER_MINIMIZED, minimized).apply()

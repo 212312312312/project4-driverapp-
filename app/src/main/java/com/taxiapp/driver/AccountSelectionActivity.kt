@@ -1,6 +1,7 @@
 package com.taxiapp.driver
 
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -17,6 +18,7 @@ class AccountSelectionActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityAccountSelectionBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
         sessionManager = SessionManager(this)
 
         setupUI()
@@ -24,18 +26,18 @@ class AccountSelectionActivity : AppCompatActivity() {
     }
 
     private fun setupUI() {
-        // Отображаем сохраненный телефон
+        // ВИПРАВЛЕНО: Показуємо тільки номер телефону, як раніше.
         val phone = sessionManager.getDriverPhone() ?: "Невідомий номер"
         binding.tvPhoneNumber.text = phone
     }
 
     private fun setupListeners() {
-        // Кнопка ВОЙТИ - идет в систему
+        // Кнопка ВОЙТИ (ПРОДОВЖИТИ) - повертає на карту
         binding.btnContinue.setOnClickListener {
             goToMainActivity()
         }
 
-        // СМЕНИТЬ АККАУНТ - разлогин и переход на Welcome
+        // ЗМІНИТИ АКАУНТ - повний розлогін і перехід на Welcome
         binding.btnSwitchAccount.setOnClickListener {
             sessionManager.clearSession()
             val intent = Intent(this, WelcomeActivity::class.java)
@@ -46,11 +48,23 @@ class AccountSelectionActivity : AppCompatActivity() {
     }
 
     private fun goToMainActivity() {
+        // Перезапускаємо сервіс локації, щоб гарантувати його роботу
         val serviceIntent = Intent(this, LocationService::class.java)
-        ContextCompat.startForegroundService(this, serviceIntent)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            ContextCompat.startForegroundService(this, serviceIntent)
+        } else {
+            startService(serviceIntent)
+        }
 
         val intent = Intent(this, MainActivity::class.java)
         startActivity(intent)
         finish()
+    }
+
+    // Забороняємо повернення назад системною кнопкою "Back",
+    // щоб водій не міг повернутися на попередній екран "виходу".
+    // Замість закриття - згортаємо додаток.
+    override fun onBackPressed() {
+        moveTaskToBack(true)
     }
 }

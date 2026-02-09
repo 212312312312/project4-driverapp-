@@ -66,15 +66,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private lateinit var navViewContent: View
 
-    // --- Geolocation & Map elements ---
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationCallback: LocationCallback
     
-    // --- Radius Circle Variables ---
     private var searchRadiusCircle: Circle? = null
-    private var currentSearchRadiusKm: Double = 3.0 // Дефолт
+    private var currentSearchRadiusKm: Double = 3.0
     private var currentDriverLocation: LatLng? = null
-    // -------------------------------
 
     private var isSectorsVisible = false
     private val sectorPolygons = mutableListOf<Polygon>()
@@ -107,7 +104,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         if (fineLocation || coarseLocation) {
             updateMapUI()
             startLocationService()
-            startUILocationUpdates() // <-- Запускаємо оновлення UI
+            startUILocationUpdates() 
             if (::map.isInitialized) centerMapOnUser()
         } else {
             Toast.makeText(this, "Потрібен доступ до геолокації!", Toast.LENGTH_LONG).show()
@@ -119,7 +116,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         setContentView(R.layout.activity_main)
 
         sessionManager = SessionManager(this)
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this) // Ініціалізація
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         if (sessionManager.fetchAuthToken() == null) {
             startActivity(Intent(this, LoginActivity::class.java))
@@ -132,7 +129,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         setupUI()
         loadUserProfile()
-        setupLocationCallback() // Налаштовуємо колбек
+        setupLocationCallback()
         
         checkPermissionsAndStart()
         checkActiveOrderOnStart()
@@ -157,31 +154,27 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         updateLockIconState()
         updateOrdersBadge()
         checkActiveOrderOnStart() 
-        startUILocationUpdates() // Відновлюємо оновлення локації
+        startUILocationUpdates()
 
         if (::map.isInitialized) {
             updateMapUI()
-            // Оновлюємо коло, якщо ми повернулися з налаштувань
             updateSearchStatusUI() 
         }
     }
 
     override fun onPause() {
         super.onPause()
-        // Зупиняємо оновлення UI, щоб не їсти батарею (сервіс фону продовжує працювати окремо)
         fusedLocationClient.removeLocationUpdates(locationCallback)
     }
 
-    // --- НАЛАШТУВАННЯ ОНОВЛЕННЯ ЛОКАЦІЇ ДЛЯ UI (РУХ КОЛА) ---
     private fun setupLocationCallback() {
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult) {
                 val location = locationResult.lastLocation ?: return
                 
-                // Якщо увімкнено ручний режим, ігноруємо GPS для кола
                 if (!sessionManager.isManualLocationActive()) {
                     currentDriverLocation = LatLng(location.latitude, location.longitude)
-                    drawSearchRadius() // Перемальовуємо коло
+                    drawSearchRadius() 
                 }
             }
         }
@@ -191,19 +184,16 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun startUILocationUpdates() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) return
         
-        val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 3000) // Оновлення раз на 3 сек
-            .setMinUpdateDistanceMeters(5f) // Або якщо проїхав 5 метрів
+        val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 3000)
+            .setMinUpdateDistanceMeters(5f)
             .build()
             
         fusedLocationClient.requestLocationUpdates(request, locationCallback, Looper.getMainLooper())
     }
-    // -----------------------------------------------------------
 
-    // --- ЛОГІКА МАЛЮВАННЯ КОЛА ---
     private fun drawSearchRadius() {
         if (!::map.isInitialized) return
 
-        // 1. Визначаємо центр кола
         val center = if (sessionManager.isManualLocationActive()) {
             val manual = sessionManager.getManualLocation() ?: return
             LatLng(manual.first, manual.second)
@@ -213,15 +203,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         if (center == null) return
 
-        // 2. Визначаємо радіус в метрах
         val radiusMeters = currentSearchRadiusKm * 1000
 
-        // 3. Колір (Неоновий, напівпрозорий)
         val strokeColor = ContextCompat.getColor(this, R.color.driver_neon_teal)
-        val fillColor = Color.argb(40, Color.red(strokeColor), Color.green(strokeColor), Color.blue(strokeColor)) // 40 = прозорість
+        val fillColor = Color.argb(40, Color.red(strokeColor), Color.green(strokeColor), Color.blue(strokeColor))
 
         if (searchRadiusCircle == null) {
-            // Створюємо нове коло
             searchRadiusCircle = map.addCircle(CircleOptions()
                 .center(center)
                 .radius(radiusMeters)
@@ -229,17 +216,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 .fillColor(fillColor)
                 .strokeWidth(3f))
         } else {
-            // Оновлюємо існуюче (плавна анімація)
             searchRadiusCircle?.center = center
             searchRadiusCircle?.radius = radiusMeters
-            searchRadiusCircle?.fillColor = fillColor // На випадок зміни теми
+            searchRadiusCircle?.fillColor = fillColor
         }
         
-        // Ховаємо коло, якщо режим "Ефір" (MANUAL) - там радіус не важливий, або якщо пошук не активний?
-        // За логікою "Ланцюга", водій має бачити зону. Залишимо завжди видимим, якщо є налаштування.
         searchRadiusCircle?.isVisible = true
     }
-    // -----------------------------
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
@@ -278,6 +261,15 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         tvSearchModeSubtitle = findViewById(R.id.tvSearchModeSubtitle)
         btnToggleSearchMode = findViewById(R.id.btnToggleSearchMode)
 
+        // --- ВИПРАВЛЕНО ТУТ ---
+        // Ставимо правильний текст за замовчуванням (Ланцюг + Неактивно)
+        tvSearchModeTitle.text = "⚡ Ланцюг замовлень"
+        tvSearchModeSubtitle.text = "Натисніть для активації"
+        
+        // Примусово оновлюємо візуал, щоб він відповідав статусу isSearchActive = false
+        updateSearchBlockVisuals(false)
+        // -----------------------
+
         btnToggleSearchMode.setOnClickListener { toggleSearchActivation() }
 
         findViewById<View>(R.id.btnSearchSettings).setOnClickListener {
@@ -310,9 +302,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             showDispatcherBottomSheet()
         }
         navViewContent.findViewById<View>(R.id.btn_menu_sos).setOnClickListener {
-            // Закрываем меню сразу, чтобы было видно диалог
             drawerLayout.closeDrawer(GravityCompat.START)
-            // Показываем диалог подтверждения
             showSosConfirmationDialog()
         }
         navViewContent.findViewById<View>(R.id.menu_item_car).setOnClickListener { startActivity(Intent(this, CarActivity::class.java)); drawerLayout.closeDrawer(GravityCompat.START) }
@@ -325,19 +315,22 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             startActivity(Intent(this, StatsActivity::class.java))
             drawerLayout.closeDrawer(GravityCompat.START)
         }
+
         navViewContent.findViewById<View>(R.id.btn_logout).setOnClickListener {
             switchOnline.isChecked = false
             lifecycleScope.launch {
-                try { ApiClient.getInstance().getApiService(this@MainActivity).updateStatus(UpdateDriverStatusRequest(false, 0.0, 0.0)) } catch (e: Exception) {}
-                finally {
-                    sessionManager.clearSession()
-                    val intent = Intent(this@MainActivity, LoginActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                try { 
+                    ApiClient.getInstance().getApiService(this@MainActivity).updateStatus(UpdateDriverStatusRequest(false, 0.0, 0.0)) 
+                } catch (e: Exception) {
+                } finally {
+                    val intent = Intent(this@MainActivity, AccountSelectionActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK 
                     startActivity(intent)
                     finish()
                 }
             }
         }
+
         updateSearchStatusUI()
     }
 
@@ -359,33 +352,17 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun showSosConfirmationDialog() {
-        // 1. Створюємо AlertDialog Builder
         val builder = AlertDialog.Builder(this)
-
-        // 2. Інфлейтимо наш красивий XML
         val customView = layoutInflater.inflate(R.layout.dialog_sos_confirm, null)
         builder.setView(customView)
-
-        // 3. Створюємо діалог
         val dialog = builder.create()
-
-        // 4. Прозорий фон вікна (ОБОВ'ЯЗКОВО, щоб було видно закруглені краї bg_bottom_sheet_driver)
         dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
 
-        // 5. Знаходимо кнопки та вішаємо слухачі
         val btnCancel = customView.findViewById<View>(R.id.btnCancelSos)
         val btnConfirm = customView.findViewById<View>(R.id.btnConfirmSos)
 
-        btnCancel.setOnClickListener {
-            dialog.dismiss()
-        }
-
-        btnConfirm.setOnClickListener {
-            dialog.dismiss()
-            sendSosSignal() // Викликаємо відправку
-        }
-
-        // 6. Показуємо
+        btnCancel.setOnClickListener { dialog.dismiss() }
+        btnConfirm.setOnClickListener { dialog.dismiss(); sendSosSignal() }
         dialog.show()
     }
 
@@ -417,10 +394,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun toggleSearchActivation() {
-        if (tvSearchModeTitle.text.contains("Ручний")) {
-            Toast.makeText(this, "Це режим Ефіру.", Toast.LENGTH_SHORT).show()
-            return
-        }
         isSearchActive = !isSearchActive
         updateSearchBlockVisuals(isSearchActive)
         if (isSearchActive) Toast.makeText(this, "Пошук розпочато...", Toast.LENGTH_SHORT).show()
@@ -437,6 +410,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             btnToggleSearchMode.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#CC1E1E1E"))
             tvSearchModeTitle.setTextColor(ContextCompat.getColor(this, R.color.driver_neon_teal))
             tvSearchModeSubtitle.setTextColor(ContextCompat.getColor(this, R.color.driver_text_secondary))
+            // Тут ми можемо залишити те, що вже є, або оновити, але setupUI тепер гарантує початковий стан.
             tvSearchModeSubtitle.text = "Натисніть для активації"
         }
     }
@@ -448,38 +422,44 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 if (response.isSuccessful && response.body() != null) {
                     val state = response.body()!!
                     
-                    // --- Оновлюємо радіус для малювання кола ---
                     currentSearchRadiusKm = state.radius
-                    drawSearchRadius() // Одразу перемальовуємо з новим радіусом
-                    // -------------------------------------------
+                    drawSearchRadius()
+
+                    val sessionManager = SessionManager(this@MainActivity)
 
                     when (state.mode) {
                         DriverSearchMode.MANUAL -> {
-                            tvSearchModeTitle.text = "Ефір (Ручний пошук)"
-                            tvSearchModeTitle.setTextColor(Color.WHITE)
+                            tvSearchModeTitle.text = "⚡ Ланцюг замовлень"
+                            searchRadiusCircle?.isVisible = true
                             isSearchActive = false
-                            // У режимі Ефіру коло можна ховати
-                            searchRadiusCircle?.isVisible = false 
+                            sessionManager.saveSearchMode(DriverSearchMode.CHAIN)
                         }
                         DriverSearchMode.CHAIN -> {
                             tvSearchModeTitle.text = "⚡ Ланцюг замовлень"
                             searchRadiusCircle?.isVisible = true
+                            sessionManager.saveSearchMode(DriverSearchMode.CHAIN)
                         }
                         DriverSearchMode.HOME -> {
                             val sectorsText = if (state.homeSectorNames.isNullOrEmpty()) "?" else state.homeSectorNames
                             tvSearchModeTitle.text = "🏠 Додому ($sectorsText)"
                             searchRadiusCircle?.isVisible = true
+                            sessionManager.saveSearchMode(DriverSearchMode.HOME)
                         }
                     }
 
-                    if (!isSearchActive && state.mode != DriverSearchMode.MANUAL) {
+                    // Оновлення тексту в залежності від того, чи ми натиснули "Старт" (isSearchActive)
+                    if (!isSearchActive && state.mode == DriverSearchMode.MANUAL) {
                         tvSearchModeSubtitle.text = "Радіус: ${state.radius} км • Натисніть для старту"
                         tvSearchModeTitle.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.driver_neon_teal))
-                    } else if (state.mode == DriverSearchMode.MANUAL) {
-                        tvSearchModeSubtitle.text = "Радіус: ${state.radius} км"
+                    } else if (!isSearchActive) {
+                        // Якщо просто оновлюємо дані з сервера, але пошук вимкнено локально
+                        tvSearchModeSubtitle.text = "Натисніть для активації" 
+                    } else {
+                        tvSearchModeSubtitle.text = "Пошук замовлень..."
                     }
 
                     if (isSearchActive) updateSearchBlockVisuals(true)
+                    else updateSearchBlockVisuals(false)
                 }
             } catch (e: Exception) { e.printStackTrace() }
         }
@@ -524,7 +504,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             val manualLoc = sessionManager.getManualLocation()
             if (manualLoc != null) {
                 val latLng = LatLng(manualLoc.first, manualLoc.second)
-                // Оновлюємо і малюємо коло навколо ручної точки
                 currentDriverLocation = latLng
                 drawSearchRadius()
                 
@@ -541,7 +520,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 map.uiSettings.isMyLocationButtonEnabled = false
                 fusedLocationClient.lastLocation.addOnSuccessListener { location ->
                     location?.let { 
-                        // Оновлюємо і малюємо коло навколо GPS
                         currentDriverLocation = LatLng(it.latitude, it.longitude)
                         drawSearchRadius()
                         map.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(it.latitude, it.longitude), 16f)) 
@@ -646,7 +624,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             val manualLoc = sessionManager.getManualLocation()
             if (manualLoc != null) {
                 val latLng = LatLng(manualLoc.first, manualLoc.second)
-                // Оновлюємо коло
                 currentDriverLocation = latLng
                 drawSearchRadius()
                 if (manualLocationMarker == null) manualLocationMarker = map.addMarker(MarkerOptions().position(latLng).title("Фіксована позиція").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN)))
@@ -732,7 +709,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val allGranted = permissionsToRequest.all { ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED }
         if (allGranted) {
             startLocationService()
-            startUILocationUpdates() // Важливо для кола
+            startUILocationUpdates() 
         } else requestPermissionLauncher.launch(permissionsToRequest.toTypedArray())
     }
 
