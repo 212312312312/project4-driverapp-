@@ -44,7 +44,7 @@
             android:layout_marginTop="16dp"
             android:background="@drawable/bg_status_pill"
             android:paddingHorizontal="24dp"
-            android:text="ОФЛАЙН"
+            android:text="@string/main_status_offline"
             android:textColor="@color/driver_text_primary"
             android:textSize="15sp"
             android:textStyle="bold"
@@ -78,7 +78,7 @@
                 android:clickable="true"
                 android:focusable="true"
                 app:tint="@color/driver_neon_teal"
-                android:tooltipText="Рибні місця" />
+                android:tooltipText="@string/main_tooltip_hotspots" />
 
             <ImageButton
                 android:id="@+id/btn_sectors"
@@ -91,7 +91,7 @@
                 android:clickable="true"
                 android:focusable="true"
                 app:tint="@color/driver_text_primary"
-                android:tooltipText="Сектори" />
+                android:tooltipText="@string/main_tooltip_sectors" />
 
         </LinearLayout>
 
@@ -117,7 +117,7 @@
                 android:clickable="true"
                 android:focusable="true"
                 app:tint="@color/driver_text_primary"
-                android:tooltipText="Закріпити камеру" />
+                android:tooltipText="@string/main_tooltip_lock" />
 
             <ImageButton
                 android:id="@+id/btn_my_location"
@@ -163,7 +163,7 @@
                     android:id="@+id/tvSearchModeTitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="⚡ Ланцюг замовлень"
+                    android:text="@string/main_search_chain_title"
                     android:textColor="@android:color/white"
                     android:textSize="16sp"
                     android:textStyle="bold" />
@@ -172,7 +172,7 @@
                     android:id="@+id/tvSearchModeSubtitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Пошук замовлень..."
+                    android:text="@string/main_search_chain_subtitle"
                     android:textColor="@color/driver_text_secondary"
                     android:textSize="12sp" />
             </LinearLayout>
@@ -225,7 +225,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Ефір"
+                    android:text="@string/main_nav_ether"
                     android:textSize="12sp"
                     android:textColor="@color/driver_neon_teal"
                     android:layout_marginTop="4dp" />
@@ -264,7 +264,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Замовлення"
+                    android:text="@string/main_nav_orders"
                     android:textSize="12sp"
                     android:textColor="@color/driver_text_secondary"
                     android:layout_marginTop="4dp" />
@@ -290,7 +290,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Фільтри"
+                    android:text="@string/main_nav_filters"
                     android:textSize="12sp"
                     android:textColor="@color/driver_text_secondary"
                     android:layout_marginTop="4dp" />

@@ -17,7 +17,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Зміна РНОКПП"
+        android:text="@string/rnokpp_title"
         android:textColor="@color/white"
         android:textSize="24sp"
         android:textStyle="bold"
@@ -27,7 +27,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Введіть 10 цифр вашого ІПН"
+        android:text="@string/rnokpp_instruction"
         android:textColor="#AAAAAA"
         android:layout_marginBottom="8dp" />
 
@@ -40,7 +40,7 @@
         android:padding="16dp"
         android:maxLength="10"
         android:inputType="number"
-        android:hint="XXXXXXXXXX"
+        android:hint="@string/rnokpp_placeholder"
         android:textColorHint="#666666" />
 
     <View android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
@@ -49,7 +49,7 @@
         android:id="@+id/btn_save_rnokpp"
         android:layout_width="match_parent"
         android:layout_height="50dp"
-        android:text="Зберегти"
+        android:text="@string/rnokpp_btn_save"
         android:gravity="center"
         android:textColor="@color/white"
         android:textStyle="bold"

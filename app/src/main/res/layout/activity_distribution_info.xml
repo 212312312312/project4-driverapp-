@@ -29,7 +29,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Розподіл замовлень"
+            android:text="@string/distrib_title"
             android:textSize="22sp"
             android:textStyle="bold"
             android:textColor="@color/driver_text_primary"
@@ -55,7 +55,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="4dp"
                 android:layout_marginBottom="8dp"
-                android:text="Основний принцип"
+                android:text="@string/distrib_sec_principle"
                 android:textColor="@color/driver_text_primary"
                 android:textSize="18sp"
                 android:textStyle="bold" />
@@ -73,7 +73,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="12dp"
-                    android:text="Ви маєте найбільші шанси отримати замовлення, якщо знаходитеся найближче до пасажира."
+                    android:text="@string/distrib_text_principle_1"
                     android:textColor="@color/driver_text_primary"
                     android:textSize="16sp" />
 
@@ -82,7 +82,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="4dp"
                     android:drawablePadding="8dp"
-                    android:text="Вам це вигідно, адже ви витрачаєте менше часу і пального на дорогу."
+                    android:text="@string/distrib_text_principle_2"
                     android:textColor="@color/driver_text_secondary"
                     android:textSize="14sp"
                     app:drawableStartCompat="@drawable/ic_list_dot"
@@ -92,7 +92,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:drawablePadding="8dp"
-                    android:text="А пасажири отримують авто швидше, адже чекають менше."
+                    android:text="@string/distrib_text_principle_3"
                     android:textColor="@color/driver_text_secondary"
                     android:textSize="14sp"
                     app:drawableStartCompat="@drawable/ic_list_dot"
@@ -104,7 +104,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="4dp"
                 android:layout_marginBottom="8dp"
-                android:text="Що впливає на розподіл?"
+                android:text="@string/distrib_sec_factors"
                 android:textColor="@color/driver_text_primary"
                 android:textSize="18sp"
                 android:textStyle="bold" />
@@ -122,25 +122,25 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="12dp"
-                    android:text="Відстань — основний, проте не єдиний фактор. Також впливають:"
+                    android:text="@string/distrib_text_factors_intro"
                     android:textColor="@color/driver_text_primary"
                     android:textSize="16sp" />
 
                 <TextView
                     style="@style/ListTextStyle"
-                    android:text="Активний ланцюг замовлень" />
+                    android:text="@string/distrib_factor_chain" />
 
                 <TextView
                     style="@style/ListTextStyle"
-                    android:text="Ваш час без замовлень" />
+                    android:text="@string/distrib_factor_time" />
 
                 <TextView
                     style="@style/ListTextStyle"
-                    android:text="Ваш рівень Активності" />
+                    android:text="@string/distrib_factor_activity" />
 
                 <TextView
                     style="@style/ListTextStyle"
-                    android:text="Брендування авто" />
+                    android:text="@string/distrib_factor_branding" />
             </LinearLayout>
 
             <TextView
@@ -148,7 +148,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="4dp"
                 android:layout_marginBottom="8dp"
-                android:text="Етапи розподілу"
+                android:text="@string/distrib_sec_stages"
                 android:textColor="@color/driver_text_primary"
                 android:textSize="18sp"
                 android:textStyle="bold" />
@@ -165,25 +165,25 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="12dp"
-                    android:text="Кожне замовлення проходить 4 етапи:"
+                    android:text="@string/distrib_text_stages_intro"
                     android:textColor="@color/driver_text_primary"
                     android:textSize="16sp" />
 
                 <TextView
                     style="@style/ListTextStyle"
-                    android:text="Пошук водіїв, які відповідають параметрам." />
+                    android:text="@string/distrib_stage_search" />
 
                 <TextView
                     style="@style/ListTextStyle"
-                    android:text="Формування черги водіїв." />
+                    android:text="@string/distrib_stage_queue" />
 
                 <TextView
                     style="@style/ListTextStyle"
-                    android:text="Надсилання замовлення водіям у черзі." />
+                    android:text="@string/distrib_stage_sending" />
 
                 <TextView
                     style="@style/ListTextStyle"
-                    android:text="Відображення в Ефірі (радіус 3 км), якщо замовлення не взяли раніше." />
+                    android:text="@string/distrib_stage_ether" />
             </LinearLayout>
 
         </LinearLayout>

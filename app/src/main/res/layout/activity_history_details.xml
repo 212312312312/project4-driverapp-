@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -7,19 +6,16 @@
     android:background="@color/driver_black_bg"
     android:fillViewport="true">
 
-
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:paddingBottom="32dp">
 
-
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:padding="16dp">
-
 
             <ImageButton
                 android:id="@+id/btn_back"
@@ -30,18 +26,16 @@
                 android:padding="8dp"
                 app:tint="@color/driver_text_primary" />
 
-
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Деталі поїздки"
+                android:text="@string/hist_det_title"
                 android:textColor="@color/driver_text_primary"
                 android:textSize="20sp"
                 android:textStyle="bold"
                 android:layout_centerInParent="true" />
 
         </RelativeLayout>
-
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -50,7 +44,6 @@
             android:background="@color/driver_card_bg"
             android:padding="16dp"
             android:layout_marginTop="8dp">
-
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -64,13 +57,12 @@
                     android:id="@+id/tv_from_detail"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="..."
+                    android:text="@string/hist_det_placeholder_dots"
                     android:textColor="@color/driver_text_primary"
                     android:layout_marginStart="12dp"
                     android:textSize="16sp" />
 
             </LinearLayout>
-
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -86,17 +78,15 @@
                     android:id="@+id/tv_to_detail"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="..."
+                    android:text="@string/hist_det_placeholder_dots"
                     android:textColor="@color/driver_text_primary"
                     android:layout_marginStart="12dp"
                     android:textSize="16sp" />
 
             </LinearLayout>
 
-
             <View android:layout_width="match_parent" android:layout_height="1dp"
                 android:background="#333" android:layout_marginVertical="16dp" />
-
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -104,37 +94,33 @@
                 android:orientation="horizontal"
                 android:gravity="center_vertical">
 
-
                 <TextView
                     android:id="@+id/tv_tariff_name"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Standard"
+                    android:text="@string/hist_det_placeholder_tariff"
                     android:textColor="@color/driver_text_secondary"
                     android:background="@drawable/bg_status_pill"
                     android:paddingHorizontal="8dp"
                     android:paddingVertical="2dp"
                     android:textSize="12sp" />
 
-
                 <View android:layout_width="0dp" android:layout_height="0dp"
                     android:layout_weight="1" />
-
 
                 <TextView
                     android:id="@+id/tv_distance_detail"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="0.0 км"
+                    android:text="@string/hist_det_placeholder_dist"
                     android:textColor="@color/driver_text_secondary"
                     android:layout_marginEnd="12dp" />
-
 
                 <TextView
                     android:id="@+id/tv_price_detail"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="0 ₴"
+                    android:text="@string/hist_det_placeholder_price"
                     android:textColor="@color/driver_text_primary"
                     android:textSize="20sp"
                     android:textStyle="bold" />
@@ -142,7 +128,6 @@
             </LinearLayout>
 
         </LinearLayout>
-
 
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
@@ -165,16 +150,14 @@
 
         </androidx.cardview.widget.CardView>
 
-
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Зміни активності"
+            android:text="@string/hist_det_label_activity"
             android:textColor="@color/driver_text_secondary"
             android:layout_marginStart="16dp"
             android:layout_marginTop="24dp"
             android:textSize="14sp" />
-
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -185,36 +168,32 @@
             android:orientation="horizontal"
             android:gravity="center_vertical">
 
-
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Успішне замовлення"
+                android:text="@string/hist_det_label_success"
                 android:textColor="@color/driver_text_primary"
                 android:textSize="16sp" />
-
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="+1"
+                android:text="@string/hist_det_score_plus"
                 android:textColor="@color/driver_neon_teal"
                 android:textStyle="bold"
                 android:textSize="16sp" />
 
         </LinearLayout>
 
-
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Автомобіль"
+            android:text="@string/hist_det_label_car"
             android:textColor="@color/driver_text_secondary"
             android:layout_marginStart="16dp"
             android:layout_marginTop="24dp"
             android:textSize="14sp" />
-
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -224,47 +203,42 @@
             android:layout_marginTop="8dp"
             android:orientation="vertical">
 
-
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal">
 
-
                 <TextView
                     android:id="@+id/tv_car_plate"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="AA 0000 AA"
+                    android:text="@string/hist_det_placeholder_plate"
                     android:textColor="@color/driver_text_black"
                     android:background="@drawable/bg_license_plate"
                     android:paddingHorizontal="8dp"
                     android:textStyle="bold" />
 
-
                 <TextView
                     android:id="@+id/tv_car_model"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Toyota Camry"
+                    android:text="@string/hist_det_placeholder_model"
                     android:textColor="@color/driver_text_primary"
                     android:layout_marginStart="16dp"
                     android:textSize="16sp" />
 
             </LinearLayout>
 
-
             <TextView
                 android:id="@+id/tv_car_class"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Standard"
+                android:text="@string/hist_det_placeholder_tariff"
                 android:textColor="@color/driver_text_secondary"
                 android:layout_marginTop="8dp"
                 android:textSize="14sp" />
 
         </LinearLayout>
-
 
     </LinearLayout>
 

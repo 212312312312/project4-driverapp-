@@ -23,18 +23,18 @@
             android:focusable="true"
             app:tint="@color/driver_text_primary"
             android:layout_centerVertical="true"
-            android:layout_alignParentStart="true"/>
+            android:layout_alignParentStart="true" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Історія змін"
+            android:text="@string/history_title"
             android:textSize="22sp"
             android:textStyle="bold"
             android:textColor="@color/driver_text_primary"
             android:layout_centerVertical="true"
             android:layout_toEndOf="@id/btnBack"
-            android:layout_marginStart="16dp"/>
+            android:layout_marginStart="16dp" />
     </RelativeLayout>
 
     <androidx.recyclerview.widget.RecyclerView
@@ -43,6 +43,6 @@
         android:layout_height="match_parent"
         android:paddingHorizontal="24dp"
         android:clipToPadding="false"
-        android:paddingBottom="24dp"/>
+        android:paddingBottom="24dp" />
 
 </LinearLayout>

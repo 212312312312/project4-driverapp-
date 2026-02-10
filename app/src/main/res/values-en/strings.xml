@@ -1,0 +1,351 @@
+<resources>
+    <string name="app_name">Taxi Driver</string>
+    <string name="google_maps_key">AIzaSyCl5DccocpzluJxAX_RwTqC5baCHgB9ybA</string>
+    <string name="menu_news">News</string>
+    <string name="menu_car">Vehicle</string>
+    <string name="menu_balance">Balance</string>
+    <string name="menu_activity">Activity</string>
+    <string name="menu_stats">Statistics</string>
+    <string name="menu_logout">Log Out</string>
+
+    <string name="settings_title">Settings</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_theme">Theme</string>
+    <string name="settings_ether_orders">Ether Orders</string>
+    <string name="settings_sounds">Sounds</string>
+    <string name="settings_navigator">Navigation</string>
+    <string name="settings_quick_access">Quick Access</string>
+    <string name="settings_quick_access_desc">Display over other apps</string>
+    <string name="settings_notifications">Notifications</string>
+    <string name="settings_notifications_desc">Status change reminders</string>
+
+    <string name="feature_coming_soon">This feature is coming soon</string>
+    <string name="me_account">My Account</string>
+    <string name="acc_phone_placeholder">+380 XX XXX XX XX</string>
+    <string name="acc_switch_account">Switch Account</string>
+    <string name="acc_btn_login">LOG IN</string>
+
+    <string name="points_title_calculation">How points are calculated</string>
+    <string name="points_label_basic">Basic points (Work)</string>
+    <string name="points_label_bonus">Extra points (Bonuses)</string>
+    <string name="points_label_penalty">Deductions (Penalties)</string>
+
+    <string name="car_title">Vehicle</string>
+    <string name="car_tab_active">Active</string>
+    <string name="car_tab_list">List</string>
+    <string name="car_status_loading">Loading...</string>
+    <string name="car_plate_placeholder">--------</string>
+    <string name="car_label_type">Vehicle Type</string>
+    <string name="car_year_placeholder">20--</string>
+    <string name="car_btn_add_branding">Add Branding</string>
+    <string name="car_btn_add_services">Add Services</string>
+    <string name="car_label_classes_services">Classes &amp; Services</string>
+    <string name="car_btn_documents">Docs &amp; Car Photos</string>
+    <string name="car_cd_add_new">Add new car</string>
+
+    <string name="docs_title">Documents &amp; Photos</string>
+    <string name="docs_tech_passport">Tech Passport</string>
+    <string name="docs_insurance">Insurance Policy</string>
+    <string name="docs_car_photos">Vehicle Photos</string>
+    <string name="docs_view_front">Front</string>
+    <string name="docs_view_back">Back</string>
+    <string name="docs_view_left">Left Side</string>
+    <string name="docs_view_right">Right Side</string>
+    <string name="docs_seats_front">Seats (Front)</string>
+    <string name="docs_seats_back">Seats (Rear)</string>
+
+    <string name="cp_title">Change Phone Number</string>
+    <string name="cp_msg_current_send">For security, we will send a code to your CURRENT number.</string>
+    <string name="cp_btn_send_code">Send Code</string>
+    <string name="cp_msg_current_enter">Enter code from SMS (current number):</string>
+    <string name="cp_hint_code">Code</string>
+    <string name="cp_btn_confirm">Confirm</string>
+    <string name="cp_msg_new_phone">Enter NEW phone number:</string>
+    <string name="cp_hint_phone_ua">+380...</string>
+    <string name="cp_btn_next">Next</string>
+    <string name="cp_msg_new_enter">Enter the code sent to the NEW number:</string>
+    <string name="cp_btn_finish">Change Number</string>
+
+    <string name="rnokpp_title">Change Tax ID</string>
+    <string name="rnokpp_instruction">Enter the 10 digits of your Tax ID</string>
+    <string name="rnokpp_placeholder">XXXXXXXXXX</string>
+    <string name="rnokpp_btn_save">Save</string>
+
+    <string name="filter_create_title">Create Filter</string>
+    <string name="filter_name_hint">Filter Name (e.g. Center)</string>
+    <string name="filter_section_from">FROM</string>
+    <string name="filter_type_distance">Distance</string>
+    <string name="filter_type_sectors">Sectors</string>
+    <string name="filter_radius_default">Radius: 5.0 km</string>
+    <string name="filter_btn_select_sectors">Select Sectors</string>
+    <string name="filter_section_to">TO</string>
+    <string name="filter_btn_select_to_sectors">+ Destination Sectors</string>
+    <string name="filter_selected_count_default">Sectors selected: 0</string>
+    <string name="filter_section_tariff">TARIFF</string>
+    <string name="filter_tariff_simple">Simple</string>
+    <string name="filter_tariff_complex">Complex</string>
+    <string name="filter_hint_min_price">Min Order Price (₴)</string>
+    <string name="filter_hint_min_price_km">Min Price per km (₴/km)</string>
+    <string name="filter_hint_complex_km">Min Distance km (e.g. 2)</string>
+    <string name="filter_hint_city_price">Min Price/km City (₴/km)</string>
+    <string name="filter_hint_suburb_price">Min Price/km Suburb (₴/km)</string>
+    <string name="filter_section_payment">PAYMENT TYPE</string>
+    <string name="filter_btn_create">CREATE FILTER</string>
+
+    <string name="disability_title">Medical Conditions</string>
+    <string name="disability_description">Specify if you have any functional impairments so we can inform the passenger.</string>
+    <string name="disability_movement_title">Musculoskeletal impairment</string>
+    <string name="disability_movement_desc">I use a wheelchair or crutches</string>
+    <string name="disability_hearing_title">Hearing impairment</string>
+    <string name="disability_hearing_desc">I use a hearing aid or have hearing difficulties</string>
+    <string name="disability_deaf_title">Total deafness</string>
+    <string name="disability_deaf_desc">Communication via chat only</string>
+    <string name="disability_speech_title">Speech impairment</string>
+    <string name="disability_speech_desc">Difficulty speaking</string>
+    <string name="disability_btn_save">Save</string>
+
+    <string name="distrib_title">Order Distribution</string>
+    <string name="distrib_sec_principle">Core Principle</string>
+    <string name="distrib_text_principle_1">You have the best chance of receiving an order if you are closest to the passenger.</string>
+    <string name="distrib_text_principle_2">This benefits you by reducing time and fuel spent on approach.</string>
+    <string name="distrib_text_principle_3">And passengers get cars faster as they wait less.</string>
+    <string name="distrib_sec_factors">What affects distribution?</string>
+    <string name="distrib_text_factors_intro">Distance is the main factor, but not the only one. Others include:</string>
+    <string name="distrib_factor_chain">Active order chain</string>
+    <string name="distrib_factor_time">Time idle without orders</string>
+    <string name="distrib_factor_activity">Your Activity Level</string>
+    <string name="distrib_factor_branding">Car Branding</string>
+    <string name="distrib_sec_stages">Distribution Stages</string>
+    <string name="distrib_text_stages_intro">Every order goes through 4 stages:</string>
+    <string name="distrib_stage_search">Searching for drivers matching parameters.</string>
+    <string name="distrib_stage_queue">Forming a driver queue.</string>
+    <string name="distrib_stage_sending">Sending the order to drivers in the queue.</string>
+    <string name="distrib_stage_ether">Displaying in Ether (3 km radius) if not taken earlier.</string>
+
+    <string name="history_title">Change History</string>
+
+    <string name="score_title">Activity</string>
+    <string name="score_max_label">/ 1000</string>
+    <string name="score_level_high">High Level</string>
+    <string name="score_level_desc">All order search methods are available to you.</string>
+    <string name="score_btn_levels_info">What are Activity levels?</string>
+    <string name="score_btn_calc_info">How are points calculated?</string>
+    <string name="score_btn_distrib_info">How are orders distributed?</string>
+    <string name="score_btn_history">Activity Change History</string>
+
+    <string name="ether_title">Order Ether</string>
+    <string name="ether_empty_state">No available orders</string>
+
+    <string name="filters_title">Order Filters</string>
+    <string name="filters_btn_disable_all">Disable All</string>
+    <string name="filters_btn_add_symbol">+</string>
+
+    <string name="hist_det_title">Trip Details</string>
+    <string name="hist_det_placeholder_dots">...</string>
+    <string name="hist_det_placeholder_tariff">Standard</string>
+    <string name="hist_det_placeholder_dist">0.0 km</string>
+    <string name="hist_det_placeholder_price">0 ₴</string>
+    <string name="hist_det_label_activity">Activity Changes</string>
+    <string name="hist_det_label_success">Successful Order</string>
+    <string name="hist_det_score_plus">+1</string>
+    <string name="hist_det_label_car">Vehicle</string>
+    <string name="hist_det_placeholder_plate">AA 0000 AA</string>
+    <string name="hist_det_placeholder_model">Toyota Camry</string>
+
+    <string name="levels_title">Activity Levels</string>
+    <string name="levels_subtitle">Activity has three levels</string>
+    <string name="levels_description">The more points you have, the higher your level and priority in order distribution.</string>
+    <string name="levels_range_green">1 000 — 701</string>
+    <string name="levels_desc_green">All order search methods are available to you</string>
+    <string name="levels_range_yellow">700 — 401</string>
+    <string name="levels_desc_yellow">Available methods: Ether, Ether filters, Chain, and Home</string>
+    <string name="levels_range_red">400 — 1</string>
+    <string name="levels_desc_red">Available methods: Ether and Ether filters</string>
+    <string name="levels_badge_current">You are here</string>
+    <string name="levels_warning_zero">When your Activity reaches 0 points, you can no longer receive orders</string>
+
+    <string name="loc_picker_title">Change Location</string>
+    <string name="loc_picker_label_selected">Selected Point</string>
+    <string name="loc_picker_placeholder_addr">Searching address...</string>
+    <string name="loc_picker_btn_confirm">Change Location</string>
+
+    <string name="login_title_entry">Login</string>
+    <string name="login_subtitle_phone">Enter your phone number to login or register</string>
+    <string name="login_label_phone">Mobile Phone</string>
+    <string name="login_phone_prefix">+380</string>
+    <string name="login_hint_phone_pattern">XX XXX XX XX</string>
+    <string name="login_action_use_password">Login with password</string>
+    <string name="login_btn_get_code">GET CODE</string>
+    <string name="login_title_sms">Enter Code</string>
+    <string name="login_subtitle_sms_sent">We sent a code to\n+380 XX XXX XX XX</string>
+    <string name="login_action_resend_code">Resend code</string>
+    <string name="login_btn_enter">ENTER</string>
+
+    <string name="login_pw_title">Login with password</string>
+    <string name="login_pw_subtitle">Enter your phone number and password</string>
+    <string name="login_label_password">Password</string>
+    <string name="login_hint_password">••••••••</string>
+    <string name="login_pw_action_use_sms">Login via SMS code</string>
+
+    <string name="main_status_offline">OFFLINE</string>
+    <string name="main_tooltip_hotspots">Hotspots</string>
+    <string name="main_tooltip_sectors">Sectors</string>
+    <string name="main_tooltip_lock">Lock Camera</string>
+    <string name="main_search_chain_title">⚡ Order Chain</string>
+    <string name="main_search_chain_subtitle">Searching for orders...</string>
+    <string name="main_nav_ether">Ether</string>
+    <string name="main_nav_orders">Orders</string>
+    <string name="main_nav_filters">Filters</string>
+
+    <string name="news_title">News &amp; Promotions</string>
+    <string name="news_empty_state">No news yet</string>
+
+    <string name="news_details_title">Details</string>
+    <string name="news_details_date_placeholder">07.02.2026</string>
+    <string name="news_details_header_placeholder">Title</string>
+    <string name="news_details_content_placeholder">News content...</string>
+
+    <string name="order_det_id_placeholder">Order #000</string>
+    <string name="order_det_tariff_placeholder">Standard</string>
+    <string name="order_det_price_placeholder">245 ₴</string>
+    <string name="order_det_dist_placeholder">5.2 km • 32 UAH/km</string>
+    <string name="order_det_label_services">Extra Services</string>
+    <string name="order_det_label_comment">Comment</string>
+    <string name="order_det_comment_placeholder">Drive in from the barrier side...</string>
+    <string name="order_det_btn_accept">ACCEPT ORDER</string>
+
+    <string name="offer_title_mandatory">Mandatory Order</string>
+    <string name="offer_header_price_placeholder">245 ₴</string>
+    <string name="offer_header_dist_placeholder">12.5 km</string>
+    <string name="offer_pickup_dist_placeholder">~2.1 km</string>
+    <string name="offer_label_pickup">pickup</string>
+    <string name="offer_points_placeholder">+10 points</string>
+    <string name="offer_label_activity">activity</string>
+    <string name="offer_rate_placeholder">18 ₴/km</string>
+    <string name="offer_label_tariff">rate</string>
+    <string name="offer_addr_from_placeholder">Khreshchatyk St, 1</string>
+    <string name="offer_addr_to_placeholder">Lavina Mall</string>
+    <string name="offer_sectors_placeholder">Center > Svyatoshyn</string>
+    <string name="offer_client_trips_placeholder">Trips: 42</string>
+    <string name="offer_client_rating_placeholder">4.9</string>
+    <string name="offer_tariff_badge_placeholder">Standard</string>
+    <string name="offer_btn_accept_title">ACCEPT</string>
+    <string name="offer_btn_accept_subtitle">Tap to accept</string>
+    <string name="offer_timer_placeholder">20</string>
+
+    <string name="progress_status_driving">Driving to client</string>
+    <string name="progress_loading_address">Loading address...</string>
+    <string name="progress_label_client">Client</string>
+    <string name="progress_payment_placeholder">Cash • 245 ₴</string>
+    <string name="progress_btn_arrived">ARRIVED</string>
+
+    <string name="orders_title">My Orders</string>
+    <string name="orders_tab_active">Active</string>
+    <string name="orders_tab_history">History</string>
+    <string name="orders_card_title">Current Order</string>
+    <string name="orders_route_placeholder">Khreshchatyk St, 1 -> Airport</string>
+    <string name="orders_btn_open">Open</string>
+    <string name="orders_empty_active">No active orders</string>
+
+    <string name="profile_title">My Profile</string>
+    <string name="profile_loading">Loading...</string>
+    <string name="profile_rating_placeholder">5.0</string>
+    <string name="profile_label_email">Email</string>
+    <string name="profile_value_empty">Not set</string>
+    <string name="profile_label_phone">Phone Number</string>
+    <string name="profile_phone_placeholder">+380...</string>
+    <string name="profile_label_ipn">Tax ID (TIN)</string>
+    <string name="profile_action_add">Add</string>
+    <string name="profile_label_license">Driver\'s License</string>
+    <string name="profile_license_placeholder">ABC 123456</string>
+    <string name="profile_btn_disability">Functional Impairment (Disability)</string>
+    <string name="profile_btn_delete">Request Account Deletion</string>
+
+    <string name="sector_select_title">Select Sectors</string>
+    <string name="sector_select_search_hint">Search sector...</string>
+    <string name="sector_select_view_map">Map</string>
+    <string name="sector_select_view_list">List</string>
+
+    <string name="stats_title">Statistics</string>
+    <string name="stats_period_today">Today</string>
+    <string name="stats_money_placeholder">0.00 ₴</string>
+    <string name="stats_commission_note">after commission</string>
+    <string name="stats_method_card">To Card</string>
+    <string name="stats_value_zero">0.00</string>
+    <string name="stats_method_cash">Cash</string>
+    <string name="stats_method_balance">To Balance</string>
+    <string name="stats_expenses_title">Expenses</string>
+    <string name="stats_symbol_percent">%</string>
+    <string name="stats_commission_label">Service Commission</string>
+    <string name="stats_expense_placeholder">- 0.00</string>
+    <string name="stats_details_title">Trip Details</string>
+    <string name="stats_label_orders">Orders</string>
+    <string name="stats_count_zero">0</string>
+    <string name="stats_label_mileage">Mileage</string>
+    <string name="stats_mileage_placeholder">0.0 km</string>
+    <string name="stats_label_avg_price">Avg / km</string>
+    <string name="stats_label_time">Time on road</string>
+    <string name="stats_time_placeholder">0h 0m</string>
+
+    <string name="welcome_logo">DRIVER\nAPP</string>
+    <string name="welcome_btn_login">LOG IN</string>
+    <string name="welcome_btn_register">REGISTER</string>
+
+    <string name="search_settings_title">Select Order Search Method</string>
+    <string name="search_settings_mode_home">Home</string>
+    <string name="search_settings_home_counter">(0/2)</string>
+    <string name="search_settings_sector_default">Sector not selected</string>
+    <string name="search_settings_mode_chain">Order Chain</string>
+    <string name="search_settings_label_radius">Pickup Radius</string>
+    <string name="search_settings_radius_val">3.0 km</string>
+    <string name="search_settings_btn_save">SAVE</string>
+
+    <string name="rate_dialog_title">Rate Passenger</string>
+    <string name="rate_dialog_hint_comment">Comment (optional)</string>
+    <string name="rate_dialog_btn_finish">Finish</string>
+
+    <string name="sos_title">EMERGENCY SITUATION!</string>
+    <string name="sos_message">Do you really want to send an SOS signal?\nThis will notify the dispatcher and other drivers.</string>
+    <string name="sos_btn_cancel">Cancel</string>
+    <string name="sos_btn_confirm">YES, SOS!</string>
+
+    <string name="car_item_model_placeholder">BMW X5</string>
+    <string name="car_item_plate_placeholder">AA 1234 AA</string>
+    <string name="car_item_status_placeholder">PENDING</string>
+    <string name="car_item_click_hint">Tap to select</string>
+
+    <string name="filter_item_name_placeholder">Filter Name</string>
+    <string name="filter_item_desc_placeholder">Radius 5km • Cash</string>
+    <string name="filter_btn_auto">AUTO</string>
+    <string name="filter_btn_ether">ETHER</string>
+    <string name="filter_btn_cycle">∞</string>
+
+    <string name="history_item_status_archived">Archived</string>
+    <string name="history_item_date_placeholder">Jan 12 14:30</string>
+    <string name="history_item_from_placeholder">Pushkinska St, 10</string>
+    <string name="history_item_to_placeholder">Khreshchatyk St, 1</string>
+    <string name="history_item_dist_placeholder">12.5 km</string>
+    <string name="history_item_price_placeholder">145 ₴</string>
+
+    <string name="news_item_title_placeholder">News Title</string>
+    <string name="news_item_date_placeholder">07.02.2026</string>
+    <string name="news_item_snippet_placeholder">Short news description...</string>
+
+    <string name="support_sheet_title">Choose Contact Method</string>
+    <string name="support_sheet_telegram">Telegram</string>
+    <string name="support_sheet_call">Call</string>
+
+    <string name="period_sheet_title">Period</string>
+    <string name="period_sheet_today">Today</string>
+    <string name="period_sheet_yesterday">Yesterday</string>
+    <string name="period_sheet_this_week">This Week</string>
+    <string name="period_sheet_last_week">Last Week</string>
+    <string name="period_sheet_this_month">This Month</string>
+    <string name="period_sheet_last_month">Last Month</string>
+
+    <string name="drawer_driver_name_placeholder">Driver</string>
+    <string name="drawer_status_online">Online</string>
+    <string name="drawer_btn_dispatcher">Dispatcher</string>
+    <string name="drawer_btn_sos">SOS</string>
+    <string name="drawer_plate_placeholder">AA 7777 AA</string>
+</resources>

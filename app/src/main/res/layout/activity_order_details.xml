@@ -65,7 +65,7 @@
                     android:id="@+id/tv_order_id"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Замовлення #000"
+                    android:text="@string/order_det_id_placeholder"
                     android:textColor="@color/driver_text_secondary"
                     android:textSize="14sp" />
 
@@ -73,7 +73,7 @@
                     android:id="@+id/tv_tariff"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Standard"
+                    android:text="@string/order_det_tariff_placeholder"
                     android:textColor="@color/driver_text_primary"
                     android:textStyle="bold"
                     android:textSize="18sp" />
@@ -102,7 +102,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
-                    android:text="245 ₴"
+                    android:text="@string/order_det_price_placeholder"
                     android:textColor="#000000"
                     android:textSize="20sp"
                     android:textStyle="bold" />
@@ -129,7 +129,7 @@
             android:layout_gravity="end"
             android:layout_marginTop="0dp"
             android:layout_marginBottom="16dp"
-            android:text="5.2 км • 32 грн/км"
+            android:text="@string/order_det_dist_placeholder"
             android:textColor="@color/driver_text_secondary"
             android:textSize="12sp" />
 
@@ -144,7 +144,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Додаткові послуги"
+                android:text="@string/order_det_label_services"
                 android:textColor="@color/driver_text_secondary"
                 android:textSize="12sp"
                 android:textAllCaps="true"
@@ -167,7 +167,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Коментар"
+                android:text="@string/order_det_label_comment"
                 android:textColor="@color/driver_text_secondary"
                 android:textSize="12sp"
                 android:textAllCaps="true"
@@ -179,7 +179,7 @@
                 android:layout_height="wrap_content"
                 android:background="@drawable/bg_comment_bubble"
                 android:padding="12dp"
-                android:text="Заїхати з боку шлагбауму..."
+                android:text="@string/order_det_comment_placeholder"
                 android:textColor="@color/driver_text_primary"
                 android:textSize="14sp"
                 android:lineSpacingExtra="4dp" />
@@ -190,7 +190,7 @@
             android:layout_width="match_parent"
             android:layout_height="60dp"
             android:layout_marginTop="24dp"
-            android:text="ПРИЙНЯТИ ЗАМОВЛЕННЯ"
+            android:text="@string/order_det_btn_accept"
             android:textSize="18sp"
             android:textStyle="bold"
             android:textColor="@color/driver_text_black"

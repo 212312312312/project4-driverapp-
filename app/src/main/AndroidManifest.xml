@@ -170,6 +170,10 @@
             android:name=".NewsDetailsActivity"
             android:exported="false"
             android:screenOrientation="portrait" />
+        <activity
+            android:name=".SettingsActivity"
+            android:screenOrientation="portrait"
+            android:exported="false" />a
         <service
             android:name=".service.MyFirebaseMessagingService"
             android:exported="false">

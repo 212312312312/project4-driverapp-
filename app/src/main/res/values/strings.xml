@@ -1,5 +1,356 @@
 <resources>
     <string name="app_name">Taxi Driver</string>
     <string name="google_maps_key">AIzaSyCl5DccocpzluJxAX_RwTqC5baCHgB9ybA</string>
-</resources>
+    <string name="menu_news">Новини</string>
+    <string name="menu_car">Автомобіль</string>
+    <string name="menu_balance">Баланс</string>
+    <string name="menu_activity">Активність</string>
+    <string name="menu_stats">Статистика</string>
+    <string name="menu_logout">Завершити роботу</string>
 
+    <string name="settings_title">Налаштування</string>
+    <string name="settings_language">Мова</string>
+    <string name="settings_theme">Тема</string>
+    <string name="settings_ether_orders">Замовлення в ефірі</string>
+    <string name="settings_sounds">Звуки</string>
+    <string name="settings_navigator">Навігатор</string>
+    <string name="settings_quick_access">Швидкий доступ</string>
+    <string name="settings_quick_access_desc">Відображати поверх всіх вікон</string>
+    <string name="settings_notifications">Сповіщення</string>
+    <string name="settings_notifications_desc">Нагадування про зміну статусів</string>
+
+    <string name="feature_coming_soon">Ця функція скоро з\'явиться</string>
+    <string name="me_account">Мій аккаунт</string>
+    <string name="acc_phone_placeholder">+380 XX XXX XX XX</string>
+    <string name="acc_switch_account">Змінити аккаунт</string>
+    <string name="acc_btn_login">УВІЙТИ</string>
+
+    <string name="points_title_calculation">Як нараховуються бали</string>
+    <string name="points_label_basic">Базові бали (За роботу)</string>
+    <string name="points_label_bonus">Додаткові бали (Бонуси)</string>
+    <string name="points_label_penalty">Списання балів (Штрафи)</string>
+
+    <string name="car_title">Автомобіль</string>
+    <string name="car_tab_active">Активне</string>
+    <string name="car_tab_list">Список</string>
+    <string name="car_status_loading">Завантаження...</string>
+    <string name="car_plate_placeholder">--------</string>
+    <string name="car_label_type">Тип авто</string>
+    <string name="car_year_placeholder">20--</string>
+    <string name="car_btn_add_branding">Додати брендування</string>
+    <string name="car_btn_add_services">Додати послуги</string>
+    <string name="car_label_classes_services">Класи та сервіси</string>
+    <string name="car_btn_documents">Фото документів та авто</string>
+    <string name="car_cd_add_new">Додати авто</string>
+
+    <string name="docs_title">Документи та фото</string>
+    <string name="docs_tech_passport">Тех. паспорт машини</string>
+    <string name="docs_insurance">Фото ОСАГО (Страховка)</string>
+    <string name="docs_car_photos">Фото автомобіля</string>
+    <string name="docs_view_front">Спереду</string>
+    <string name="docs_view_back">Ззаду</string>
+    <string name="docs_view_left">Зліва (бік)</string>
+    <string name="docs_view_right">Справа (бік)</string>
+    <string name="docs_seats_front">Сидіння (перед)</string>
+    <string name="docs_seats_back">Сидіння (зад)</string>
+
+    <string name="cp_title">Зміна номера</string>
+    <string name="cp_msg_current_send">Для безпеки ми відправимо код на ваш ПОТОЧНИЙ номер.</string>
+    <string name="cp_btn_send_code">Надіслати код</string>
+    <string name="cp_msg_current_enter">Введіть код з SMS (поточний номер):</string>
+    <string name="cp_hint_code">Код</string>
+    <string name="cp_btn_confirm">Підтвердити</string>
+    <string name="cp_msg_new_phone">Введіть НОВИЙ номер телефону:</string>
+    <string name="cp_hint_phone_ua">+380...</string>
+    <string name="cp_btn_next">Далі</string>
+    <string name="cp_msg_new_enter">Введіть код, який прийшов на НОВИЙ номер:</string>
+    <string name="cp_btn_finish">Змінити номер</string>
+
+    <string name="rnokpp_title">Зміна РНОКПП</string>
+    <string name="rnokpp_instruction">Введіть 10 цифр вашого ІПН</string>
+    <string name="rnokpp_placeholder">XXXXXXXXXX</string>
+    <string name="rnokpp_btn_save">Зберегти</string>
+
+    <string name="filter_create_title">Створення фільтра</string>
+    <string name="filter_name_hint">Назва фільтра (напр. Центр)</string>
+    <string name="filter_section_from">ЗВІДКИ</string>
+    <string name="filter_type_distance">Відстань</string>
+    <string name="filter_type_sectors">Сектори</string>
+    <string name="filter_radius_default">Радіус: 5.0 км</string>
+    <string name="filter_btn_select_sectors">Вибрати сектори</string>
+    <string name="filter_section_to">КУДИ</string>
+    <string name="filter_btn_select_to_sectors">+ Сектори призначення</string>
+    <string name="filter_selected_count_default">Вибрано секторів: 0</string>
+    <string name="filter_section_tariff">ТАРИФ</string>
+    <string name="filter_tariff_simple">Простий</string>
+    <string name="filter_tariff_complex">Складний</string>
+    <string name="filter_hint_min_price">Мін. сума замовлення (₴)</string>
+    <string name="filter_hint_min_price_km">Мін. ціна за км (₴/км)</string>
+    <string name="filter_hint_complex_km">Км у мінімалці (напр. 2)</string>
+    <string name="filter_hint_city_price">Мін. ціна/км У місті (₴/км)</string>
+    <string name="filter_hint_suburb_price">Мін. ціна/км У передмісті (₴/км)</string>
+    <string name="filter_section_payment">ТИП ОПЛАТИ</string>
+    <string name="filter_btn_create">СТВОРИТИ ФІЛЬТР</string>
+
+    <string name="disability_title">Медичні особливості</string>
+    <string name="disability_description">Вкажіть, якщо у вас є порушення функцій, щоб ми могли повідомити про це пасажира.</string>
+    <string name="disability_movement_title">Порушення опорно-рухового апарату</string>
+    <string name="disability_movement_desc">Пересуваюсь на кріслі колісному або милицях</string>
+    <string name="disability_hearing_title">Порушення слуху</string>
+    <string name="disability_hearing_desc">Користуюсь слуховим апаратом або погано чую</string>
+    <string name="disability_deaf_title">Повна глухота (Глухонімий)</string>
+    <string name="disability_deaf_desc">Спілкування тільки через чат</string>
+    <string name="disability_speech_title">Порушення мовлення</string>
+    <string name="disability_speech_desc">Важко розмовляти</string>
+    <string name="disability_btn_save">Зберегти</string>
+
+    <string name="distrib_title">Розподіл замовлень</string>
+    <string name="distrib_sec_principle">Основний принцип</string>
+    <string name="distrib_text_principle_1">Ви маєте найбільші шанси отримати замовлення, якщо знаходитеся найближче до пасажира.</string>
+    <string name="distrib_text_principle_2">Вам це вигідно, адже ви витрачаєте менше часу і пального на дорогу.</string>
+    <string name="distrib_text_principle_3">А пасажири отримують авто швидше, адже чекають менше.</string>
+    <string name="distrib_sec_factors">Що впливає на розподіл?</string>
+    <string name="distrib_text_factors_intro">Відстань — основний, проте не єдиний фактор. Також впливають:</string>
+    <string name="distrib_factor_chain">Активний ланцюг замовлень</string>
+    <string name="distrib_factor_time">Ваш час без замовлень</string>
+    <string name="distrib_factor_activity">Ваш рівень Активності</string>
+    <string name="distrib_factor_branding">Брендування авто</string>
+    <string name="distrib_sec_stages">Етапи розподілу</string>
+    <string name="distrib_text_stages_intro">Кожне замовлення проходить 4 етапи:</string>
+    <string name="distrib_stage_search">Пошук водіїв, які відповідають параметрам.</string>
+    <string name="distrib_stage_queue">Формування черги водіїв.</string>
+    <string name="distrib_stage_sending">Надсилання замовлення водіям у черзі.</string>
+    <string name="distrib_stage_ether">Відображення в Ефірі (радіус 3 км), якщо замовлення не взяли раніше.</string>
+
+    <string name="history_title">Історія змін</string>
+
+    <string name="score_title">Активність</string>
+    <string name="score_max_label">/ 1000</string>
+    <string name="score_level_high">Високий рівень</string>
+    <string name="score_level_desc">Вам доступні всі методи пошуку замовлень.</string>
+    <string name="score_btn_levels_info">Які є рівні балів активності?</string>
+    <string name="score_btn_calc_info">Як нараховуються бали?</string>
+    <string name="score_btn_distrib_info">Як розподіляються замовлення?</string>
+    <string name="score_btn_history">Історія змін Активності</string>
+
+    <string name="ether_title">Ефір замовлень</string>
+    <string name="ether_empty_state">Немає доступних замовлень</string>
+
+    <string name="filters_title">Фільтри замовлень</string>
+    <string name="filters_btn_disable_all">Вимкнути всі</string>
+    <string name="filters_btn_add_symbol">+</string>
+
+    <string name="hist_det_title">Деталі поїздки</string>
+    <string name="hist_det_placeholder_dots">...</string>
+    <string name="hist_det_placeholder_tariff">Standard</string>
+    <string name="hist_det_placeholder_dist">0.0 км</string>
+    <string name="hist_det_placeholder_price">0 ₴</string>
+    <string name="hist_det_label_activity">Зміни активності</string>
+    <string name="hist_det_label_success">Успішне замовлення</string>
+    <string name="hist_det_score_plus">+1</string>
+    <string name="hist_det_label_car">Автомобіль</string>
+    <string name="hist_det_placeholder_plate">AA 0000 AA</string>
+    <string name="hist_det_placeholder_model">Toyota Camry</string>
+
+    <string name="levels_title">Рівні активності</string>
+    <string name="levels_subtitle">Активність має три рівні</string>
+    <string name="levels_description">Чим більше балів, тим вищий рівень і вплив на пріоритет при розподілі замовлень</string>
+    <string name="levels_range_green">1 000 — 701</string>
+    <string name="levels_desc_green">Вам доступні всі методи пошуку замовлень</string>
+    <string name="levels_range_yellow">700 — 401</string>
+    <string name="levels_desc_yellow">Доступні методи: Ефір, фільтри Ефіру, Ланцюг та Додому</string>
+    <string name="levels_range_red">400 — 1</string>
+    <string name="levels_desc_red">Доступні методи: Ефір та фільтри Ефіру</string>
+    <string name="levels_badge_current">Ви тут</string>
+    <string name="levels_warning_zero">Коли ваша Активність досягає 0 балів, ви більше не можете отримувати замовлення</string>
+
+    <string name="loc_picker_title">Зміна локації</string>
+    <string name="loc_picker_label_selected">Обрана точка</string>
+    <string name="loc_picker_placeholder_addr">Пошук адреси...</string>
+    <string name="loc_picker_btn_confirm">Змінити локацію</string>
+
+    <string name="login_title_entry">Вхід</string>
+    <string name="login_subtitle_phone">Введіть номер телефону для входу або реєстрації</string>
+    <string name="login_label_phone">Мобільний телефон</string>
+    <string name="login_phone_prefix">+380</string>
+    <string name="login_hint_phone_pattern">XX XXX XX XX</string>
+    <string name="login_action_use_password">Увійти за паролем</string>
+    <string name="login_btn_get_code">ОТРИМАТИ КОД</string>
+    <string name="login_title_sms">Введіть код</string>
+    <string name="login_subtitle_sms_sent">Ми відправили код на номер\n+380 XX XXX XX XX</string>
+    <string name="login_action_resend_code">Надіслати код повторно</string>
+    <string name="login_btn_enter">УВІЙТИ</string>
+
+    <string name="login_pw_title">Вхід за паролем</string>
+    <string name="login_pw_subtitle">Введіть номер телефону та ваш пароль</string>
+    <string name="login_label_password">Пароль</string>
+    <string name="login_hint_password">••••••••</string>
+    <string name="login_pw_action_use_sms">Увійти через SMS код</string>
+
+    <string name="main_status_offline">ОФЛАЙН</string>
+    <string name="main_tooltip_hotspots">Рибні місця</string>
+    <string name="main_tooltip_sectors">Сектори</string>
+    <string name="main_tooltip_lock">Закріпити камеру</string>
+    <string name="main_search_chain_title">⚡ Ланцюг замовлень</string>
+    <string name="main_search_chain_subtitle">Пошук замовлень...</string>
+    <string name="main_nav_ether">Ефір</string>
+    <string name="main_nav_orders">Замовлення</string>
+    <string name="main_nav_filters">Фільтри</string>
+
+    <string name="news_title">Новини та Акції</string>
+    <string name="news_empty_state">Новин поки немає</string>
+
+    <string name="news_details_title">Деталі</string>
+    <string name="news_details_date_placeholder">07.02.2026</string>
+    <string name="news_details_header_placeholder">Заголовок</string>
+    <string name="news_details_content_placeholder">Текст новости...</string>
+
+    <string name="order_det_id_placeholder">Замовлення #000</string>
+    <string name="order_det_tariff_placeholder">Standard</string>
+    <string name="order_det_price_placeholder">245 ₴</string>
+    <string name="order_det_dist_placeholder">5.2 км • 32 грн/км</string>
+    <string name="order_det_label_services">Додаткові послуги</string>
+    <string name="order_det_label_comment">Коментар</string>
+    <string name="order_det_comment_placeholder">Заїхати з боку шлагбауму...</string>
+    <string name="order_det_btn_accept">ПРИЙНЯТИ ЗАМОВЛЕННЯ</string>
+
+    <string name="offer_title_mandatory">Обов\'язкове замовлення</string>
+    <string name="offer_header_price_placeholder">245 ₴</string>
+    <string name="offer_header_dist_placeholder">12.5 км</string>
+    <string name="offer_pickup_dist_placeholder">~2.1 км</string>
+    <string name="offer_label_pickup">до подачі</string>
+    <string name="offer_points_placeholder">+10 балів</string>
+    <string name="offer_label_activity">активність</string>
+    <string name="offer_rate_placeholder">18 ₴/км</string>
+    <string name="offer_label_tariff">тариф</string>
+    <string name="offer_addr_from_placeholder">вул. Хрещатик, 1</string>
+    <string name="offer_addr_to_placeholder">ТЦ Lavina Mall</string>
+    <string name="offer_sectors_placeholder">Центр > Святошин</string>
+    <string name="offer_client_trips_placeholder">Поїздки: 42</string>
+    <string name="offer_client_rating_placeholder">4.9</string>
+    <string name="offer_tariff_badge_placeholder">Standard</string>
+    <string name="offer_btn_accept_title">ПРИЙНЯТИ</string>
+    <string name="offer_btn_accept_subtitle">Натисніть, щоб прийняти</string>
+    <string name="offer_timer_placeholder">20</string>
+
+    <string name="progress_status_driving">Їду до клієнта</string>
+    <string name="progress_loading_address">Завантаження адреси...</string>
+    <string name="progress_label_client">Клієнт</string>
+    <string name="progress_payment_placeholder">Готівка • 245 ₴</string>
+    <string name="progress_btn_arrived">НА МІСЦІ</string>
+
+    <string name="orders_title">Мої замовлення</string>
+    <string name="orders_tab_active">Активні</string>
+    <string name="orders_tab_history">Історія</string>
+    <string name="orders_card_title">Поточне замовлення</string>
+    <string name="orders_route_placeholder">Вул. Хрещатик, 1 -> Аеропорт</string>
+    <string name="orders_btn_open">Відкрити</string>
+    <string name="orders_empty_active">Немає активних замовлень</string>
+
+    <string name="profile_title">Мій профіль</string>
+    <string name="profile_loading">Завантаження...</string>
+    <string name="profile_rating_placeholder">5.0</string>
+    <string name="profile_label_email">Електронна пошта</string>
+    <string name="profile_value_empty">Не вказано</string>
+    <string name="profile_label_phone">Номер телефону</string>
+    <string name="profile_phone_placeholder">+380...</string>
+    <string name="profile_label_ipn">РНОКПП (ІПН)</string>
+    <string name="profile_action_add">Додати</string>
+    <string name="profile_label_license">Водійське посвідчення</string>
+    <string name="profile_license_placeholder">ABC 123456</string>
+    <string name="profile_btn_disability">Порушення функцій (Інвалідність)</string>
+    <string name="profile_btn_delete">Запит на видалення акаунту</string>
+
+
+    <string name="sector_select_title">Вибір секторів</string>
+    <string name="sector_select_search_hint">Пошук сектора...</string>
+    <string name="sector_select_view_map">На карті</string>
+    <string name="sector_select_view_list">Список</string>
+
+    <string name="stats_title">Статистика</string>
+    <string name="stats_period_today">Сьогодні</string>
+    <string name="stats_money_placeholder">0.00 ₴</string>
+    <string name="stats_commission_note">з вирахуванням комісії</string>
+    <string name="stats_method_card">На картку</string>
+    <string name="stats_value_zero">0.00</string>
+    <string name="stats_method_cash">Готівка</string>
+    <string name="stats_method_balance">На баланс</string>
+    <string name="stats_expenses_title">Витрати</string>
+    <string name="stats_symbol_percent">%</string>
+    <string name="stats_commission_label">Комісія сервісу</string>
+    <string name="stats_expense_placeholder">- 0.00</string>
+    <string name="stats_details_title">Деталі поїздок</string>
+    <string name="stats_label_orders">Замовлення</string>
+    <string name="stats_count_zero">0</string>
+    <string name="stats_label_mileage">Кілометраж</string>
+    <string name="stats_mileage_placeholder">0.0 км</string>
+    <string name="stats_label_avg_price">Середня / км</string>
+    <string name="stats_label_time">Час в дорозі</string>
+    <string name="stats_time_placeholder">0г 0хв</string>
+
+    <string name="welcome_logo">DRIVER\nAPP</string>
+    <string name="welcome_btn_login">УВІЙТИ</string>
+    <string name="welcome_btn_register">ЗАРЕЄСТРУВАТИСЯ</string>
+
+    <string name="search_settings_title">Оберіть метод пошуку замовлення</string>
+    <string name="search_settings_mode_home">Додому</string>
+    <string name="search_settings_home_counter">(0/2)</string>
+    <string name="search_settings_sector_default">Сектор не обрано</string>
+    <string name="search_settings_mode_chain">Ланцюг замовлень</string>
+    <string name="search_settings_label_radius">Відстань подачі</string>
+    <string name="search_settings_radius_val">3.0 км</string>
+    <string name="search_settings_btn_save">ЗБЕРЕГТИ</string>
+
+    <string name="rate_dialog_title">Оцініть пасажира</string>
+    <string name="rate_dialog_hint_comment">Коментар (необов\'язково)</string>
+    <string name="rate_dialog_btn_finish">Завершити</string>
+
+    <string name="sos_title">ЕКСТРЕНА СИТУАЦІЯ!</string>
+    <string name="sos_message">Ви дійсно хочете відправити сигнал SOS?\nЦе сповістить диспетчера та інших водіїв.</string>
+    <string name="sos_btn_cancel">Скасувати</string>
+    <string name="sos_btn_confirm">ТАК, SOS!</string>
+
+    <string name="car_item_model_placeholder">BMW X5</string>
+    <string name="car_item_plate_placeholder">AA 1234 AA</string>
+    <string name="car_item_status_placeholder">PENDING</string>
+    <string name="car_item_click_hint">Натисніть, щоб обрати</string>
+
+    <string name="filter_item_name_placeholder">Назва фільтра</string>
+    <string name="filter_item_desc_placeholder">Радіус 5км • Готівка</string>
+    <string name="filter_btn_auto">АВТО</string>
+    <string name="filter_btn_ether">ЕФІР</string>
+    <string name="filter_btn_cycle">∞</string>
+
+    <string name="history_item_status_archived">Архівне</string>
+    <string name="history_item_date_placeholder">12 січ. 14:30</string>
+    <string name="history_item_from_placeholder">Вул. Пушкінська, 10</string>
+    <string name="history_item_to_placeholder">Вул. Хрещатик, 1</string>
+    <string name="history_item_dist_placeholder">12.5 км</string>
+    <string name="history_item_price_placeholder">145 ₴</string>
+
+    <string name="news_item_title_placeholder">Заголовок новини</string>
+    <string name="news_item_date_placeholder">07.02.2026</string>
+    <string name="news_item_snippet_placeholder">Короткий опис новини...</string>
+
+    <string name="support_sheet_title">Оберіть спосіб зв\'язку</string>
+    <string name="support_sheet_telegram">Telegram</string>
+    <string name="support_sheet_call">Зателефонувати</string>
+
+    <string name="period_sheet_title">Період</string>
+    <string name="period_sheet_today">Сьогодні</string>
+    <string name="period_sheet_yesterday">Вчора</string>
+    <string name="period_sheet_this_week">Поточний тиждень</string>
+    <string name="period_sheet_last_week">Минулий тиждень</string>
+    <string name="period_sheet_this_month">Поточний місяць</string>
+    <string name="period_sheet_last_month">Минулий місяць</string>
+
+    <string name="drawer_driver_name_placeholder">Водій</string>
+    <string name="drawer_status_online">На лінії</string>
+    <string name="drawer_btn_dispatcher">Диспетчер</string>
+    <string name="drawer_btn_sos">SOS</string>
+    <string name="drawer_plate_placeholder">AA 7777 AA</string>
+
+
+
+
+</resources>

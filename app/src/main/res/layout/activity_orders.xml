@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -20,16 +21,16 @@
             android:src="@drawable/ic_arrow_back_black"
             android:background="@drawable/bg_round_button"
             android:padding="8dp"
-            app:tint="@color/driver_text_primary"/>
+            app:tint="@color/driver_text_primary" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Мої замовлення"
+            android:text="@string/orders_title"
             android:textColor="@color/driver_text_primary"
             android:textSize="20sp"
             android:textStyle="bold"
-            android:layout_centerInParent="true"/>
+            android:layout_centerInParent="true" />
     </RelativeLayout>
 
     <LinearLayout
@@ -46,25 +47,25 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:text="Активні"
+            android:text="@string/orders_tab_active"
             android:gravity="center"
             android:textSize="16sp"
             android:textStyle="bold"
             android:textColor="@color/driver_black_bg"
             android:background="@drawable/bg_status_pill"
-            android:backgroundTint="@color/driver_neon_teal"/>
+            android:backgroundTint="@color/driver_neon_teal" />
 
         <TextView
             android:id="@+id/tab_history"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:text="Історія"
+            android:text="@string/orders_tab_history"
             android:gravity="center"
             android:textSize="16sp"
             android:textStyle="bold"
             android:textColor="@color/driver_text_secondary"
-            android:background="@null"/>
+            android:background="@null" />
     </LinearLayout>
 
     <FrameLayout
@@ -92,28 +93,28 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Поточне замовлення"
+                    android:text="@string/orders_card_title"
                     android:textColor="@color/driver_neon_teal"
                     android:textStyle="bold"
-                    android:textSize="18sp"/>
+                    android:textSize="18sp" />
 
                 <TextView
                     android:id="@+id/tv_active_route"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Вул. Хрещатик, 1 -> Аеропорт"
+                    android:text="@string/orders_route_placeholder"
                     android:textColor="@color/driver_text_primary"
                     android:textSize="16sp"
-                    android:layout_marginTop="8dp"/>
-                
+                    android:layout_marginTop="8dp" />
+
                 <Button
                     android:id="@+id/btn_open_active"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Відкрити"
+                    android:text="@string/orders_btn_open"
                     android:backgroundTint="@color/driver_neon_teal"
                     android:textColor="@color/driver_black_bg"
-                    android:layout_marginTop="12dp"/>
+                    android:layout_marginTop="12dp" />
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
@@ -121,9 +122,9 @@
             android:id="@+id/tv_no_active"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Немає активних замовлень"
+            android:text="@string/orders_empty_active"
             android:textColor="@color/driver_text_secondary"
-            android:layout_gravity="center"/>
+            android:layout_gravity="center" />
     </FrameLayout>
 
     <androidx.recyclerview.widget.RecyclerView
@@ -135,7 +136,7 @@
         android:clipToPadding="false"
         app:layout_constraintTop_toBottomOf="@id/tabs_container"
         app:layout_constraintBottom_toBottomOf="parent"
-        tools:listitem="@layout/item_history_order"/>
+        tools:listitem="@layout/item_history_order" />
 
     <ProgressBar
         android:id="@+id/progressBar"
@@ -146,6 +147,6 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tabs_container"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        app:layout_constraintEnd_toEndOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

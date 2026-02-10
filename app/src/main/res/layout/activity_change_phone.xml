@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -12,12 +13,12 @@
         android:layout_height="40dp"
         android:background="@null"
         android:src="@drawable/ic_arrow_back_black"
-        android:tint="@color/white" />
+        app:tint="@color/white" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Зміна номера"
+        android:text="@string/cp_title"
         android:textColor="@color/white"
         android:textSize="24sp"
         android:textStyle="bold"
@@ -31,54 +32,55 @@
 
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
             android:orientation="vertical">
-            <TextView android:text="Для безпеки ми відправимо код на ваш ПОТОЧНИЙ номер."
+            <TextView android:text="@string/cp_msg_current_send"
                 android:textColor="#AAA" android:layout_marginBottom="20dp"
                 android:layout_width="match_parent" android:layout_height="wrap_content" />
-            <Button android:id="@+id/btn_send_current" android:text="Надіслати код"
+            <Button android:id="@+id/btn_send_current" android:text="@string/cp_btn_send_code"
                 android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:backgroundTint="@color/driver_neon_teal" />
         </LinearLayout>
 
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
             android:orientation="vertical">
-            <TextView android:text="Введіть код з SMS (поточний номер):" android:textColor="#AAA"
+            <TextView android:text="@string/cp_msg_current_enter" android:textColor="#AAA"
                 android:layout_marginBottom="10dp" android:layout_width="match_parent"
                 android:layout_height="wrap_content" />
             <EditText android:id="@+id/et_current_code" android:inputType="number"
-                android:hint="Kod" android:textColor="@color/white"
+                android:hint="@string/cp_hint_code" android:textColor="@color/white"
                 android:background="@drawable/bg_driver_input" android:padding="16dp"
                 android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:layout_marginBottom="20dp" />
-            <Button android:id="@+id/btn_verify_current" android:text="Підтвердити"
+            <Button android:id="@+id/btn_verify_current" android:text="@string/cp_btn_confirm"
                 android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:backgroundTint="@color/driver_neon_teal" />
         </LinearLayout>
 
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
             android:orientation="vertical">
-            <TextView android:text="Введіть НОВИЙ номер телефону:" android:textColor="#AAA"
+            <TextView android:text="@string/cp_msg_new_phone" android:textColor="#AAA"
                 android:layout_marginBottom="10dp" android:layout_width="match_parent"
                 android:layout_height="wrap_content" />
             <EditText android:id="@+id/et_new_phone" android:inputType="phone"
-                android:hint="+380..." android:textColor="@color/white"
+                android:hint="@string/cp_hint_phone_ua" android:textColor="@color/white"
                 android:background="@drawable/bg_driver_input" android:padding="16dp"
                 android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:layout_marginBottom="20dp" />
-            <Button android:id="@+id/btn_send_new" android:text="Далі"
+            <Button android:id="@+id/btn_send_new" android:text="@string/cp_btn_next"
                 android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:backgroundTint="@color/driver_neon_teal" />
         </LinearLayout>
 
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
             android:orientation="vertical">
-            <TextView android:text="Введіть код, який прийшов на НОВИЙ номер:"
+            <TextView android:text="@string/cp_msg_new_enter"
                 android:textColor="#AAA" android:layout_marginBottom="10dp"
                 android:layout_width="match_parent" android:layout_height="wrap_content" />
-            <EditText android:id="@+id/et_new_code" android:inputType="number" android:hint="Kod"
+            <EditText android:id="@+id/et_new_code" android:inputType="number"
+                android:hint="@string/cp_hint_code"
                 android:textColor="@color/white" android:background="@drawable/bg_driver_input"
                 android:padding="16dp" android:layout_width="match_parent"
                 android:layout_height="wrap_content" android:layout_marginBottom="20dp" />
-            <Button android:id="@+id/btn_confirm_all" android:text="Змінити номер"
+            <Button android:id="@+id/btn_confirm_all" android:text="@string/cp_btn_finish"
                 android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:backgroundTint="@color/driver_neon_teal" />
         </LinearLayout>

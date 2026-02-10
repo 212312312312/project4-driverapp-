@@ -64,7 +64,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="5.0"
+                        android:text="@string/profile_rating_placeholder"
                         android:textSize="14sp"
                         android:textStyle="bold"
                         android:textColor="@color/white"
@@ -84,7 +84,7 @@
                     android:id="@+id/tv_driver_name"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Водій"
+                    android:text="@string/drawer_driver_name_placeholder"
                     android:textSize="22sp"
                     android:textStyle="bold"
                     android:textColor="@color/white" />
@@ -92,7 +92,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="На лінії"
+                    android:text="@string/drawer_status_online"
                     android:textSize="14sp"
                     android:textColor="#888888" />
             </LinearLayout>
@@ -136,7 +136,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Диспетчер"
+                    android:text="@string/drawer_btn_dispatcher"
                     android:textColor="@color/white"
                     android:layout_marginStart="8dp"
                     android:textSize="14sp" />
@@ -163,13 +163,14 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="SOS"
+                    android:text="@string/drawer_btn_sos"
                     android:textColor="@color/driver_error_red"
                     android:textStyle="bold"
                     android:textSize="18sp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
     </LinearLayout>
+
 
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
@@ -197,22 +198,19 @@
                 android:background="?attr/selectableItemBackground"
                 android:clickable="true"
                 android:focusable="true">
-
                 <ImageView
                     android:layout_width="24dp"
                     android:layout_height="24dp"
                     android:src="@drawable/ic_car"
                     app:tint="#AAAAAA" />
-
                 <TextView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Автомобіль"
+                    android:text="@string/menu_car"
                     android:textColor="#DDDDDD"
                     android:textSize="16sp"
                     android:layout_marginStart="16dp" />
-
                 <TextView
                     android:id="@+id/tv_menu_plate_number"
                     android:layout_width="wrap_content"
@@ -226,7 +224,7 @@
                     android:paddingVertical="4dp"
                     android:visibility="gone"
                     tools:visibility="visible"
-                    tools:text="AA 7777 AA" />
+                    tools:text="@string/drawer_plate_placeholder" />
             </LinearLayout>
 
             <LinearLayout
@@ -234,13 +232,11 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 style="@style/MenuStyle">
-
                 <ImageView
                     android:src="@drawable/ic_list_bullet"
                     style="@style/MenuIconStyle" />
-
                 <TextView
-                    android:text="Новини"
+                    android:text="@string/menu_news"
                     style="@style/MenuTextStyle" />
             </LinearLayout>
 
@@ -250,7 +246,7 @@
                 android:layout_height="wrap_content"
                 style="@style/MenuStyle">
                 <ImageView android:src="@drawable/ic_wallet" style="@style/MenuIconStyle" />
-                <TextView android:text="Баланс" style="@style/MenuTextStyle" />
+                <TextView android:text="@string/menu_balance" style="@style/MenuTextStyle" />
             </LinearLayout>
 
             <LinearLayout
@@ -259,7 +255,7 @@
                 android:layout_height="wrap_content"
                 style="@style/MenuStyle">
                 <ImageView android:src="@drawable/ic_menu_history" style="@style/MenuIconStyle" />
-                <TextView android:text="Активність" style="@style/MenuTextStyle" />
+                <TextView android:text="@string/menu_activity" style="@style/MenuTextStyle" />
             </LinearLayout>
 
             <LinearLayout
@@ -268,8 +264,22 @@
                 android:layout_height="wrap_content"
                 style="@style/MenuStyle">
                 <ImageView android:src="@drawable/ic_stat_star" style="@style/MenuIconStyle" />
-                <TextView android:text="Статистика" style="@style/MenuTextStyle" />
+                <TextView android:text="@string/menu_stats" style="@style/MenuTextStyle" />
             </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/menu_item_settings"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                style="@style/MenuStyle">
+                <ImageView
+                    android:src="@drawable/ic_settings"
+                    style="@style/MenuIconStyle" />
+                <TextView
+                    android:text="@string/settings_title"
+                    style="@style/MenuTextStyle" />
+            </LinearLayout>
+
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
@@ -300,11 +310,10 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Завершити роботу"
+                android:text="@string/menu_logout"
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:textColor="#888888" />
-
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 </LinearLayout>

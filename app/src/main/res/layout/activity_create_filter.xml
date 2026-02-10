@@ -27,7 +27,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerInParent="true"
-            android:text="Створення фільтра"
+            android:text="@string/filter_create_title"
             android:textColor="@color/driver_text_primary"
             android:textSize="18sp"
             android:textStyle="bold" />
@@ -50,7 +50,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="55dp"
                 android:background="@drawable/bg_driver_input"
-                android:hint="Назва фільтра (напр. Центр)"
+                android:hint="@string/filter_name_hint"
                 android:paddingHorizontal="16dp"
                 android:textColor="@color/driver_text_primary"
                 android:textColorHint="@color/driver_text_secondary" />
@@ -59,7 +59,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
-                android:text="ЗВІДКИ"
+                android:text="@string/filter_section_from"
                 android:textColor="@color/driver_neon_teal"
                 android:textSize="12sp"
                 android:textStyle="bold" />
@@ -77,7 +77,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:checked="true"
-                    android:text="Відстань"
+                    android:text="@string/filter_type_distance"
                     android:textColor="@color/driver_text_primary" />
 
                 <RadioButton
@@ -85,7 +85,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Сектори"
+                    android:text="@string/filter_type_sectors"
                     android:textColor="@color/driver_text_primary" />
             </RadioGroup>
 
@@ -100,7 +100,7 @@
                     android:id="@+id/tv_distance_val"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Радіус: 5.0 км"
+                    android:text="@string/filter_radius_default"
                     android:textColor="@color/driver_text_primary" />
 
                 <SeekBar
@@ -118,7 +118,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="Вибрати сектори"
+                android:text="@string/filter_btn_select_sectors"
                 android:visibility="gone"
                 app:strokeColor="@color/driver_neon_teal" />
 
@@ -126,7 +126,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
-                android:text="КУДИ"
+                android:text="@string/filter_section_to"
                 android:textColor="@color/driver_neon_teal"
                 android:textSize="12sp"
                 android:textStyle="bold" />
@@ -137,14 +137,14 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="+ Сектори призначення"
+                android:text="@string/filter_btn_select_to_sectors"
                 app:strokeColor="@color/driver_neon_teal" />
 
             <TextView
                 android:id="@+id/tv_selected_to_count"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Вибрано секторів: 0"
+                android:text="@string/filter_selected_count_default"
                 android:textColor="@color/driver_text_secondary"
                 android:textSize="12sp" />
 
@@ -152,7 +152,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
-                android:text="ТАРИФ"
+                android:text="@string/filter_section_tariff"
                 android:textColor="@color/driver_neon_teal"
                 android:textSize="12sp"
                 android:textStyle="bold" />
@@ -170,7 +170,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:checked="true"
-                    android:text="Простий"
+                    android:text="@string/filter_tariff_simple"
                     android:textColor="@color/driver_text_primary" />
 
                 <RadioButton
@@ -178,7 +178,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Складний"
+                    android:text="@string/filter_tariff_complex"
                     android:textColor="@color/driver_text_primary" />
             </RadioGroup>
 
@@ -194,7 +194,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="50dp"
                     android:background="@drawable/bg_driver_input"
-                    android:hint="Мін. сума замовлення (₴)"
+                    android:hint="@string/filter_hint_min_price"
                     android:inputType="numberDecimal"
                     android:paddingHorizontal="12dp"
                     android:textColor="@color/driver_text_primary" />
@@ -205,7 +205,7 @@
                     android:layout_height="50dp"
                     android:layout_marginTop="12dp"
                     android:background="@drawable/bg_driver_input"
-                    android:hint="Мін. ціна за км (₴/км)"
+                    android:hint="@string/filter_hint_min_price_km"
                     android:inputType="numberDecimal"
                     android:paddingHorizontal="12dp"
                     android:textColor="@color/driver_text_primary" />
@@ -224,7 +224,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="50dp"
                     android:background="@drawable/bg_driver_input"
-                    android:hint="Мін. сума замовлення (₴)"
+                    android:hint="@string/filter_hint_min_price"
                     android:inputType="numberDecimal"
                     android:paddingHorizontal="12dp"
                     android:textColor="@color/driver_text_primary" />
@@ -236,7 +236,7 @@
                     android:layout_marginTop="12dp"
                     android:background="@drawable/bg_driver_input"
                     android:enabled="true"
-                    android:hint="Км у мінімалці (напр. 2)"
+                    android:hint="@string/filter_hint_complex_km"
                     android:inputType="numberDecimal"
                     android:paddingHorizontal="12dp"
                     android:textColor="@color/driver_text_primary" />
@@ -247,7 +247,7 @@
                     android:layout_height="50dp"
                     android:layout_marginTop="12dp"
                     android:background="@drawable/bg_driver_input"
-                    android:hint="Мін. ціна/км У місті (₴/км)"
+                    android:hint="@string/filter_hint_city_price"
                     android:inputType="numberDecimal"
                     android:paddingHorizontal="12dp"
                     android:textColor="@color/driver_text_primary" />
@@ -259,7 +259,7 @@
                     android:layout_marginTop="12dp"
                     android:background="@drawable/bg_driver_input"
                     android:enabled="true"
-                    android:hint="Мін. ціна/км У передмісті (₴/км)"
+                    android:hint="@string/filter_hint_suburb_price"
                     android:inputType="numberDecimal"
                     android:paddingHorizontal="12dp"
                     android:textColor="@color/driver_text_primary" />
@@ -269,7 +269,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
-                android:text="ТИП ОПЛАТИ"
+                android:text="@string/filter_section_payment"
                 android:textColor="@color/driver_neon_teal"
                 android:textSize="12sp"
                 android:textStyle="bold" />
@@ -294,7 +294,7 @@
         android:layout_width="match_parent"
         android:layout_height="60dp"
         android:layout_margin="20dp"
-        android:text="СТВОРИТИ ФІЛЬТР"
+        android:text="@string/filter_btn_create"
         android:textColor="@color/driver_black_bg"
         android:textStyle="bold"
         app:backgroundTint="@color/driver_neon_teal"

@@ -3,6 +3,8 @@ package com.taxiapp.driver
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.AlertDialog
+import android.content.Context
+import com.taxiapp.driver.utils.LocaleHelper
 import com.taxiapp.driver.network.UpdateLocationRequest
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -109,6 +111,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         } else {
             Toast.makeText(this, "Потрібен доступ до геолокації!", Toast.LENGTH_LONG).show()
         }
+    }
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(LocaleHelper.onAttach(newBase))
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -313,6 +319,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         navViewContent.findViewById<View>(R.id.menu_item_activity).setOnClickListener { startActivity(Intent(this, DriverScoreActivity::class.java)); drawerLayout.closeDrawer(GravityCompat.START) }
         navViewContent.findViewById<View>(R.id.menu_item_stats)?.setOnClickListener {
             startActivity(Intent(this, StatsActivity::class.java))
+            drawerLayout.closeDrawer(GravityCompat.START)
+        }
+        navViewContent.findViewById<View>(R.id.menu_item_settings).setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
             drawerLayout.closeDrawer(GravityCompat.START)
         }
 

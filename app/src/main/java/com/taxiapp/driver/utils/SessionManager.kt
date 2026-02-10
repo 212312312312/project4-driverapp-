@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import com.taxiapp.driver.network.DriverSearchMode
 
 class SessionManager(context: Context) {
+    // Використовуємо твою назву файлу налаштувань
     private var prefs: SharedPreferences = context.getSharedPreferences("DriverPrefs", Context.MODE_PRIVATE)
 
     companion object {
@@ -14,13 +15,27 @@ class SessionManager(context: Context) {
         const val KEY_DRIVER_PHONE = "driver_phone"
         const val KEY_FCM_TOKEN = "fcm_token"
 
-        const val KEY_SEARCH_MODE = "search_mode" // Новий ключ
+        const val KEY_SEARCH_MODE = "search_mode"
 
         const val KEY_MANUAL_LAT = "manual_lat"
         const val KEY_MANUAL_LNG = "manual_lng"
         const val KEY_IS_MANUAL_LOC = "is_manual_loc"
         const val KEY_WAS_ORDER_MINIMIZED = "was_order_minimized"
+
+        // --- НОВИЙ КЛЮЧ ДЛЯ МОВИ ---
+        const val KEY_LANGUAGE = "app_language"
     }
+
+    // --- Language Methods (НОВІ) ---
+    fun saveLanguage(lang: String) {
+        prefs.edit().putString(KEY_LANGUAGE, lang).apply()
+    }
+
+    fun getLanguage(): String {
+        // По замовчуванню "uk" (Українська)
+        return prefs.getString(KEY_LANGUAGE, "uk") ?: "uk"
+    }
+    // -------------------------------
 
     fun isLoggedIn(): Boolean {
         return fetchAuthToken() != null
@@ -74,14 +89,13 @@ class SessionManager(context: Context) {
     }
 
     fun getSearchMode(): DriverSearchMode {
-        val modeStr = prefs.getString(KEY_SEARCH_MODE, DriverSearchMode.CHAIN.name) // За замовчуванням CHAIN
+        val modeStr = prefs.getString(KEY_SEARCH_MODE, DriverSearchMode.CHAIN.name)
         return try {
             DriverSearchMode.valueOf(modeStr!!)
         } catch (e: Exception) {
-            DriverSearchMode.CHAIN // Якщо помилка - вертаємо CHAIN
+            DriverSearchMode.CHAIN
         }
     }
-    // ------------------------------
 
     fun setOrderMinimized(minimized: Boolean) {
         prefs.edit().putBoolean(KEY_WAS_ORDER_MINIMIZED, minimized).apply()
@@ -97,10 +111,15 @@ class SessionManager(context: Context) {
 
     fun clearSession() {
         val fcmToken = fetchFcmToken()
+        // Зберігаємо мову при виході, щоб екран логіна був зрозумілою мовою
+        val language = getLanguage()
+
         prefs.edit().clear().apply()
+
         if (fcmToken != null) {
             saveFcmToken(fcmToken)
         }
+        saveLanguage(language) // Відновлюємо мову
     }
 
     // Manual location methods...

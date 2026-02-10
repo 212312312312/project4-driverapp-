@@ -28,7 +28,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Автомобіль"
+            android:text="@string/car_title"
             android:textColor="@color/white"
             android:textSize="20sp"
             android:textStyle="bold"
@@ -50,7 +50,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Активне"
+            android:text="@string/car_tab_active"
             android:gravity="center"
             android:paddingVertical="8dp"
             android:background="@drawable/bg_round_button"
@@ -63,7 +63,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Список"
+            android:text="@string/car_tab_list"
             android:gravity="center"
             android:paddingVertical="8dp"
             android:textColor="#888888" />
@@ -109,7 +109,7 @@
                     android:id="@+id/tv_car_model"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:text="Завантаження..."
+                    android:text="@string/car_status_loading"
                     android:textColor="@color/white"
                     android:textSize="22sp"
                     android:textStyle="bold"
@@ -121,7 +121,7 @@
                     android:id="@+id/tv_plate_number"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="--------"
+                    android:text="@string/car_plate_placeholder"
                     android:background="@drawable/bg_license_plate"
                     android:paddingHorizontal="10dp"
                     android:paddingVertical="4dp"
@@ -155,7 +155,7 @@
                         android:id="@+id/tv_car_type"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Тип авто"
+                        android:text="@string/car_label_type"
                         android:textColor="#AAAAAA"
                         android:textSize="14sp"
                         android:layout_marginStart="8dp" />
@@ -165,7 +165,7 @@
                     android:id="@+id/tv_car_year"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="20--"
+                    android:text="@string/car_year_placeholder"
                     android:textColor="#666666"
                     android:textSize="14sp"
                     android:layout_marginTop="4dp"
@@ -200,7 +200,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Додати брендування"
+                        android:text="@string/car_btn_add_branding"
                         android:textColor="@color/white"
                         android:textSize="16sp" />
                     <ImageView
@@ -224,7 +224,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Додати послуги"
+                        android:text="@string/car_btn_add_services"
                         android:textColor="@color/white"
                         android:textSize="16sp" />
                     <ImageView
@@ -238,7 +238,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Класи та сервіси"
+                android:text="@string/car_label_classes_services"
                 android:textColor="#666666"
                 android:textSize="14sp"
                 android:layout_marginStart="20dp"
@@ -267,7 +267,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Фото документів та авто"
+                    android:text="@string/car_btn_documents"
                     android:textColor="@color/white"
                     android:textSize="16sp" />
                 <ImageView
@@ -297,7 +297,7 @@
         android:layout_height="wrap_content"
         android:layout_margin="24dp"
         android:src="@android:drawable/ic_input_add"
-        android:contentDescription="Додати авто"
+        android:contentDescription="@string/car_cd_add_new"
         android:backgroundTint="#000000"
         app:tint="#FFFFFF"
         android:visibility="gone"

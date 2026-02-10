@@ -36,7 +36,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:layout_marginStart="12dp"
-            android:text="Обов'язкове замовлення"
+            android:text="@string/offer_title_mandatory"
             android:textColor="@color/driver_neon_teal"
             android:textStyle="bold"
             android:textSize="16sp" />
@@ -50,7 +50,7 @@
                 android:id="@+id/tv_header_price"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="245 ₴"
+                android:text="@string/offer_header_price_placeholder"
                 android:textColor="@android:color/white"
                 android:textSize="18sp"
                 android:textStyle="bold" />
@@ -58,7 +58,7 @@
                 android:id="@+id/tv_header_distance"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="12.5 км"
+                android:text="@string/offer_header_dist_placeholder"
                 android:textColor="#AAAAAA"
                 android:textSize="12sp" />
         </LinearLayout>
@@ -82,14 +82,14 @@
                 android:id="@+id/tv_pickup_distance"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="~2.1 км"
+                android:text="@string/offer_pickup_dist_placeholder"
                 android:textColor="@android:color/white"
                 android:textStyle="bold"
                 android:textSize="14sp" />
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="до подачі"
+                android:text="@string/offer_label_pickup"
                 android:textColor="#888888"
                 android:textSize="11sp" />
         </LinearLayout>
@@ -103,14 +103,14 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="+10 балів"
+                android:text="@string/offer_points_placeholder"
                 android:textColor="@color/driver_neon_teal"
                 android:textStyle="bold"
                 android:textSize="14sp" />
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="активність"
+                android:text="@string/offer_label_activity"
                 android:textColor="#888888"
                 android:textSize="11sp" />
         </LinearLayout>
@@ -125,14 +125,14 @@
                 android:id="@+id/tv_price_per_km"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="18 ₴/км"
+                android:text="@string/offer_rate_placeholder"
                 android:textColor="@android:color/white"
                 android:textStyle="bold"
                 android:textSize="14sp" />
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="тариф"
+                android:text="@string/offer_label_tariff"
                 android:textColor="#888888"
                 android:textSize="11sp" />
         </LinearLayout>
@@ -169,7 +169,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="12dp"
-                android:text="вул. Хрещатик, 1"
+                android:text="@string/offer_addr_from_placeholder"
                 android:textColor="@android:color/white"
                 android:textSize="15sp"
                 android:maxLines="1"
@@ -190,7 +190,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="12dp"
-                android:text="ТЦ Lavina Mall"
+                android:text="@string/offer_addr_to_placeholder"
                 android:textColor="@android:color/white"
                 android:textSize="15sp"
                 android:maxLines="1"
@@ -204,7 +204,7 @@
         android:layout_height="wrap_content"
         android:paddingHorizontal="16dp"
         android:paddingBottom="12dp"
-        android:text="Центр > Святошин"
+        android:text="@string/offer_sectors_placeholder"
         android:textColor="#AAAAAA"
         android:textSize="13sp"
         android:textStyle="italic"
@@ -224,7 +224,7 @@
             android:id="@+id/tv_client_trips"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Поїздки: 42"
+            android:text="@string/offer_client_trips_placeholder"
             android:textColor="@android:color/white"
             android:textSize="13sp"
             android:background="@drawable/bg_status_pill"
@@ -251,7 +251,7 @@
                 android:id="@+id/tv_client_rating"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="4.9"
+                android:text="@string/offer_client_rating_placeholder"
                 android:textColor="@android:color/white"
                 android:textSize="13sp"
                 android:layout_marginStart="4dp" />
@@ -263,7 +263,7 @@
             android:id="@+id/tv_tariff_badge"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Standard"
+            android:text="@string/offer_tariff_badge_placeholder"
             android:textColor="#000000"
             android:textStyle="bold"
             android:textSize="13sp"
@@ -322,7 +322,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="ПРИЙНЯТИ"
+                    android:text="@string/offer_btn_accept_title"
                     android:textSize="20sp"
                     android:textStyle="bold"
                     android:textColor="#000000" />
@@ -330,7 +330,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Натисніть, щоб прийняти"
+                    android:text="@string/offer_btn_accept_subtitle"
                     android:textSize="12sp"
                     android:textColor="#333333" />
             </LinearLayout>
@@ -339,7 +339,7 @@
                 android:id="@+id/tv_timer"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="20"
+                android:text="@string/offer_timer_placeholder"
                 android:textSize="32sp"
                 android:textStyle="bold"
                 android:textColor="#000000"

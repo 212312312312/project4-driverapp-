@@ -10,7 +10,7 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Період"
+        android:text="@string/period_sheet_title"
         android:textSize="20sp"
         android:textStyle="bold"
         android:textColor="@color/driver_text_primary"
@@ -32,7 +32,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Сьогодні"
+            android:text="@string/period_sheet_today"
             android:textSize="16sp"
             android:textColor="@color/driver_text_primary" />
 
@@ -57,7 +57,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Вчора"
+            android:text="@string/period_sheet_yesterday"
             android:textSize="16sp"
             android:textColor="@color/driver_text_primary" />
 
@@ -82,7 +82,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Поточний тиждень"
+            android:text="@string/period_sheet_this_week"
             android:textSize="16sp"
             android:textColor="@color/driver_text_primary" />
 
@@ -107,7 +107,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Минулий тиждень"
+            android:text="@string/period_sheet_last_week"
             android:textSize="16sp"
             android:textColor="@color/driver_text_primary" />
 
@@ -132,7 +132,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Поточний місяць"
+            android:text="@string/period_sheet_this_month"
             android:textSize="16sp"
             android:textColor="@color/driver_text_primary" />
 
@@ -157,7 +157,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Минулий місяць"
+            android:text="@string/period_sheet_last_month"
             android:textSize="16sp"
             android:textColor="@color/driver_text_primary" />
 
