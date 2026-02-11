@@ -320,6 +320,11 @@
     <string name="filter_btn_ether">ETHER</string>
     <string name="filter_btn_cycle">∞</string>
 
+    <string name="settings_theme_title">Appearance</string>
+    <string name="theme_system">System default</string>
+    <string name="theme_dark">Dark</string>
+    <string name="theme_light">Light</string>
+
     <string name="history_item_status_archived">Archived</string>
     <string name="history_item_date_placeholder">Jan 12 14:30</string>
     <string name="history_item_from_placeholder">Pushkinska St, 10</string>

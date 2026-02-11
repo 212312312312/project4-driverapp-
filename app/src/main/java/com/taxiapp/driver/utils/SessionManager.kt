@@ -2,6 +2,7 @@ package com.taxiapp.driver.utils
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.appcompat.app.AppCompatDelegate
 import com.taxiapp.driver.network.DriverSearchMode
 
 class SessionManager(context: Context) {
@@ -22,11 +23,33 @@ class SessionManager(context: Context) {
         const val KEY_IS_MANUAL_LOC = "is_manual_loc"
         const val KEY_WAS_ORDER_MINIMIZED = "was_order_minimized"
 
-        // --- НОВИЙ КЛЮЧ ДЛЯ МОВИ ---
+        // --- КЛЮЧІ ДЛЯ МОВИ ТА ТЕМИ ---
         const val KEY_LANGUAGE = "app_language"
+        const val KEY_THEME = "app_theme"
     }
 
-    // --- Language Methods (НОВІ) ---
+    // --- Theme Methods (НОВІ) ---
+    // values: "SYSTEM", "DARK", "LIGHT"
+    fun saveTheme(theme: String) {
+        prefs.edit().putString(KEY_THEME, theme).apply()
+    }
+
+    fun getTheme(): String {
+        // По замовчуванню "DARK" (Темна), як ти і хотів
+        return prefs.getString(KEY_THEME, "DARK") ?: "DARK"
+    }
+
+    // Допоміжний метод для отримання int-значення для AppCompatDelegate
+    fun getThemeMode(): Int {
+        return when (getTheme()) {
+            "LIGHT" -> AppCompatDelegate.MODE_NIGHT_NO
+            "DARK" -> AppCompatDelegate.MODE_NIGHT_YES
+            else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+        }
+    }
+    // ----------------------------
+
+    // --- Language Methods ---
     fun saveLanguage(lang: String) {
         prefs.edit().putString(KEY_LANGUAGE, lang).apply()
     }
@@ -35,7 +58,7 @@ class SessionManager(context: Context) {
         // По замовчуванню "uk" (Українська)
         return prefs.getString(KEY_LANGUAGE, "uk") ?: "uk"
     }
-    // -------------------------------
+    // ------------------------
 
     fun isLoggedIn(): Boolean {
         return fetchAuthToken() != null
@@ -110,16 +133,19 @@ class SessionManager(context: Context) {
     }
 
     fun clearSession() {
+        // Зберігаємо важливі налаштування перед очищенням
         val fcmToken = fetchFcmToken()
-        // Зберігаємо мову при виході, щоб екран логіна був зрозумілою мовою
         val language = getLanguage()
+        val theme = getTheme() // Зберігаємо тему
 
         prefs.edit().clear().apply()
 
+        // Відновлюємо налаштування
         if (fcmToken != null) {
             saveFcmToken(fcmToken)
         }
-        saveLanguage(language) // Відновлюємо мову
+        saveLanguage(language)
+        saveTheme(theme) // Відновлюємо тему
     }
 
     // Manual location methods...

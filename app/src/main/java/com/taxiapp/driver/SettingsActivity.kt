@@ -7,6 +7,7 @@ import android.view.View
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.taxiapp.driver.utils.LocaleHelper
 import com.taxiapp.driver.utils.SessionManager
@@ -15,34 +16,41 @@ class SettingsActivity : AppCompatActivity() {
 
     private lateinit var sessionManager: SessionManager
 
-    // ВАЖЛИВО: Це дозволяє екрану зрозуміти поточну мову до створення UI
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(LocaleHelper.onAttach(newBase))
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_settings)
         sessionManager = SessionManager(this)
+
+        // Важно: Применяем тему перед setContentView (хотя AppCompatDelegate работает и динамически)
+        AppCompatDelegate.setDefaultNightMode(sessionManager.getThemeMode())
+
+        setContentView(R.layout.activity_settings)
 
         findViewById<View>(R.id.btn_back).setOnClickListener { finish() }
 
-        // Оновлюємо тексти кнопок (вони підтягнуться з потрібного strings.xml)
         setupSimpleButton(R.id.btn_language, R.string.settings_language)
-        setupSimpleButton(R.id.btn_theme, R.string.settings_theme)
+        setupSimpleButton(R.id.btn_theme, R.string.settings_theme) // Текст кнопки обновится из strings
         setupSimpleButton(R.id.btn_ether_settings, R.string.settings_ether_orders)
         setupSimpleButton(R.id.btn_sounds, R.string.settings_sounds)
         setupSimpleButton(R.id.btn_navigator, R.string.settings_navigator)
 
+        // Язык
         findViewById<View>(R.id.btn_language).setOnClickListener {
             showLanguageBottomSheet()
+        }
+
+        // --- ТЕМА (Подключили слушатель) ---
+        findViewById<View>(R.id.btn_theme).setOnClickListener {
+            showThemeBottomSheet()
         }
 
         val clickListener = View.OnClickListener {
             Toast.makeText(this, R.string.feature_coming_soon, Toast.LENGTH_SHORT).show()
         }
 
-        findViewById<View>(R.id.btn_theme).setOnClickListener(clickListener)
         findViewById<View>(R.id.btn_ether_settings).setOnClickListener(clickListener)
         findViewById<View>(R.id.btn_sounds).setOnClickListener(clickListener)
         findViewById<View>(R.id.btn_navigator).setOnClickListener(clickListener)
@@ -56,6 +64,7 @@ class SettingsActivity : AppCompatActivity() {
         tvTitle.text = getString(stringId)
     }
 
+    // --- BottomSheet выбора языка ---
     private fun showLanguageBottomSheet() {
         val bottomSheetDialog = BottomSheetDialog(this)
         val view = layoutInflater.inflate(R.layout.bottom_sheet_language, null)
@@ -74,15 +83,65 @@ class SettingsActivity : AppCompatActivity() {
         bottomSheetDialog.show()
     }
 
+    // --- BottomSheet выбора ТЕМЫ (Новый метод) ---
+    private fun showThemeBottomSheet() {
+        val bottomSheetDialog = BottomSheetDialog(this)
+        val view = layoutInflater.inflate(R.layout.bottom_sheet_theme, null)
+        bottomSheetDialog.setContentView(view)
+
+        // Слушатель на "Системная"
+        view.findViewById<View>(R.id.btn_theme_system)?.setOnClickListener {
+            bottomSheetDialog.dismiss()
+            applyAppTheme("SYSTEM")
+        }
+
+        // Слушатель на "Темная"
+        view.findViewById<View>(R.id.btn_theme_dark)?.setOnClickListener {
+            bottomSheetDialog.dismiss()
+            applyAppTheme("DARK")
+        }
+
+        // Слушатель на "Светлая"
+        view.findViewById<View>(R.id.btn_theme_light)?.setOnClickListener {
+            bottomSheetDialog.dismiss()
+            applyAppTheme("LIGHT")
+        }
+
+        bottomSheetDialog.show()
+    }
+
+    // Метод применения темы
+    private fun applyAppTheme(themeCode: String) {
+        val currentTheme = sessionManager.getTheme()
+        if (currentTheme == themeCode) return
+
+        // 1. Сохраняем
+        sessionManager.saveTheme(themeCode)
+
+        // 2. Применяем режим
+        val mode = when (themeCode) {
+            "LIGHT" -> AppCompatDelegate.MODE_NIGHT_NO
+            "DARK" -> AppCompatDelegate.MODE_NIGHT_YES
+            else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+        }
+        AppCompatDelegate.setDefaultNightMode(mode)
+
+        // 3. Пересоздаем активити (опционально, но надежнее для обновления ресурсов)
+        // recreate()
+        // Или так же, как с языком — перезагрузить через Main, чтобы везде применилось:
+        val intent = Intent(this, MainActivity::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        startActivity(intent)
+        finish()
+    }
+
     private fun updateAppLocale(languageCode: String) {
         val currentLang = sessionManager.getLanguage()
-        if (currentLang == languageCode) return // Не оновлюємо, якщо мова та ж сама
+        if (currentLang == languageCode) return
 
-        // 1. Зберігаємо нову мову
         LocaleHelper.setLocale(this, languageCode)
         sessionManager.saveLanguage(languageCode)
 
-        // 2. Перезавантажуємо додаток, щоб зміни вступили в силу всюди
         val intent = Intent(this, MainActivity::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(intent)

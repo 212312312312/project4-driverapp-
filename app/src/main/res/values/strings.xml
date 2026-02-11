@@ -8,6 +8,11 @@
     <string name="menu_stats">Статистика</string>
     <string name="menu_logout">Завершити роботу</string>
 
+    <string name="settings_theme_title">Тема оформлення</string>
+    <string name="theme_system">Системна</string>
+    <string name="theme_dark">Темна</string>
+    <string name="theme_light">Світла</string>
+
     <string name="settings_title">Налаштування</string>
     <string name="settings_language">Мова</string>
     <string name="settings_theme">Тема</string>
