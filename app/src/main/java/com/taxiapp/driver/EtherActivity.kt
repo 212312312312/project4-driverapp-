@@ -79,6 +79,10 @@ class EtherActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         stompClient.connect()
+        adapter.updateDisplaySettings(
+            sectorFirst = sessionManager.isEtherSectorFirst(),
+            hidePricePerKm = sessionManager.isEtherPricePerKmHidden()
+        )
         fetchOrders()
     }
 

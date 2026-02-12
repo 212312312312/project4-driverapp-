@@ -300,6 +300,32 @@
     <string name="search_settings_radius_val">3.0 km</string>
     <string name="search_settings_btn_save">SAVE</string>
 
+    <string name="settings_ether_title">Order Appearance</string>
+    <string name="settings_ether_preview">Preview</string>
+    <string name="settings_ether_sector_first">Sector first</string>
+    <string name="settings_ether_sector_first_desc">Sector will be shown in large text, address below</string>
+    <string name="settings_ether_hide_price">Hide price per km</string>
+    <string name="settings_ether_hide_price_desc">Do not show (UAH/km) on the order card</string>
+
+    <string name="navigator_title">Navigator</string>
+    <string name="navigator_google_maps">Google Maps</string>
+    <string name="navigator_waze">Waze</string>
+    <string name="navigator_status_installed">Installed</string>
+    <string name="navigator_status_install">Install</string>
+    <string name="navigator_status_active">Active</string>
+
+    <string name="settings_quick_access_title">Quick Access</string>
+    <string name="settings_status_reminder_title">Status Reminder</string>
+    <string name="settings_status_reminder_desc">Widget or notification when approaching destination</string>
+
+    <string name="status_widget_arrived">Arrived</string>
+    <string name="status_widget_complete">Complete</string>
+    <string name="notification_zone_title">You arrived</string>
+    <string name="notification_zone_desc">You are near the order location</string>
+    <string name="permission_overlay_title">Permission Required</string>
+    <string name="permission_overlay_desc">Allow the app to display over other apps to use Quick Access.</string>
+    <string name="permission_overlay_allow">Allow</string>
+
     <string name="rate_dialog_title">Rate Passenger</string>
     <string name="rate_dialog_hint_comment">Comment (optional)</string>
     <string name="rate_dialog_btn_finish">Finish</string>

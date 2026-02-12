@@ -13,6 +13,26 @@
     <string name="theme_dark">Темна</string>
     <string name="theme_light">Світла</string>
 
+    <string name="settings_ether_title">Вигляд замовлення</string>
+    <string name="settings_ether_preview">Попередній перегляд</string>
+    <string name="settings_ether_sector_first">Спочатку сектор</string>
+    <string name="settings_ether_sector_first_desc">Великим текстом буде сектор, а адреса — під ним</string>
+    <string name="settings_ether_hide_price">Приховати ціну за км</string>
+    <string name="settings_ether_hide_price_desc">Не показувати (грн/км) на картці замовлення</string>
+
+    <string name="navigator_title">Навігатор</string>
+    <string name="navigator_google_maps">Google Maps</string>
+    <string name="navigator_waze">Waze</string>
+    <string name="navigator_status_installed">Встановлено</string>
+    <string name="navigator_status_install">Встановити</string>
+    <string name="navigator_status_active">Активний</string>
+
+    <string name="settings_quick_access_title">Швидкий доступ</string>
+    <string name="settings_quick_access_desc">Плаваюча кнопка поверх інших програм</string>
+    <string name="permission_overlay_title">Потрібен дозвіл</string>
+    <string name="permission_overlay_desc">Для роботи швидкого доступу дозвольте програмі відображатися поверх інших вікон.</string>
+    <string name="permission_overlay_allow">Дозволити</string>
+
     <string name="settings_title">Налаштування</string>
     <string name="settings_language">Мова</string>
     <string name="settings_theme">Тема</string>
@@ -20,7 +40,13 @@
     <string name="settings_sounds">Звуки</string>
     <string name="settings_navigator">Навігатор</string>
     <string name="settings_quick_access">Швидкий доступ</string>
-    <string name="settings_quick_access_desc">Відображати поверх всіх вікон</string>
+    <string name="settings_status_reminder_title">Нагадування статусу</string>
+    <string name="settings_status_reminder_desc">Віджет або сповіщення при наближенні до точки</string>
+
+    <string name="status_widget_arrived">На місці</string>
+    <string name="status_widget_complete">Завершити</string>
+    <string name="notification_zone_title">Ви прибули</string>
+    <string name="notification_zone_desc">Ви знаходитесь поруч з точкою замовлення</string>
     <string name="settings_notifications">Сповіщення</string>
     <string name="settings_notifications_desc">Нагадування про зміну статусів</string>
 

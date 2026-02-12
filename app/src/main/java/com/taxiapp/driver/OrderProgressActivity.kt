@@ -1,19 +1,23 @@
 package com.taxiapp.driver
 
 import android.annotation.SuppressLint
-import android.app.Dialog // <--- НОВЫЙ ИМПОРТ
+import android.app.Dialog
+import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
-import android.graphics.Color // <--- НОВЫЙ ИМПОРТ
-import android.graphics.drawable.ColorDrawable // <--- НОВЫЙ ИМПОРТ
+import android.content.ServiceConnection
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.location.Location
 import android.os.Build
 import android.os.Bundle
+import android.os.IBinder
 import android.os.Looper
 import android.view.View
-import android.view.ViewGroup // <--- НОВЫЙ ИМПОРТ
-import android.widget.Button // <--- НОВЫЙ ИМПОРТ
-import android.widget.EditText // <--- НОВЫЙ ИМПОРТ
-import android.widget.RatingBar // <--- НОВЫЙ ИМПОРТ
+import android.view.ViewGroup
+import android.widget.Button
+import android.widget.EditText
+import android.widget.RatingBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -29,7 +33,8 @@ import com.google.android.material.button.MaterialButton
 import com.google.maps.android.PolyUtil
 import com.taxiapp.driver.network.ApiClient
 import com.taxiapp.driver.network.Order
-import com.taxiapp.driver.network.RateClientRequest // <--- ВАЖНО
+import com.taxiapp.driver.network.RateClientRequest
+import com.taxiapp.driver.service.LocationService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -51,8 +56,23 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var tvClientName: TextView
     private lateinit var tvOrderInfo: TextView
 
-    private enum class RideState { TO_CLIENT, WAITING, TO_DESTINATION, COMPLETED } // <-- Добавил COMPLETED
+    private enum class RideState { TO_CLIENT, WAITING, TO_DESTINATION, COMPLETED }
     private var currentState = RideState.TO_CLIENT
+
+    // --- ЗВ'ЯЗОК З СЕРВІСОМ (ДЛЯ НАГАДУВАНЬ) ---
+    private var locationService: LocationService? = null
+    private val serviceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+            val binder = service as LocationService.LocalBinder
+            locationService = binder.getService()
+            // Передаємо замовлення для відстеження
+            locationService?.setTargetOrder(currentOrder)
+        }
+        override fun onServiceDisconnected(name: ComponentName?) {
+            locationService = null
+        }
+    }
+    // ------------------------------------------
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -78,6 +98,22 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
 
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
+    }
+
+    override fun onStart() {
+        super.onStart()
+        // Біндимо сервіс, щоб передавати йому дані про замовлення
+        Intent(this, LocationService::class.java).also { intent ->
+            bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        if (locationService != null) {
+            unbindService(serviceConnection)
+            locationService = null
+        }
     }
 
     private fun initViews() {
@@ -118,7 +154,6 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
             "IN_PROGRESS" -> { currentState = RideState.TO_DESTINATION; setupUiForInTrip() }
             "COMPLETED" -> {
                 currentState = RideState.COMPLETED
-                // Если заказ завершен, но не оценен -> Показываем диалог
                 if (currentOrder?.isRatedByDriver == false) {
                     showRatingDialog()
                 } else {
@@ -134,6 +169,9 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
         determineStateByStatus(order.status ?: "")
         tvClientName.text = "Клієнт"
         tvOrderInfo.text = "${if(order.paymentMethod == "CASH") "Готівка" else "Картка"} • ${order.price.toInt()} ₴"
+
+        // Оновлюємо дані в сервісі локації
+        locationService?.setTargetOrder(order)
     }
 
     @SuppressLint("MissingPermission")
@@ -258,18 +296,43 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
             try {
                 val api = ApiClient.getInstance().getApiService(this@OrderProgressActivity)
                 when (currentState) {
-                    RideState.TO_CLIENT -> if (api.notifyArrived(orderId).isSuccessful) {
-                        currentState = RideState.WAITING; setupUiForWaiting(); updateMapVisuals()
+                    RideState.TO_CLIENT -> {
+                        if (api.notifyArrived(orderId).isSuccessful) {
+                            // ВИПРАВЛЕННЯ: Створюємо копію об'єкта з новим статусом
+                            currentOrder = currentOrder?.copy(status = "DRIVER_ARRIVED")
+
+                            // Оновлюємо сервіс вже НОВИМ об'єктом
+                            locationService?.setTargetOrder(currentOrder)
+
+                            currentState = RideState.WAITING
+                            setupUiForWaiting()
+                            updateMapVisuals()
+                        }
                     }
-                    RideState.WAITING -> if (api.startTrip(orderId).isSuccessful) {
-                        currentState = RideState.TO_DESTINATION; setupUiForInTrip(); updateMapVisuals()
+                    RideState.WAITING -> {
+                        if (api.startTrip(orderId).isSuccessful) {
+                            // ВИПРАВЛЕННЯ: copy()
+                            currentOrder = currentOrder?.copy(status = "IN_PROGRESS")
+
+                            locationService?.setTargetOrder(currentOrder)
+
+                            currentState = RideState.TO_DESTINATION
+                            setupUiForInTrip()
+                            updateMapVisuals()
+                        }
                     }
-                    RideState.TO_DESTINATION -> if (api.completeOrder(orderId).isSuccessful) {
-                        // Поездка завершена. Показываем диалог оценки!
-                        currentState = RideState.COMPLETED
-                        showRatingDialog()
+                    RideState.TO_DESTINATION -> {
+                        if (api.completeOrder(orderId).isSuccessful) {
+                            // ВИПРАВЛЕННЯ: copy()
+                            currentOrder = currentOrder?.copy(status = "COMPLETED")
+
+                            locationService?.setTargetOrder(null) // Зупиняємо відстеження
+
+                            currentState = RideState.COMPLETED
+                            showRatingDialog()
+                        }
                     }
-                    RideState.COMPLETED -> { /* Ничего не делаем */ }
+                    RideState.COMPLETED -> { }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -280,13 +343,12 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
-    // --- ДИАЛОГ ОЦЕНКИ ПАССАЖИРА ---
     private fun showRatingDialog() {
         val dialog = Dialog(this)
-        dialog.setContentView(R.layout.dialog_rate_client) // Файл создадим ниже
+        dialog.setContentView(R.layout.dialog_rate_client)
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-        dialog.setCancelable(false) // Нельзя закрыть без оценки
+        dialog.setCancelable(false)
 
         val ratingBar = dialog.findViewById<RatingBar>(R.id.rating_bar)
         val etComment = dialog.findViewById<EditText>(R.id.et_comment)
@@ -330,7 +392,6 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
         startActivity(intent)
         finish()
     }
-    // --------------------------------
 
     private fun loadActiveOrderFromServer() {
         lifecycleScope.launch {

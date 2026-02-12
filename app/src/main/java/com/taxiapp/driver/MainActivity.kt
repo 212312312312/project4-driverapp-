@@ -49,6 +49,7 @@ import com.taxiapp.driver.network.FcmTokenDto
 import com.taxiapp.driver.service.LocationService
 import com.taxiapp.driver.utils.SessionManager
 import kotlinx.coroutines.launch
+import com.taxiapp.driver.service.FloatingWidgetService
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
@@ -155,12 +156,17 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
+
+
+
+
     override fun onResume() {
         super.onResume()
         updateLockIconState()
         updateOrdersBadge()
         checkActiveOrderOnStart() 
         startUILocationUpdates()
+
 
         if (::map.isInitialized) {
             updateMapUI()

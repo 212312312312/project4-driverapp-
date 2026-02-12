@@ -6,7 +6,6 @@ import androidx.appcompat.app.AppCompatDelegate
 import com.taxiapp.driver.network.DriverSearchMode
 
 class SessionManager(context: Context) {
-    // Використовуємо твою назву файлу налаштувань
     private var prefs: SharedPreferences = context.getSharedPreferences("DriverPrefs", Context.MODE_PRIVATE)
 
     companion object {
@@ -22,24 +21,74 @@ class SessionManager(context: Context) {
         const val KEY_MANUAL_LNG = "manual_lng"
         const val KEY_IS_MANUAL_LOC = "is_manual_loc"
         const val KEY_WAS_ORDER_MINIMIZED = "was_order_minimized"
-
-        // --- КЛЮЧІ ДЛЯ МОВИ ТА ТЕМИ ---
+        const val KEY_STATUS_REMINDER = "status_reminder_enabled"
         const val KEY_LANGUAGE = "app_language"
         const val KEY_THEME = "app_theme"
+
+        // --- НОВІ НАЛАШТУВАННЯ ЕФІРУ ---
+        const val KEY_ETHER_SECTOR_FIRST = "ether_sector_first"
+        const val KEY_ETHER_HIDE_PRICE_KM = "ether_hide_price_km"
+
+        const val KEY_NAVIGATOR = "preferred_navigator" // "google" or "waze"
+
+        const val KEY_QUICK_ACCESS_ENABLED = "quick_access_enabled"
     }
 
-    // --- Theme Methods (НОВІ) ---
-    // values: "SYSTEM", "DARK", "LIGHT"
+    fun setQuickAccessEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_QUICK_ACCESS_ENABLED, enabled).apply()
+    }
+
+    fun isQuickAccessEnabled(): Boolean {
+        return prefs.getBoolean(KEY_QUICK_ACCESS_ENABLED, false)
+    }
+
+    fun saveNavigator(nav: String) {
+        prefs.edit().putString(KEY_NAVIGATOR, nav).apply()
+    }
+
+    fun setStatusReminderEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_STATUS_REMINDER, enabled).apply()
+    }
+
+    fun isStatusReminderEnabled(): Boolean {
+        // За замовчуванням увімкнено (true)
+        return prefs.getBoolean(KEY_STATUS_REMINDER, true)
+    }
+
+    fun getNavigator(): String {
+        // За замовчуванням Google Maps
+        return prefs.getString(KEY_NAVIGATOR, "google") ?: "google"
+    }
+
+    // --- Ether Settings Methods ---
+    fun setEtherSectorFirst(isFirst: Boolean) {
+        prefs.edit().putBoolean(KEY_ETHER_SECTOR_FIRST, isFirst).apply()
+    }
+
+    fun isEtherSectorFirst(): Boolean {
+        // По замовчуванню false (Спочатку адреса)
+        return prefs.getBoolean(KEY_ETHER_SECTOR_FIRST, false)
+    }
+
+    fun setEtherHidePricePerKm(isHidden: Boolean) {
+        prefs.edit().putBoolean(KEY_ETHER_HIDE_PRICE_KM, isHidden).apply()
+    }
+
+    fun isEtherPricePerKmHidden(): Boolean {
+        // По замовчуванню false (Показувати ціну)
+        return prefs.getBoolean(KEY_ETHER_HIDE_PRICE_KM, false)
+    }
+    // -----------------------------
+
+    // --- Theme Methods ---
     fun saveTheme(theme: String) {
         prefs.edit().putString(KEY_THEME, theme).apply()
     }
 
     fun getTheme(): String {
-        // По замовчуванню "DARK" (Темна), як ти і хотів
         return prefs.getString(KEY_THEME, "DARK") ?: "DARK"
     }
 
-    // Допоміжний метод для отримання int-значення для AppCompatDelegate
     fun getThemeMode(): Int {
         return when (getTheme()) {
             "LIGHT" -> AppCompatDelegate.MODE_NIGHT_NO
@@ -47,7 +96,6 @@ class SessionManager(context: Context) {
             else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
         }
     }
-    // ----------------------------
 
     // --- Language Methods ---
     fun saveLanguage(lang: String) {
@@ -55,16 +103,13 @@ class SessionManager(context: Context) {
     }
 
     fun getLanguage(): String {
-        // По замовчуванню "uk" (Українська)
         return prefs.getString(KEY_LANGUAGE, "uk") ?: "uk"
     }
-    // ------------------------
 
     fun isLoggedIn(): Boolean {
         return fetchAuthToken() != null
     }
 
-    // Зберігаємо чистий токен
     fun saveAuthToken(token: String) {
         val cleanToken = token.replace("Bearer", "").trim()
         prefs.edit().putString(USER_TOKEN, cleanToken).apply()
@@ -133,19 +178,19 @@ class SessionManager(context: Context) {
     }
 
     fun clearSession() {
-        // Зберігаємо важливі налаштування перед очищенням
         val fcmToken = fetchFcmToken()
         val language = getLanguage()
-        val theme = getTheme() // Зберігаємо тему
+        val theme = getTheme()
+        val sectorFirst = isEtherSectorFirst() // Зберігаємо налаштування ефіру
+        val hidePrice = isEtherPricePerKmHidden()
 
         prefs.edit().clear().apply()
 
-        // Відновлюємо налаштування
-        if (fcmToken != null) {
-            saveFcmToken(fcmToken)
-        }
+        if (fcmToken != null) saveFcmToken(fcmToken)
         saveLanguage(language)
-        saveTheme(theme) // Відновлюємо тему
+        saveTheme(theme)
+        setEtherSectorFirst(sectorFirst) // Відновлюємо
+        setEtherHidePricePerKm(hidePrice)
     }
 
     // Manual location methods...
