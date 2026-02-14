@@ -54,11 +54,11 @@ class EtherSettingsActivity : AppCompatActivity() {
         val rvPreview = findViewById<RecyclerView>(R.id.rv_preview)
         rvPreview.layoutManager = LinearLayoutManager(this)
 
-        // Створюємо адаптер. Клік по прев'ю нічого не робить.
+        // ВИПРАВЛЕНО: Тільки один аргумент
         previewAdapter = OrderAdapter { }
         rvPreview.adapter = previewAdapter
 
-        // Створюємо фейкове замовлення для прикладу (ВИПРАВЛЕНО ПІД Order.kt)
+        // Створюємо фейкове замовлення для прикладу
         val demoOrder = Order(
             id = 9999,
             price = 245.0,
@@ -68,7 +68,7 @@ class EtherSettingsActivity : AppCompatActivity() {
 
             fromAddress = "вул. Хрещатик, 1",
             fromSector = "Центр",
-            // Використовуємо правильні назви полів координат
+
             originLat = 50.4501,
             originLng = 30.5234,
 
@@ -79,7 +79,6 @@ class EtherSettingsActivity : AppCompatActivity() {
 
             tariffName = "Standard",
 
-            // Замість clientName та clientPhone створюємо об'єкт OrderClient
             client = com.taxiapp.driver.network.OrderClient(
                 id = 101,
                 fullName = "Олександр",

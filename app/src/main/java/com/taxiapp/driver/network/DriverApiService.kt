@@ -21,6 +21,12 @@ data class RateClientRequest(
     val comment: String?
 )
 
+data class CancellationReason(
+    val id: Long,
+    val reasonText: String,
+    val penaltyScore: Int
+)
+
 data class DriverStatsDto(
     val totalIncome: Double,
     val commission: Double,
@@ -124,7 +130,16 @@ interface DriverApiService {
     suspend fun completeOrder(@Path("id") orderId: Long): Response<Void>
 
     @POST("api/v1/driver/orders/{id}/cancel")
-    suspend fun cancelOrder(@Path("id") orderId: Long): Response<Void>
+    suspend fun cancelOrder(
+        @Path("id") orderId: Long,
+        @Query("reasonId") reasonId: Long? = null // Може бути null, якщо причина не обрана (стара логіка)
+    ): Response<Void>
+
+    @POST("api/v1/driver/orders/{id}/confirm")
+    suspend fun confirmOrder(@Path("id") orderId: Long): Response<Order>
+
+    @GET("api/v1/cancellation-reasons")
+    suspend fun getCancellationReasons(): Response<List<CancellationReason>>
 
     @POST("api/v1/driver/orders/{id}/reject")
     suspend fun rejectOffer(@Path("id") orderId: Long): Response<Unit>

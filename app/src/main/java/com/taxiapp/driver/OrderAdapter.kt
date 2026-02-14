@@ -14,11 +14,10 @@ import com.taxiapp.driver.network.Order
 
 class OrderAdapter(
     private val onItemClick: (Order) -> Unit
+    // Прибрали onActionClick
 ) : RecyclerView.Adapter<OrderAdapter.OrderViewHolder>() {
 
     private val orders = mutableListOf<Order>()
-
-    // Налаштування відображення (за замовчуванням стандартні)
     private var isSectorFirst: Boolean = false
     private var isPricePerKmHidden: Boolean = false
 
@@ -28,7 +27,6 @@ class OrderAdapter(
         notifyDataSetChanged()
     }
 
-    // Метод для оновлення налаштувань "на льоту"
     fun updateDisplaySettings(sectorFirst: Boolean, hidePricePerKm: Boolean) {
         this.isSectorFirst = sectorFirst
         this.isPricePerKmHidden = hidePricePerKm
@@ -50,17 +48,11 @@ class OrderAdapter(
         private val tvPrice: TextView = itemView.findViewById(R.id.tv_price)
         private val llPriceBg: LinearLayout = itemView.findViewById(R.id.ll_price_background)
         private val ivPaymentIcon: ImageView = itemView.findViewById(R.id.iv_payment_icon)
-
         private val tvPricePerKm: TextView = itemView.findViewById(R.id.tv_price_per_km)
-
-        // Основні TextView (Великий шрифт)
         private val tvFrom: TextView = itemView.findViewById(R.id.tv_address_from)
         private val tvTo: TextView = itemView.findViewById(R.id.tv_address_to)
-
-        // Додаткові TextView (Маленький шрифт - Сектори)
         private val tvSectorFrom: TextView = itemView.findViewById(R.id.tv_sector_from)
         private val tvSectorTo: TextView = itemView.findViewById(R.id.tv_sector_to)
-
         private val tvTariff: TextView = itemView.findViewById(R.id.tv_tariff_badge)
         private val tvDistance: TextView = itemView.findViewById(R.id.tv_distance)
         private val stopsContainer: LinearLayout = itemView.findViewById(R.id.ll_stops_container)
@@ -68,59 +60,41 @@ class OrderAdapter(
         fun bind(order: Order) {
             tvPrice.text = order.getFormattedPrice()
 
-            // --- ЛОГИКА: ПРИХОВАТИ ЦІНУ ЗА КМ ---
             if (isPricePerKmHidden) {
                 tvPricePerKm.visibility = View.GONE
             } else {
                 tvPricePerKm.visibility = View.VISIBLE
                 tvPricePerKm.text = order.getPricePerKm()
             }
-            // ------------------------------------
 
             tvTariff.text = order.tariffName
 
-            // --- ЛОГИКА: СЕКТОР СПОЧАТКУ ---
             if (isSectorFirst) {
-                // Якщо увімкнено "Сектор Спочатку":
-                // 1. У велике поле (tvFrom) ставимо Сектор
-                // 2. У маленьке поле (tvSectorFrom) ставимо Адресу
-
-                // FROM
                 if (!order.fromSector.isNullOrEmpty()) {
-                    tvFrom.text = order.fromSector // Великий текст = Сектор
-                    tvSectorFrom.text = order.fromAddress // Маленький текст = Адреса
+                    tvFrom.text = order.fromSector
+                    tvSectorFrom.text = order.fromAddress
                     tvSectorFrom.visibility = View.VISIBLE
                 } else {
-                    // Якщо сектора немає, залишаємо адресу великою
                     tvFrom.text = order.fromAddress
                     tvSectorFrom.visibility = View.GONE
                 }
-
-                // TO
                 if (!order.toSector.isNullOrEmpty()) {
-                    tvTo.text = order.toSector // Великий текст = Сектор
-                    tvSectorTo.text = order.toAddress // Маленький текст = Адреса
+                    tvTo.text = order.toSector
+                    tvSectorTo.text = order.toAddress
                     tvSectorTo.visibility = View.VISIBLE
                 } else {
                     tvTo.text = order.toAddress
                     tvSectorTo.visibility = View.GONE
                 }
-
             } else {
-                // Стандартна логіка:
-                // 1. У велике поле (tvFrom) ставимо Адресу
-                // 2. У маленьке поле (tvSectorFrom) ставимо Сектор
-
                 tvFrom.text = order.fromAddress
-                tvTo.text = order.toAddress
-
                 if (!order.fromSector.isNullOrEmpty()) {
                     tvSectorFrom.text = order.fromSector
                     tvSectorFrom.visibility = View.VISIBLE
                 } else {
                     tvSectorFrom.visibility = View.GONE
                 }
-
+                tvTo.text = order.toAddress
                 if (!order.toSector.isNullOrEmpty()) {
                     tvSectorTo.text = order.toSector
                     tvSectorTo.visibility = View.VISIBLE
@@ -128,19 +102,20 @@ class OrderAdapter(
                     tvSectorTo.visibility = View.GONE
                 }
             }
-            // ------------------------------------
 
-            // Час або Дистанція
             if (order.isScheduled()) {
                 val timeStr = order.scheduledAt?.replace("T", " ")?.take(16) ?: ""
-                tvDistance.text = "🕒 $timeStr"
+                val timeOnly = try {
+                    order.scheduledAt?.substring(11, 16) ?: ""
+                } catch (e: Exception) { "" }
+
+                tvDistance.text = "🕒 $timeOnly"
                 tvDistance.setTextColor(Color.parseColor("#FF9800"))
             } else {
                 tvDistance.text = order.getFormattedDistance()
                 tvDistance.setTextColor(ContextCompat.getColor(itemView.context, R.color.driver_text_secondary))
             }
 
-            // Оплата
             val method = order.paymentMethod ?: "CASH"
             if (method == "CASH") {
                 llPriceBg.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#FFD600"))
@@ -154,12 +129,10 @@ class OrderAdapter(
                 ivPaymentIcon.setColorFilter(Color.WHITE)
             }
 
-            // Остановки
             stopsContainer.removeAllViews()
             if (!order.stops.isNullOrEmpty()) {
                 val inflater = LayoutInflater.from(itemView.context)
                 val sortedStops = order.stops.sortedBy { it.stopOrder }
-
                 for (stop in sortedStops) {
                     val stopView = inflater.inflate(R.layout.item_route_point, stopsContainer, false)
                     val tvAddress = stopView.findViewById<TextView>(R.id.tv_point_address)
@@ -170,7 +143,6 @@ class OrderAdapter(
                     ivIcon.setImageResource(R.drawable.ic_circle_green)
                     ivIcon.setColorFilter(ContextCompat.getColor(itemView.context, R.color.driver_neon_teal))
                     line.visibility = View.VISIBLE
-
                     stopsContainer.addView(stopView)
                 }
             }

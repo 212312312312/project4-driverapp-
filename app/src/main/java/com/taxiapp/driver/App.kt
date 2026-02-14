@@ -1,7 +1,10 @@
 package com.taxiapp.driver
 
 import android.app.Application
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.Intent
+import android.os.Build
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
@@ -13,24 +16,49 @@ class App : Application(), DefaultLifecycleObserver {
     private lateinit var sessionManager: SessionManager
 
     override fun onCreate() {
-        // ВИПРАВЛЕННЯ: Явно вказуємо, що викликаємо onCreate з Application
         super<Application>.onCreate()
 
         sessionManager = SessionManager(this)
 
-        // Підписуємось на події життєвого циклу ВСЬОГО додатка
+        // Створюємо канали сповіщень
+        createNotificationChannels()
+
+        // Підписуємось на події життєвого циклу
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
     }
 
-    // Прибираємо super.onStart(owner), бо він порожній і викликає помилку
+    private fun createNotificationChannels() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val manager = getSystemService(NotificationManager::class.java)
+
+            // 1. Канал для Foreground Service (Геолокація) - Низький пріоритет (без звуку)
+            val serviceChannel = NotificationChannel(
+                "location_channel",
+                "Геолокація водія",
+                NotificationManager.IMPORTANCE_LOW
+            )
+            manager.createNotificationChannel(serviceChannel)
+
+            // 2. Канал для Важливих сповіщень (Прибуття) - Високий пріоритет (зі звуком і спливаючим вікном)
+            val alertChannel = NotificationChannel(
+                "driver_alert_channel",
+                "Сповіщення про замовлення",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Сповіщення про наближення до клієнта або точки висадки"
+                enableVibration(true)
+            }
+            manager.createNotificationChannel(alertChannel)
+        }
+    }
+
     override fun onStart(owner: LifecycleOwner) {
-        // Ховаємо віджет, бо ми всередині додатка
+        // Ховаємо плаваючу кнопку (швидкого доступу), коли ми в додатку
         stopService(Intent(this, FloatingWidgetService::class.java))
     }
 
-    // Прибираємо super.onStop(owner), бо він порожній і викликає помилку
     override fun onStop(owner: LifecycleOwner) {
-        // Якщо функція увімкнена і є права -> показуємо віджет
+        // Якщо функція швидкого доступу увімкнена -> показуємо кнопку
         if (sessionManager.isQuickAccessEnabled()) {
             startService(Intent(this, FloatingWidgetService::class.java))
         }

@@ -19,6 +19,7 @@ import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.schedulers.Schedulers
 import kotlinx.coroutines.launch
+import org.json.JSONObject // <--- ДОДАНО ІМПОРТ
 import ua.naiksoftware.stomp.Stomp
 import ua.naiksoftware.stomp.StompClient
 
@@ -49,7 +50,6 @@ class EtherActivity : AppCompatActivity() {
         tabLayout = findViewById(R.id.ether_tabs)
         val btnBack = findViewById<View>(R.id.btn_back)
 
-        // Настройка табов
         tabLayout.addTab(tabLayout.newTab().setText("Зараз"))
         tabLayout.addTab(tabLayout.newTab().setText("Заплановані"))
 
@@ -64,7 +64,9 @@ class EtherActivity : AppCompatActivity() {
 
         rvOrders.layoutManager = LinearLayoutManager(this)
 
+        // --- ІНІЦІАЛІЗАЦІЯ АДАПТЕРА ---
         adapter = OrderAdapter { selectedOrder ->
+            // Клік по картці відкриває деталі
             val intent = Intent(this, OrderDetailsActivity::class.java)
             intent.putExtra("EXTRA_ORDER", selectedOrder)
             startActivity(intent)
@@ -74,6 +76,49 @@ class EtherActivity : AppCompatActivity() {
         btnBack.setOnClickListener { finish() }
 
         setupWebSocket()
+    }
+
+    // --- ЛОГІКА ПРИЙНЯТТЯ ---
+
+    private fun acceptScheduledOrder(order: Order) {
+        pbLoading.visibility = View.VISIBLE
+        lifecycleScope.launch {
+            try {
+                val response = ApiClient.getInstance().getApiService(this@EtherActivity).acceptOrder(order.id)
+
+                if (response.isSuccessful) {
+                    Toast.makeText(this@EtherActivity, "Ви забронювали замовлення!", Toast.LENGTH_SHORT).show()
+
+                    removeOrderFromList(order.id)
+
+                    val intent = Intent(this@EtherActivity, OrdersActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                    startActivity(intent)
+                    finish()
+                } else {
+                    val errorMsg = response.errorBody()?.string() ?: ""
+                    if (errorMsg.contains("Conflict") || response.code() == 409) {
+                        Toast.makeText(this@EtherActivity, "Замовлення вже зайняте", Toast.LENGTH_SHORT).show()
+                        removeOrderFromList(order.id)
+                    } else {
+                        Toast.makeText(this@EtherActivity, "Помилка: ${response.code()}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@EtherActivity, "Помилка мережі", Toast.LENGTH_SHORT).show()
+            } finally {
+                pbLoading.visibility = View.GONE
+            }
+        }
+    }
+
+    private fun acceptOrder(order: Order) {
+        acceptScheduledOrder(order)
+    }
+
+    private fun removeOrderFromList(orderId: Long) {
+        allOrdersList.removeAll { it.id == orderId }
+        filterAndShowOrders()
     }
 
     override fun onResume() {
@@ -100,21 +145,11 @@ class EtherActivity : AppCompatActivity() {
         pbLoading.visibility = View.VISIBLE
         lifecycleScope.launch {
             try {
-                // 1. Обычные заказы
-                val responseActive = ApiClient.getInstance().getApiService(this@EtherActivity).getAvailableOrders()
-                val activeList = if (responseActive.isSuccessful) responseActive.body() ?: emptyList() else emptyList()
-
-                // 2. Запланированные (Предположим, тот же метод возвращает и их, или сервер шлет все)
-                // Если у тебя на сервере getAvailableOrders фильтрует только REQUESTED,
-                // то запланированные придут только через сокет или если сервер их включает.
-                // В OrderService.getFilteredOrdersForDriver мы берем REQUESTED.
-                // Для SCHEDULED нужна отдельная ручка или логика на сервере.
-                // ПОКА работаем с тем, что есть: считаем, что сервер может прислать SCHEDULED
+                val response = ApiClient.getInstance().getApiService(this@EtherActivity).getAvailableOrders()
+                val list = if (response.isSuccessful) response.body() ?: emptyList() else emptyList()
 
                 allOrdersList.clear()
-                allOrdersList.addAll(activeList)
-
-                // Сортировка: Срочные сверху
+                allOrdersList.addAll(list)
                 allOrdersList.sortByDescending { it.id }
 
                 updateUI()
@@ -136,8 +171,26 @@ class EtherActivity : AppCompatActivity() {
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe({ topicMessage ->
-                val newOrder = Gson().fromJson(topicMessage.payload, Order::class.java)
-                addNewOrder(newOrder)
+                if (topicMessage.payload == null || topicMessage.payload == "null") return@subscribe
+
+                try {
+                    val msgObj = JSONObject(topicMessage.payload)
+                    val action = msgObj.optString("action")
+                    val orderId = msgObj.optLong("orderId")
+
+                    if (action == "REMOVE") {
+                        removeOrderFromList(orderId)
+                    } else if (action == "ADD") {
+                        val orderJson = msgObj.optJSONObject("order")?.toString()
+                        if (orderJson != null) {
+                            // ВИПРАВЛЕНО: Явне приведення типу для усунення неоднозначності Gson
+                            val newOrder = Gson().fromJson(orderJson as String, Order::class.java)
+                            handleSocketOrderUpdate(newOrder)
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
             }, { error ->
                 Log.e("WS", "Error: ${error.message}")
             })
@@ -156,17 +209,18 @@ class EtherActivity : AppCompatActivity() {
         compositeDisposable.add(lifecycleDisposable)
     }
 
-    private fun addNewOrder(order: Order) {
-        // Удаляем старую версию, если есть
-        allOrdersList.removeAll { it.id == order.id }
-
-        // Добавляем новую, если она подходит (например, не CANCELLED)
-        if (order.status != "CANCELLED" && order.status != "COMPLETED") {
-            allOrdersList.add(0, order)
-            Toast.makeText(this, "Нове замовлення!", Toast.LENGTH_SHORT).show()
+    private fun handleSocketOrderUpdate(order: Order) {
+        // Якщо замовлення не в статусі пошуку або заплановане - прибираємо
+        if (order.status != "REQUESTED" && order.status != "SCHEDULED") {
+            removeOrderFromList(order.id)
+            return
         }
 
-        updateUI()
+        allOrdersList.removeAll { it.id == order.id }
+        allOrdersList.add(0, order)
+        allOrdersList.sortByDescending { it.id }
+
+        filterAndShowOrders()
     }
 
     private fun updateUI() {
@@ -175,10 +229,10 @@ class EtherActivity : AppCompatActivity() {
 
     private fun filterAndShowOrders() {
         val filtered = if (currentTabIndex == 0) {
-            // Вкладка "Зараз": REQUESTED (и другие активные, если вдруг попадут)
+            // Вкладка "Зараз"
             allOrdersList.filter { !it.isScheduled() }
         } else {
-            // Вкладка "Заплановані": SCHEDULED
+            // Вкладка "Заплановані"
             allOrdersList.filter { it.isScheduled() }
         }
 

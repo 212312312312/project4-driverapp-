@@ -2,6 +2,10 @@ package com.taxiapp.driver.network
 
 import com.google.gson.annotations.SerializedName
 import java.io.Serializable
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 
 data class Order(
     @SerializedName("id") val id: Long,
@@ -23,11 +27,9 @@ data class Order(
     @SerializedName("comment") val comment: String? = null,
     @SerializedName("services") val services: List<TaxiService>? = null,
 
-    // ИСПРАВЛЕНО: Сектора приходят строками, так и оставляем
     @SerializedName("fromSector") val fromSector: String? = null,
     @SerializedName("toSector") val toSector: String? = null,
 
-    // --- ДОБАВЛЕНО: Объект клиента для отображения рейтинга ---
     @SerializedName("client") val client: OrderClient? = null,
 
     @SerializedName("arrivedAt") val arrivedAt: String? = null,
@@ -36,7 +38,10 @@ data class Order(
     @SerializedName("carColor") val carColor: String? = null,
 
     @SerializedName("isRatedByDriver") val isRatedByDriver: Boolean = false,
-    @SerializedName("scheduledAt") val scheduledAt: String? = null
+    @SerializedName("scheduledAt") val scheduledAt: String? = null,
+
+    // --- НОВЕ ПОЛЕ ---
+    @SerializedName("isDriverConfirmed") val isDriverConfirmed: Boolean = false
 ) : Serializable {
 
     fun getFormattedPrice(): String = "${price.toInt()} ₴"
@@ -55,12 +60,32 @@ data class Order(
     fun isScheduled(): Boolean {
         return status == "SCHEDULED" || !scheduledAt.isNullOrEmpty()
     }
+
+    // Парсинг часу подачі
+    fun getScheduledDate(): Date? {
+        if (scheduledAt.isNullOrEmpty()) return null
+        return try {
+            // Формат ISO 8601, який зазвичай шле Spring (наприклад "2023-10-25T14:30:00")
+            val format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+            // Важливо: Сервер шле час без Z, якщо це LocalDateTime, тому вважаємо локальним або UTC в залежності від налаштувань.
+            // Для надійності припустимо, що сервер і клієнт в одній зоні або сервер шле UTC.
+            // Якщо сервер шле без таймзони, Android сприйме це як локальний час.
+            format.parse(scheduledAt)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    fun getFormattedScheduledTime(): String {
+        val date = getScheduledDate() ?: return ""
+        val format = SimpleDateFormat("HH:mm", Locale.getDefault())
+        return format.format(date)
+    }
 }
 
-// Новый класс для данных клиента
 data class OrderClient(
     @SerializedName("id") val id: Long,
     @SerializedName("fullName") val fullName: String?,
     @SerializedName("rating") val rating: Double = 5.0,
-    @SerializedName("completedRides") val completedRides: Int = 0 // Или другое поле, если сервер шлет tripsCount
+    @SerializedName("completedRides") val completedRides: Int = 0
 ) : Serializable

@@ -113,6 +113,17 @@
             </LinearLayout>
 
             <ImageView
+                android:id="@+id/btn_options"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginEnd="12dp"
+                android:background="@drawable/bg_circle_white"
+                android:backgroundTint="#333333"
+                android:padding="10dp"
+                android:src="@drawable/ic_list_bullet"
+                app:tint="@color/driver_text_primary" />
+
+            <ImageView
                 android:id="@+id/btn_call_client"
                 android:layout_width="40dp"
                 android:layout_height="40dp"

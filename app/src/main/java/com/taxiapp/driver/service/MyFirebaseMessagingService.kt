@@ -11,6 +11,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import com.taxiapp.driver.OrderConfirmationActivity // <--- НОВА ACTIVITY
 import com.taxiapp.driver.OrderOfferActivity
 import com.taxiapp.driver.R
 import com.taxiapp.driver.network.ApiClient
@@ -23,18 +24,16 @@ import kotlinx.coroutines.launch
 class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
-        // Теперь этот метод будет вызываться ВСЕГДА, даже если приложение закрыто
         val data = remoteMessage.data
         val type = data["type"]
         Log.d("FCM", "Message received type: $type")
 
-        if (type == "ORDER_OFFER") {
-            // Будим процессор на 10 секунд, чтобы успеть загрузить данные и показать экран
+        if (type == "ORDER_OFFER" || type == "ORDER_CONFIRMATION") {
             wakeUpScreen()
-
             val orderId = data["orderId"]?.toLongOrNull()
             if (orderId != null) {
-                fetchOrderAndShowNotification(orderId)
+                // Передаємо тип далі, щоб знати яку Activity відкрити
+                fetchOrderAndShowNotification(orderId, type)
             }
         }
     }
@@ -47,80 +46,72 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                 PowerManager.FULL_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP or PowerManager.ON_AFTER_RELEASE,
                 "TaxiDriver:WakeUpLock"
             )
-            wl.acquire(10000) // Держим 10 секунд
+            wl.acquire(10000)
         }
     }
 
-    private fun fetchOrderAndShowNotification(orderId: Long) {
-        val sessionManager = SessionManager(this)
-        if (sessionManager.fetchAuthToken() == null) return
+    private fun fetchOrderAndShowNotification(orderId: Long, type: String) {
+        if (SessionManager(this).fetchAuthToken() == null) return
 
         CoroutineScope(Dispatchers.Main).launch {
             try {
-                // Если API ответит быстро - экран появится быстро.
-                // Если интернет плохой, задержка будет здесь.
                 val response = ApiClient.getInstance().getApiService(applicationContext).getOrderById(orderId)
-
                 if (response.isSuccessful && response.body() != null) {
                     val order = response.body()!!
-                    showFullScreenNotification(order)
+
+                    if (type == "ORDER_CONFIRMATION") {
+                        showConfirmationNotification(order)
+                    } else {
+                        showOfferNotification(order)
+                    }
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+            } catch (e: Exception) { e.printStackTrace() }
         }
     }
 
-    private fun showFullScreenNotification(order: Order) {
-        val channelId = "order_offers_channel"
+    // --- ЗВИЧАЙНА ПРОПОЗИЦІЯ (15 сек) ---
+    private fun showOfferNotification(order: Order) {
+        val intent = Intent(this, OrderOfferActivity::class.java).apply {
+            putExtra("EXTRA_ORDER", order)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        }
+        showFullScreen(intent, "offer_channel", "Пропозиція замовлення", "Нове замовлення!", order.id.toInt())
+    }
+
+    // --- ПІДТВЕРДЖЕННЯ ПОПЕРЕДНЬОГО (60 сек) ---
+    private fun showConfirmationNotification(order: Order) {
+        val intent = Intent(this, OrderConfirmationActivity::class.java).apply {
+            putExtra("EXTRA_ORDER", order)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        }
+        showFullScreen(intent, "confirm_channel", "Підтвердження замовлення", "Підтвердіть поїздку!", order.id.toInt() + 1000)
+    }
+
+    private fun showFullScreen(intent: Intent, channelId: String, channelName: String, title: String, notifId: Int) {
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                channelId,
-                "Пропозиції замовлень", // Важно: название, которое видит юзер
-                NotificationManager.IMPORTANCE_HIGH // Обязательно HIGH
-            ).apply {
-                description = "Показує нові замовлення на весь екран"
+            val channel = NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_HIGH).apply {
                 enableVibration(true)
-                // Звук лучше настраивать здесь, если нужен кастомный
                 lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
+                setSound(android.provider.Settings.System.DEFAULT_RINGTONE_URI, android.media.AudioAttributes.Builder().setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION_RINGTONE).build())
             }
             notificationManager.createNotificationChannel(channel)
         }
 
-        // Интент на открытие OrderOfferActivity
-        val fullScreenIntent = Intent(this, OrderOfferActivity::class.java).apply {
-            putExtra("EXTRA_ORDER", order)
-            // Эти флаги критически важны, чтобы активити открылась поверх всего
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-        }
+        val pendingIntent = PendingIntent.getActivity(this, notifId, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 
-        val fullScreenPendingIntent = PendingIntent.getActivity(
-            this,
-            order.id.toInt(),
-            fullScreenIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val distanceKm = "%.1f".format((order.distanceMeters ?: 0) / 1000.0)
-
-        val notificationBuilder = NotificationCompat.Builder(this, channelId)
+        val builder = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle("Нове замовлення! (${order.tariffName})")
-            .setContentText("${order.price.toInt()} ₴ • $distanceKm км")
-            .setPriority(NotificationCompat.PRIORITY_MAX) // MAX для мгновенного показа
-            .setCategory(NotificationCompat.CATEGORY_CALL) // Категория звонка лучше всего будит
+            .setContentTitle(title)
+            .setContentText("Натисніть для деталей")
+            .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setCategory(NotificationCompat.CATEGORY_ALARM) // ALARM краще будить
             .setAutoCancel(true)
-            .setFullScreenIntent(fullScreenPendingIntent, true) // TRUE - открывать сразу
-            .setContentIntent(fullScreenPendingIntent)
-            .setTimeoutAfter(20000) // Убрать уведомление через 20 сек (таймаут сервера)
+            .setFullScreenIntent(pendingIntent, true)
+            .setContentIntent(pendingIntent)
+            .setTimeoutAfter(60000)
 
-        notificationManager.notify(order.id.toInt(), notificationBuilder.build())
-    }
-
-    override fun onNewToken(token: String) {
-        super.onNewToken(token)
-        SessionManager(this).saveFcmToken(token)
+        notificationManager.notify(notifId, builder.build())
     }
 }
