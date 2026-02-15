@@ -177,17 +177,34 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
                 if (response.isSuccessful && response.body() != null) {
                     val updatedOrder = response.body()!!
 
-                    Toast.makeText(this@OrderDetailsActivity, "Замовлення прийнято!", Toast.LENGTH_SHORT).show()
+                    // --- ИСПРАВЛЕНИЕ ЛОГИКИ ПЕРЕХОДА ---
+                    if (updatedOrder.status == "SCHEDULED") {
+                        // Если заказ запланированный - просто уведомляем и закрываем экран
+                        Toast.makeText(this@OrderDetailsActivity, "Замовлення успішно заплановано!", Toast.LENGTH_LONG).show()
+                        finish() // Возвращаемся в список/эфир
+                    } else {
+                        // Если заказ активный ("на сейчас") - переходим к выполнению
+                        Toast.makeText(this@OrderDetailsActivity, "Замовлення прийнято!", Toast.LENGTH_SHORT).show()
+                        val intent = Intent(this@OrderDetailsActivity, OrderProgressActivity::class.java)
+                        intent.putExtra("EXTRA_ORDER", updatedOrder)
+                        intent.putExtra("EXTRA_ORDER_ID", orderId)
+                        startActivity(intent)
+                        finish()
+                    }
+                    // -----------------------------------
 
-                    val intent = Intent(this@OrderDetailsActivity, OrderProgressActivity::class.java)
-                    intent.putExtra("EXTRA_ORDER", updatedOrder)
-                    intent.putExtra("EXTRA_ORDER_ID", orderId)
-                    startActivity(intent)
-                    finish()
                 } else {
                     binding.btnAccept.isEnabled = true
                     binding.btnAccept.text = "ПРИЙНЯТИ ЗАМОВЛЕННЯ"
-                    Toast.makeText(this@OrderDetailsActivity, "Помилка сервера: ${response.code()}", Toast.LENGTH_SHORT).show()
+
+                    // Пытаемся распарсить ошибку
+                    val errorBody = response.errorBody()?.string()
+                    if (errorBody?.contains("Вже має водія") == true || response.code() == 409) {
+                        Toast.makeText(this@OrderDetailsActivity, "Замовлення вже забрали", Toast.LENGTH_SHORT).show()
+                        finish() // Закрываем, так как заказ ушел
+                    } else {
+                        Toast.makeText(this@OrderDetailsActivity, "Помилка сервера: ${response.code()}", Toast.LENGTH_SHORT).show()
+                    }
                 }
             } catch (e: Exception) {
                 binding.btnAccept.isEnabled = true

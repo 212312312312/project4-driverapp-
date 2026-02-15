@@ -12,6 +12,9 @@ import com.google.android.material.button.MaterialButton
 import com.taxiapp.driver.network.ApiClient
 import com.taxiapp.driver.network.Order
 import kotlinx.coroutines.launch
+import android.app.KeyguardManager
+import android.content.Context
+import android.view.WindowManager
 
 class OrderConfirmationActivity : AppCompatActivity() {
 
@@ -23,8 +26,27 @@ class OrderConfirmationActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // --- БЛОК 1: Пробуждение экрана и показ поверх блокировки ---
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true)
+            setTurnScreenOn(true)
+            val keyguardManager = getSystemService(android.content.Context.KEYGUARD_SERVICE) as android.app.KeyguardManager
+            keyguardManager.requestDismissKeyguard(this, null)
+        } else {
+            @Suppress("DEPRECATION")
+            window.addFlags(
+                android.view.WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                        android.view.WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
+                        android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
+                        android.view.WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD
+            )
+        }
+        // -----------------------------------------------------------
+
         setContentView(R.layout.activity_order_confirmation)
 
+        // --- БЛОК 2: Получение данных заказа ---
         currentOrder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             intent.getSerializableExtra("EXTRA_ORDER", Order::class.java)
         } else {

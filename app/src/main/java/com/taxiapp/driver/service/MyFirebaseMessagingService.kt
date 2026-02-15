@@ -84,6 +84,18 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             putExtra("EXTRA_ORDER", order)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         }
+
+        // 1. СПРОБА ПРИМУСОВОГО ЗАПУСКУ
+        // Якщо версія Android < 10 АБО надано дозвіл "Поверх інших вікон" -> відкриваємо одразу
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || android.provider.Settings.canDrawOverlays(this)) {
+            try {
+                startActivity(intent)
+            } catch (e: Exception) {
+                Log.e("FCM", "Не вдалося запустити Activity напряму: ${e.message}")
+            }
+        }
+
+        // 2. FullScreen Notification (працює завжди: і для звуку, і як фолбек)
         showFullScreen(intent, "confirm_channel", "Підтвердження замовлення", "Підтвердіть поїздку!", order.id.toInt() + 1000)
     }
 

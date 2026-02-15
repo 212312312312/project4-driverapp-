@@ -1,6 +1,7 @@
 package com.taxiapp.driver.network
 
 import com.google.gson.annotations.SerializedName
+import java.io.Serializable
 
 data class DriverProfileDto(
     @SerializedName("id") val id: Long,
@@ -13,7 +14,7 @@ data class DriverProfileDto(
     @SerializedName("rnokpp") val rnokpp: String?,
     @SerializedName("driverLicense") val driverLicense: String?,
 
-    // Медицинские данные (Добавлено)
+    // Медицинские данные
     @SerializedName("hasMovementIssue") val hasMovementIssue: Boolean = false,
     @SerializedName("hasHearingIssue") val hasHearingIssue: Boolean = false,
     @SerializedName("isDeaf") val isDeaf: Boolean = false,
@@ -21,5 +22,8 @@ data class DriverProfileDto(
 
     // Ссылка на объекты
     @SerializedName("car") val car: CarDto?,
-    @SerializedName("allowedTariffs") val allowedTariffs: List<CarTariffDto>?
-)
+    @SerializedName("allowedTariffs") val allowedTariffs: List<CarTariffDto>?,
+
+    // --- ДОБАВЛЕНО ПОЛЕ РЕЙТИНГА ---
+    @SerializedName("rating") val rating: Double = 5.0
+) : Serializable

@@ -62,6 +62,7 @@
                         app:tint="@color/driver_neon_teal" />
 
                     <TextView
+                        android:id="@+id/tv_menu_rating"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/profile_rating_placeholder"

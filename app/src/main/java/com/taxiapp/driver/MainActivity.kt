@@ -482,31 +482,58 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun loadUserProfile() {
+        // Знаходимо елементи в боковому меню
         val tvDriverName = navViewContent.findViewById<TextView>(R.id.tv_driver_name)
+        val tvRating = navViewContent.findViewById<TextView>(R.id.tv_menu_rating) // <-- ПЕРЕВІР ЦЕЙ ID в layout_drawer_content.xml
         val imgAvatar = navViewContent.findViewById<android.widget.ImageView>(R.id.img_avatar)
         val tvPlateNumber = navViewContent.findViewById<TextView>(R.id.tv_menu_plate_number)
+
+        // Спочатку показуємо те, що збережено локально
         val savedName = sessionManager.getDriverName()
-        if (savedName != null) tvDriverName.text = extractFirstName(savedName)
-        else {
+        if (savedName != null) {
+            tvDriverName.text = extractFirstName(savedName)
+        } else {
             val token = sessionManager.fetchAuthToken()
             tvDriverName.text = if (token != null && token.length > 4) "ID ${token.takeLast(4)}" else "Водій"
         }
+
         lifecycleScope.launch {
             try {
                 val response = ApiClient.getInstance().getApiService(this@MainActivity).getDriverProfile()
                 if (response.isSuccessful && response.body() != null) {
                     val profile = response.body()!!
+                    
+                    // 1. Ім'я
                     val serverName = profile.fullName ?: "Водій"
                     sessionManager.saveDriverName(serverName)
                     tvDriverName.text = extractFirstName(serverName)
-                    if (!profile.photoUrl.isNullOrEmpty()) {
-                        Glide.with(this@MainActivity).load(profile.photoUrl).circleCrop().into(imgAvatar)
+
+                    // 2. Рейтинг (НОВЕ)
+                    // Форматуємо до 1 знаку після коми (наприклад, "4.8")
+                    if (tvRating != null) {
+                        tvRating.text = String.format("%.1f", profile.rating)
                     }
+
+                    // 3. Фото
+                    if (!profile.photoUrl.isNullOrEmpty()) {
+                        Glide.with(this@MainActivity)
+                            .load(profile.photoUrl)
+                            .circleCrop()
+                            .placeholder(R.drawable.ic_driver_avatar_placeholder) // Додай плейсхолдер, якщо є
+                            .into(imgAvatar)
+                    }
+
+                    // 4. Номер авто
                     if (profile.car != null && !profile.car.plateNumber.isNullOrEmpty()) {
-                        tvPlateNumber.text = profile.car.plateNumber; tvPlateNumber.visibility = View.VISIBLE
-                    } else tvPlateNumber.visibility = View.GONE
+                        tvPlateNumber.text = profile.car.plateNumber
+                        tvPlateNumber.visibility = View.VISIBLE
+                    } else {
+                        tvPlateNumber.visibility = View.GONE
+                    }
                 }
-            } catch (e: Exception) { e.printStackTrace() }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 

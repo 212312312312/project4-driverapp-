@@ -74,6 +74,13 @@
             android:name=".OrdersActivity"
             android:exported="false"
             android:screenOrientation="portrait"/>
+        <activity
+            android:name=".OrderConfirmationActivity"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:screenOrientation="portrait"
+            android:showOnLockScreen="true"
+            android:turnScreenOn="true" />
 
         <activity
             android:name=".CreateFilterActivity"
@@ -189,10 +196,7 @@
             android:screenOrientation="portrait"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
-        <service
-            android:name=".service.StatusWidgetService"
-            android:enabled="true"
-            android:exported="false"/>
+
         <service
             android:name=".service.MyFirebaseMessagingService"
             android:exported="false">
