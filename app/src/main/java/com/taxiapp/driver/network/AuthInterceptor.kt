@@ -1,6 +1,7 @@
 package com.taxiapp.driver.network
 
 import android.content.Context
+import android.util.Log // <--- Важливо: додали імпорт для логів
 import com.taxiapp.driver.utils.SessionManager
 import okhttp3.Interceptor
 import okhttp3.Response
@@ -36,6 +37,12 @@ class AuthInterceptor(context: Context) : Interceptor {
             }
 
             requestBuilder.header("Authorization", finalHeader)
+
+            // --- ЛОГ ДЛЯ ПРОВЕРКИ (Дивись в Logcat) ---
+            Log.d("AuthInterceptor", "✅ Adding Authorization header: ${finalHeader.take(15)}...")
+        } else {
+            // --- ЛОГ ПОМИЛКИ ---
+            Log.e("AuthInterceptor", "⛔ TOKEN IS MISSING! Request sent without auth to: $url")
         }
 
         return chain.proceed(requestBuilder.build())

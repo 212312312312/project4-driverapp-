@@ -52,6 +52,15 @@ data class CodeVerifyRequest(
     val code: String
 )
 
+data class InitPaymentRequest(
+    val amount: Double
+)
+
+data class InitPaymentResponse(
+    val paymentUrl: String,
+    val paymentId: Long
+)
+
 data class ChangePhoneConfirmRequest(
     val newPhone: String,
     val code: String,
@@ -117,8 +126,14 @@ interface DriverApiService {
     @GET("api/v1/driver/orders/available")
     suspend fun getAvailableOrders(): Response<List<Order>>
 
+    @POST("api/v1/payments/init")
+    suspend fun initPayment(@Body request: InitPaymentRequest): Response<InitPaymentResponse>
+
     @GET("api/v1/driver/orders/heatmap")
     suspend fun getHeatmap(): Response<List<HeatmapZoneDto>>
+
+    @POST("api/v1/payments/check/{id}")
+    suspend fun checkPaymentStatus(@Path("id") id: Long): Response<Map<String, String>>
 
     @POST("api/v1/driver/sos")
     suspend fun sendSos(@Body location: UpdateLocationRequest): Response<Void>
@@ -216,6 +231,9 @@ interface DriverApiService {
 
     @POST("api/v1/driver/rate")
     suspend fun rateClient(@Body request: RateClientRequest): Response<Void>
+
+    @GET("api/v1/driver/transactions")
+    suspend fun getWalletTransactions(): Response<List<WalletTransactionDto>>
 
     @GET("api/v1/driver/stats")
     suspend fun getStats(

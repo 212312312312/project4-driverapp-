@@ -2,9 +2,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <uses-permission android:name="android.permission.VIBRATE" />
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
@@ -13,15 +10,19 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.CAMERA" />
+
     <queries>
         <package android:name="com.google.android.apps.maps" />
         <package android:name="com.waze" />
     </queries>
+
     <application
         android:name=".App"
         android:allowBackup="true"
@@ -30,9 +31,8 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.TaxiAppDriver"
-        android:usesCleartextTraffic="true">
-
-
+        android:usesCleartextTraffic="true"
+        tools:targetApi="31">
 
         <activity
             android:name=".WelcomeActivity"
@@ -50,22 +50,11 @@
             android:exported="false"
             android:screenOrientation="portrait"
             android:windowSoftInputMode="adjustResize"/>
+        <activity android:name=".AccountSelectionActivity" android:screenOrientation="portrait"/>
+        <activity android:name=".LoginPasswordActivity" android:screenOrientation="portrait"/>
 
-        <provider
-            android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.provider"
-            android:exported="false"
-            android:grantUriPermissions="true">
-            <meta-data
-                android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/file_paths" />
-        </provider>
-        <service
-            android:name=".service.FloatingWidgetService"
-            android:enabled="true"
-            android:exported="false"/>
-        <activity android:name=".LocationPickerActivity" />
-        <activity android:name=".MainActivity" />
+        <activity android:name=".MainActivity" android:screenOrientation="portrait"/>
+        <activity android:name=".LocationPickerActivity" android:screenOrientation="portrait"/>
         <activity android:name=".EtherActivity" android:screenOrientation="portrait"/>
         <activity android:name=".OrderDetailsActivity" android:screenOrientation="portrait"/>
         <activity android:name=".ProfileActivity" android:screenOrientation="portrait" />
@@ -74,6 +63,7 @@
             android:name=".OrdersActivity"
             android:exported="false"
             android:screenOrientation="portrait"/>
+
         <activity
             android:name=".OrderConfirmationActivity"
             android:exported="false"
@@ -108,28 +98,18 @@
         <activity
             android:name=".CarActivity"
             android:screenOrientation="portrait"
-            android:exported="false"
-            android:theme="@style/Theme.TaxiAppDriver" />
-
-        <meta-data
-            android:name="com.google.android.geo.API_KEY"
-            android:value="@string/google_maps_key" />
-
-        <service
-            android:name=".service.LocationService"
-            android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="location" />
+            android:exported="false" />
 
         <activity
             android:name=".CarDocumentsActivity"
             android:screenOrientation="portrait"
-            android:exported="false"
-            android:theme="@style/Theme.TaxiAppDriver" />
+            android:exported="false" />
+
         <activity android:name=".DriverScoreActivity"
             android:screenOrientation="portrait"/>
         <activity android:name=".DriverActivityHistoryActivity"
             android:screenOrientation="portrait"/>
+
         <activity
             android:name=".OrderOfferActivity"
             android:exported="false"
@@ -137,6 +117,7 @@
             android:screenOrientation="portrait"
             android:showOnLockScreen="true"
             android:turnScreenOn="true" />
+
         <activity
             android:name=".StatsActivity"
             android:screenOrientation="portrait"
@@ -172,12 +153,12 @@
             android:screenOrientation="portrait"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
-        <activity android:name=".AccountSelectionActivity" />
-        <activity android:name=".LoginPasswordActivity" />
+
         <activity
             android:name=".DisabilityStatusActivity"
             android:screenOrientation="portrait"
             android:exported="false" />
+
         <activity
             android:name=".NewsActivity"
             android:exported="false"
@@ -187,15 +168,47 @@
             android:name=".NewsDetailsActivity"
             android:exported="false"
             android:screenOrientation="portrait" />
+
         <activity
             android:name=".SettingsActivity"
             android:screenOrientation="portrait"
             android:exported="false" />
+
         <activity
             android:name=".EtherSettingsActivity"
             android:screenOrientation="portrait"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name=".WalletActivity"
+            android:screenOrientation="portrait"
+            android:exported="false" />
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="@string/google_maps_key" />
+
+        <service
+            android:name=".service.FloatingWidgetService"
+            android:enabled="true"
+            android:exported="false"/>
+
+        <service
+            android:name=".service.LocationService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="location" />
 
         <service
             android:name=".service.MyFirebaseMessagingService"
@@ -204,5 +217,6 @@
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
+
     </application>
 </manifest>

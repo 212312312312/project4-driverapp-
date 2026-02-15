@@ -307,6 +307,20 @@
     <string name="settings_ether_hide_price">Hide price per km</string>
     <string name="settings_ether_hide_price_desc">Do not show (UAH/km) on the order card</string>
 
+    <string name="wallet_title">My Wallet</string>
+    <string name="wallet_current_balance">Current Balance</string>
+    <string name="wallet_btn_top_up">Top Up</string>
+    <string name="wallet_history_title">Transaction History</string>
+    <string name="wallet_history_empty">History is empty</string>
+    <string name="wallet_loading_error">Loading error</string>
+    <string name="wallet_top_up_message">Redirecting to payment...</string>
+
+    <string name="tx_deposit">Deposit</string>
+    <string name="tx_bonus">Bonus</string>
+    <string name="tx_commission">Commission</string>
+    <string name="tx_penalty">Penalty</string>
+    <string name="tx_withdrawal">Withdrawal</string>
+
     <string name="navigator_title">Navigator</string>
     <string name="navigator_google_maps">Google Maps</string>
     <string name="navigator_waze">Waze</string>

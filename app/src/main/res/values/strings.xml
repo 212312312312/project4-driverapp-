@@ -20,6 +20,20 @@
     <string name="settings_ether_hide_price">Приховати ціну за км</string>
     <string name="settings_ether_hide_price_desc">Не показувати (грн/км) на картці замовлення</string>
 
+    <string name="wallet_title">Мій Гаманець</string>
+    <string name="wallet_current_balance">Поточний баланс</string>
+    <string name="wallet_btn_top_up">Поповнити</string>
+    <string name="wallet_history_title">Історія транзакцій</string>
+    <string name="wallet_history_empty">Історія порожня</string>
+    <string name="wallet_loading_error">Помилка завантаження</string>
+    <string name="wallet_top_up_message">Перехід до оплати...</string>
+
+    <string name="tx_deposit">Поповнення</string>
+    <string name="tx_bonus">Бонус</string>
+    <string name="tx_commission">Комісія</string>
+    <string name="tx_penalty">Штраф</string>
+    <string name="tx_withdrawal">Списання</string>
+
     <string name="navigator_title">Навігатор</string>
     <string name="navigator_google_maps">Google Maps</string>
     <string name="navigator_waze">Waze</string>

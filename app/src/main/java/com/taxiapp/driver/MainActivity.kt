@@ -322,6 +322,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             startActivity(Intent(this, NewsActivity::class.java))
             drawerLayout.closeDrawer(GravityCompat.START)
         }
+
+        navViewContent.findViewById<View>(R.id.menu_item_balance).setOnClickListener {
+            startActivity(Intent(this, WalletActivity::class.java))
+            drawerLayout.closeDrawer(GravityCompat.START)
+        }
         navViewContent.findViewById<View>(R.id.menu_item_activity).setOnClickListener { startActivity(Intent(this, DriverScoreActivity::class.java)); drawerLayout.closeDrawer(GravityCompat.START) }
         navViewContent.findViewById<View>(R.id.menu_item_stats)?.setOnClickListener {
             startActivity(Intent(this, StatsActivity::class.java))
