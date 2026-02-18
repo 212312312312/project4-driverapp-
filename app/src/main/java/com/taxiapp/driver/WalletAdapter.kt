@@ -6,12 +6,14 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.taxiapp.driver.network.WalletTransactionDto
 import java.text.SimpleDateFormat
 import java.util.Locale
+import java.util.TimeZone
 
 class WalletAdapter : ListAdapter<WalletTransactionDto, WalletAdapter.WalletViewHolder>(DiffCallback()) {
 
@@ -30,42 +32,53 @@ class WalletAdapter : ListAdapter<WalletTransactionDto, WalletAdapter.WalletView
 
     override fun onBindViewHolder(holder: WalletViewHolder, position: Int) {
         val item = getItem(position)
-        val context = holder.itemView.context // Отримуємо контекст для доступу до strings.xml
+        val context = holder.itemView.context
 
-        holder.tvDesc.text = item.description ?: ""
+        // 1. Описание
+        holder.tvDesc.text = item.description ?: "Без опису"
 
-        // Форматування дати
+        // 2. Дата (парсинг ISO 8601)
         try {
+            // Сервер отдает время, скорее всего, без часового пояса или в UTC.
+            // Подстраиваем формат под то, что шлет Java LocalDateTime.toString()
             val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
             val outputFormat = SimpleDateFormat("dd.MM HH:mm", Locale.getDefault())
+
             val date = inputFormat.parse(item.createdAt)
             holder.tvDate.text = if (date != null) outputFormat.format(date) else item.createdAt
         } catch (e: Exception) {
-            holder.tvDate.text = item.createdAt
+            holder.tvDate.text = item.createdAt // Если ошибка, показываем как есть
         }
 
-        // Логіка відображення (Колір + Переклад тексту)
-        if (item.amount >= 0) {
-            // ПРИБУТОК (Зелений)
+        // 3. Цвета и Иконки
+        // DEPOSIT (Пополнение) -> Зеленый
+        if (item.operationType == "DEPOSIT" || item.operationType == "BONUS") {
             holder.tvAmount.text = "+%.2f ₴".format(item.amount)
-            holder.tvAmount.setTextColor(Color.parseColor("#4CAF50"))
+            holder.tvAmount.setTextColor(Color.parseColor("#4CAF50")) // Green
+
+            holder.imgIcon.setImageResource(R.drawable.ic_wallet) // Или иконка "стрелка вниз"
             holder.imgIcon.setColorFilter(Color.parseColor("#4CAF50"))
 
-            if (item.operationType == "DEPOSIT") {
-                holder.tvType.text = context.getString(R.string.tx_deposit)
-            } else {
-                holder.tvType.text = context.getString(R.string.tx_bonus)
-            }
-        } else {
-            // ВИТРАТА (Червоний)
-            holder.tvAmount.text = "%.2f ₴".format(item.amount)
-            holder.tvAmount.setTextColor(Color.parseColor("#FF5252"))
-            holder.imgIcon.setColorFilter(Color.parseColor("#FF5252"))
+            holder.tvType.text = if (item.operationType == "DEPOSIT") "Поповнення" else "Бонус"
+        }
+        // COMMISSION / PENALTY / WITHDRAWAL -> Красный
+        else {
+            // amount может приходить отрицательным с сервера (например, -15.0), а может положительным
+            // Если оно уже отрицательное, знак минус будет автоматически.
+            // Если положительное, но это списание - добавим минус.
 
-            when (item.operationType) {
-                "COMMISSION" -> holder.tvType.text = context.getString(R.string.tx_commission)
-                "PENALTY" -> holder.tvType.text = context.getString(R.string.tx_penalty)
-                else -> holder.tvType.text = context.getString(R.string.tx_withdrawal)
+            // В нашем коде сервера мы сохраняли: amount = -commissionAmount. Значит число уже с минусом.
+            holder.tvAmount.text = "%.2f ₴".format(item.amount)
+            holder.tvAmount.setTextColor(Color.parseColor("#F44336")) // Red
+
+            holder.imgIcon.setImageResource(R.drawable.ic_payment_card) // Или иконка "стрелка вверх"
+            holder.imgIcon.setColorFilter(Color.parseColor("#F44336"))
+
+            holder.tvType.text = when (item.operationType) {
+                "COMMISSION" -> "Комісія"
+                "PENALTY" -> "Штраф"
+                "WITHDRAWAL" -> "Виведення"
+                else -> item.operationType
             }
         }
     }

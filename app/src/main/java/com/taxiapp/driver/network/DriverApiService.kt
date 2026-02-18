@@ -15,6 +15,11 @@ data class NewsDto(
     val target: NewsTarget,
     val imageUrl: String?
 )
+
+data class CommissionInfoDto(
+    val percent: Double,
+    val description: String?
+)
 data class RateClientRequest(
     val orderId: Long,
     val score: Int,
@@ -125,6 +130,9 @@ interface DriverApiService {
     // --- ЗАКАЗЫ ---
     @GET("api/v1/driver/orders/available")
     suspend fun getAvailableOrders(): Response<List<Order>>
+
+    @GET("api/v1/driver/commission")
+    suspend fun getCommission(): Response<CommissionInfoDto>
 
     @POST("api/v1/payments/init")
     suspend fun initPayment(@Body request: InitPaymentRequest): Response<InitPaymentResponse>

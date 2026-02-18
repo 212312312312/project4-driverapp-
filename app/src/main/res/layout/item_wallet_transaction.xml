@@ -4,9 +4,8 @@
     android:layout_height="wrap_content"
     android:orientation="horizontal"
     android:padding="16dp"
-    android:background="@drawable/bg_bottom_sheet_driver"
-    android:layout_marginBottom="8dp">
-
+    android:background="#1E1E1E"
+    android:layout_marginBottom="1dp">
     <ImageView
         android:id="@+id/img_tx_icon"
         android:layout_width="40dp"

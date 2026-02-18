@@ -96,6 +96,15 @@
                     android:text="@string/drawer_status_online"
                     android:textSize="14sp"
                     android:textColor="#888888" />
+
+                <TextView
+                    android:id="@+id/tv_menu_commission"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Комісія: --%"
+                    android:textSize="13sp"
+                    android:textColor="@color/driver_neon_teal"
+                    android:layout_marginTop="2dp" />
             </LinearLayout>
 
             <ImageView
@@ -171,7 +180,6 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
     </LinearLayout>
-
 
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"

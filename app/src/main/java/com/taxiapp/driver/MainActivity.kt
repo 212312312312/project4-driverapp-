@@ -166,7 +166,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         updateOrdersBadge()
         checkActiveOrderOnStart() 
         startUILocationUpdates()
-
+        updateCommissionInfo()
 
         if (::map.isInitialized) {
             updateMapUI()
@@ -765,5 +765,20 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         if (fullName.isBlank()) return "Водій"
         val parts = fullName.trim().split("\\s+".toRegex())
         return when { parts.size >= 2 -> parts[1]; parts.isNotEmpty() -> parts[0]; else -> "Водій" }
+    }
+
+    private fun updateCommissionInfo() {
+        lifecycleScope.launch {
+            try {
+                val response = ApiClient.getInstance().getApiService(this@MainActivity).getCommission()
+                if (response.isSuccessful && response.body() != null) {
+                    val percent = response.body()!!.percent
+                    val tvCommission = navViewContent.findViewById<TextView>(R.id.tv_menu_commission)
+                    tvCommission.text = "Комісія сервісу: ${String.format("%.1f", percent)}%"
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 }
