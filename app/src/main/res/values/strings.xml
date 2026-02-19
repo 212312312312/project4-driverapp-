@@ -34,6 +34,10 @@
     <string name="tx_penalty">Штраф</string>
     <string name="tx_withdrawal">Списання</string>
 
+    <string name="menu_notifications">Сервісні повідомлення</string>
+    <string name="title_service_messages">Повідомлення</string>
+    <string name="no_messages">Повідомлень немає</string>
+
     <string name="navigator_title">Навігатор</string>
     <string name="navigator_google_maps">Google Maps</string>
     <string name="navigator_waze">Waze</string>

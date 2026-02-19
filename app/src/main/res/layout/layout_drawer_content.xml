@@ -250,6 +250,18 @@
             </LinearLayout>
 
             <LinearLayout
+                android:id="@+id/menu_item_notifications"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                style="@style/MenuStyle">
+                <ImageView
+                    android:src="@drawable/ic_list_bullet"
+                    style="@style/MenuIconStyle" />
+                <TextView
+                    android:text="@string/menu_notifications"
+                    style="@style/MenuTextStyle" />
+            </LinearLayout>
+            <LinearLayout
                 android:id="@+id/menu_item_balance"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

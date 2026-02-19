@@ -3,6 +3,7 @@ package com.taxiapp.driver.network
 import com.google.gson.annotations.SerializedName
 import retrofit2.Response
 import retrofit2.http.*
+import retrofit2.Call
 
 // --- DTO КЛАССЫ ---
 
@@ -30,6 +31,15 @@ data class CancellationReason(
     val id: Long,
     val reasonText: String,
     val penaltyScore: Int
+)
+
+data class DriverNotificationDto(
+    val id: Long,
+    val title: String,
+    val body: String,
+    val type: String, // "PAYMENT", "ORDER_CANCEL", "SYSTEM"
+    val date: String,
+    val isRead: Boolean
 )
 
 data class DriverStatsDto(
@@ -200,6 +210,9 @@ interface DriverApiService {
     // --- ФИЛЬТРЫ ---
     @GET("api/v1/driver/filters")
     suspend fun getFilters(): Response<List<DriverFilter>>
+
+    @GET("/api/v1/driver/notifications")
+    fun getNotifications(): Call<List<DriverNotificationDto>>
 
     @POST("api/v1/driver/filters")
     suspend fun createFilter(@Body req: CreateFilterRequest): Response<DriverFilter>

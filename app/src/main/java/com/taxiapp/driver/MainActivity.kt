@@ -50,6 +50,7 @@ import com.taxiapp.driver.service.LocationService
 import com.taxiapp.driver.utils.SessionManager
 import kotlinx.coroutines.launch
 import com.taxiapp.driver.service.FloatingWidgetService
+import com.taxiapp.driver.ServiceMessagesActivity
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
@@ -334,6 +335,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
         navViewContent.findViewById<View>(R.id.menu_item_settings).setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
+            drawerLayout.closeDrawer(GravityCompat.START)
+        }
+
+        navViewContent.findViewById<View>(R.id.menu_item_notifications).setOnClickListener {
+            startActivity(Intent(this, ServiceMessagesActivity::class.java))
             drawerLayout.closeDrawer(GravityCompat.START)
         }
 
