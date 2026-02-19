@@ -189,11 +189,12 @@ interface DriverApiService {
     suspend fun deleteLocation(): Response<Void>
 
     // --- УВЕДОМЛЕНИЯ ---
+    // --- УВЕДОМЛЕНИЯ ---
     @POST("api/v1/driver/orders/{id}/arrive")
-    suspend fun notifyArrived(@Path("id") orderId: Long): Response<Void>
+    suspend fun notifyArrived(@Path("id") orderId: Long): Response<Order> // Изменили Void на Order
 
     @POST("api/v1/driver/orders/{id}/start")
-    suspend fun startTrip(@Path("id") orderId: Long): Response<Void>
+    suspend fun startTrip(@Path("id") orderId: Long): Response<Order> // Изменили Void на Order
 
     @GET("api/v1/driver/orders/active")
     suspend fun getActiveOrder(): Response<Order>

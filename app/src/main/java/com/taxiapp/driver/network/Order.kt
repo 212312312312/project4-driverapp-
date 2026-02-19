@@ -23,6 +23,11 @@ data class Order(
     @SerializedName("destLat") val destLat: Double? = 0.0,
     @SerializedName("destLng") val destLng: Double? = 0.0,
 
+    @SerializedName("startedAt") val startedAt: String? = null,
+    @SerializedName("waitingPrice") val waitingPrice: Double = 0.0,
+    @SerializedName("freeWaitingMinutes") val freeWaitingMinutes: Int = 3,
+    @SerializedName("pricePerWaitingMinute") val pricePerWaitingMinute: Double = 0.0,
+
     @SerializedName("paymentMethod") val paymentMethod: String? = "CASH",
     @SerializedName("comment") val comment: String? = null,
     @SerializedName("services") val services: List<TaxiService>? = null,

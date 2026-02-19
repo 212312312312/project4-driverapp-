@@ -2,6 +2,7 @@ package com.taxiapp.driver
 
 import android.annotation.SuppressLint
 import android.app.Dialog
+import android.os.IBinder
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -12,7 +13,6 @@ import android.location.Location
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
-import android.os.IBinder
 import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
@@ -53,6 +53,11 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private lateinit var map: GoogleMap
     private var currentOrder: Order? = null
+
+    private lateinit var layoutWaitingInfo: android.widget.LinearLayout
+    private lateinit var tvWaitingTimer: TextView
+    private var waitingTimerHandler = Handler(Looper.getMainLooper())
+    private var waitingTimerRunnable: Runnable? = null
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationCallback: LocationCallback
@@ -136,9 +141,12 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
             locationService = null
         }
         timeHandler.removeCallbacks(timeRunnable)
+        stopWaitingTimer()
     }
 
     private fun initViews() {
+        layoutWaitingInfo = findViewById(R.id.layout_waiting_info)
+        tvWaitingTimer = findViewById(R.id.tv_waiting_timer)
         tvStatusTitle = findViewById(R.id.tv_status_title)
         tvDestinationLabel = findViewById(R.id.tv_destination_label)
         tvClientName = findViewById(R.id.tv_client_name)
@@ -195,6 +203,64 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
         showStylishBottomSheet("Чому скасовуєте?", options) { selected ->
             performCancellation(selected.id)
         }
+    }
+
+    private fun startWaitingTimer(order: Order) {
+        stopWaitingTimer()
+
+        if (order.arrivedAt == null) return
+        layoutWaitingInfo.visibility = View.VISIBLE
+
+        val cleanArrivedAt = order.arrivedAt.substringBefore(".").substringBefore("Z")
+        val format = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.getDefault())
+
+        val arrivedTime = try {
+            format.parse(cleanArrivedAt)?.time ?: return
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return
+        }
+
+        waitingTimerRunnable = object : Runnable {
+            override fun run() {
+                val now = System.currentTimeMillis()
+                val diffMs = now - arrivedTime
+
+                if (diffMs < 0) {
+                    waitingTimerHandler.postDelayed(this, 1000)
+                    return
+                }
+
+                val diffMinutesFull = diffMs / (1000 * 60).toDouble()
+                val freeMins = order.freeWaitingMinutes
+
+                if (diffMinutesFull <= freeMins) {
+                    // Безкоштовне очікування
+                    val remainingMs = (freeMins * 60 * 1000) - diffMs
+                    val remMin = (remainingMs / (1000 * 60)).toInt()
+                    val remSec = ((remainingMs / 1000) % 60).toInt()
+
+                    layoutWaitingInfo.backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#EBFBEE"))
+                    tvWaitingTimer.setTextColor(Color.parseColor("#2B8A3E"))
+                    tvWaitingTimer.text = String.format("⏱ Безкоштовне очікування: %02d:%02d", remMin, remSec)
+                } else {
+                    // Платне очікування
+                    val paidMins = Math.floor(diffMinutesFull - freeMins).toInt()
+                    val extraCost = paidMins * order.pricePerWaitingMinute
+
+                    layoutWaitingInfo.backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#FFF5F5"))
+                    tvWaitingTimer.setTextColor(Color.parseColor("#C92A2A"))
+                    tvWaitingTimer.text = String.format("⏳ Платне очікування: %d хв (+%.2f ₴)", paidMins, extraCost)
+                }
+                waitingTimerHandler.postDelayed(this, 1000)
+            }
+        }
+        waitingTimerHandler.post(waitingTimerRunnable!!)
+    }
+
+    private fun stopWaitingTimer() {
+        waitingTimerRunnable?.let { waitingTimerHandler.removeCallbacks(it) }
+        waitingTimerRunnable = null
     }
 
     private fun showStylishBottomSheet(
@@ -382,18 +448,13 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
             btnAction.backgroundTintList = ContextCompat.getColorStateList(this, R.color.driver_black_bg)
         } else {
             // Час підтверджувати (<= 35 хв)
-            // Перевіряємо, чи ми вже підтвердили
             if (order.isDriverConfirmed) {
-                // Якщо підтвердили, але статус все ще SCHEDULED (сервер ще не перемикнув або лаг)
                 btnAction.text = "ОЧІКУВАННЯ ПОЧАТКУ..."
                 btnAction.isEnabled = false
             } else {
-                // Треба підтвердити!
                 btnAction.text = "ПІДТВЕРДИТИ ЗАМОВЛЕННЯ"
                 btnAction.isEnabled = true
                 btnAction.backgroundTintList = ContextCompat.getColorStateList(this, R.color.driver_neon_teal)
-
-                // Можна додати вібрацію або звук тут, якщо вікно відкрите
             }
         }
     }
@@ -520,6 +581,7 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
+    // ВАЖЛИВЕ ОНОВЛЕННЯ ТУТ
     private fun handleActionButton() {
         val orderId = currentOrder?.id ?: return
 
@@ -535,13 +597,48 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
             try {
                 val api = ApiClient.getInstance().getApiService(this@OrderProgressActivity)
                 when (currentState) {
-                    RideState.TO_CLIENT -> if (api.notifyArrived(orderId).isSuccessful) { currentOrder = currentOrder?.copy(status = "DRIVER_ARRIVED"); locationService?.setTargetOrder(currentOrder); currentState = RideState.WAITING; setupUiForWaiting(); updateMapVisuals() }
-                    RideState.WAITING -> if (api.startTrip(orderId).isSuccessful) { currentOrder = currentOrder?.copy(status = "IN_PROGRESS"); locationService?.setTargetOrder(currentOrder); currentState = RideState.TO_DESTINATION; setupUiForInTrip(); updateMapVisuals() }
-                    RideState.TO_DESTINATION -> if (api.completeOrder(orderId).isSuccessful) { currentOrder = currentOrder?.copy(status = "COMPLETED"); locationService?.setTargetOrder(null); currentState = RideState.COMPLETED; showRatingDialog() }
+                    RideState.TO_CLIENT -> {
+                        val response = api.notifyArrived(orderId)
+                        if (response.isSuccessful) {
+                            // Беремо оновлене замовлення від сервера (з полем arrivedAt) або генеруємо час локально як запасний план
+                            currentOrder = response.body() ?: currentOrder?.copy(
+                                status = "DRIVER_ARRIVED",
+                                arrivedAt = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
+                            )
+                            locationService?.setTargetOrder(currentOrder)
+                            currentState = RideState.WAITING
+                            setupUiForWaiting()
+                            updateMapVisuals()
+                        }
+                    }
+                    RideState.WAITING -> {
+                        val response = api.startTrip(orderId)
+                        if (response.isSuccessful) {
+                            // Беремо оновлене замовлення від сервера (з полем waitingPrice)
+                            currentOrder = response.body() ?: currentOrder?.copy(status = "IN_PROGRESS")
+                            locationService?.setTargetOrder(currentOrder)
+                            currentState = RideState.TO_DESTINATION
+                            setupUiForInTrip()
+                            updateMapVisuals()
+                        }
+                    }
+                    RideState.TO_DESTINATION -> {
+                        val response = api.completeOrder(orderId)
+                        if (response.isSuccessful) {
+                            currentOrder = currentOrder?.copy(status = "COMPLETED")
+                            locationService?.setTargetOrder(null)
+                            currentState = RideState.COMPLETED
+                            showRatingDialog()
+                        }
+                    }
                     RideState.COMPLETED -> { }
                     else -> {}
                 }
-            } catch (e: Exception) { Toast.makeText(this@OrderProgressActivity, "Помилка: ${e.message}", Toast.LENGTH_SHORT).show() } finally { btnAction.isEnabled = true }
+            } catch (e: Exception) {
+                Toast.makeText(this@OrderProgressActivity, "Помилка: ${e.message}", Toast.LENGTH_SHORT).show()
+            } finally {
+                btnAction.isEnabled = true
+            }
         }
     }
 
@@ -591,22 +688,49 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun setupUiForWaiting() {
-        tvStatusTitle.text = "Очікування";
-        // Якщо є час подачі (заплановане), показуємо його
+        tvStatusTitle.text = "Очікування"
         val order = currentOrder
         if (order != null && order.isScheduled()) {
             tvDestinationLabel.text = "Клієнт вийде о ${order.getFormattedScheduledTime()}"
         } else {
             tvDestinationLabel.text = "Клієнт виходить..."
         }
-        btnAction.text = "ПОЧАТИ ПОЇЗДКУ"; btnAction.isEnabled = true; btnAction.backgroundTintList = ContextCompat.getColorStateList(this, R.color.taxi_yellow)
+        btnAction.text = "ПОЧАТИ ПОЇЗДКУ"
+        btnAction.isEnabled = true
+        btnAction.backgroundTintList = ContextCompat.getColorStateList(this, R.color.taxi_yellow)
+
+        // ЗАПУСК ТАЙМЕРА
+        currentOrder?.let { startWaitingTimer(it) }
     }
 
-    private fun setupUiForInTrip() { tvStatusTitle.text = "В дорозі"; tvDestinationLabel.text = currentOrder?.toAddress ?: "Кінцева точка"; btnAction.text = "ЗАВЕРШИТИ"; btnAction.isEnabled = true; btnAction.backgroundTintList = ContextCompat.getColorStateList(this, R.color.driver_error) }
+    private fun setupUiForInTrip() {
+        tvStatusTitle.text = "В дорозі"
+        tvDestinationLabel.text = currentOrder?.toAddress ?: "Кінцева точка"
+        btnAction.text = "ЗАВЕРШИТИ"
+        btnAction.isEnabled = true
+        btnAction.backgroundTintList = ContextCompat.getColorStateList(this, R.color.driver_error)
+
+        // ЗУПИНКА ТАЙМЕРА І ВІДОБРАЖЕННЯ НАДБАВКИ
+        stopWaitingTimer()
+        if (currentOrder != null && currentOrder!!.waitingPrice > 0) {
+            layoutWaitingInfo.visibility = View.VISIBLE
+            layoutWaitingInfo.backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#FFF4E6"))
+            tvWaitingTimer.setTextColor(Color.parseColor("#D9480F"))
+            tvWaitingTimer.text = String.format("💰 Додано за очікування: %.2f ₴", currentOrder!!.waitingPrice)
+        } else {
+            layoutWaitingInfo.visibility = View.GONE
+        }
+    }
 
     private fun setupUiForToClient() {
-        tvStatusTitle.text = "Їду до клієнта"; tvDestinationLabel.text = currentOrder?.fromAddress ?: "Адреса посадки";
-        // Початковий стан кнопки (буде оновлено в checkDistanceForArrivedButton)
-        btnAction.text = "ОЧІКУВАННЯ ПОЗИЦІЇ..."; btnAction.isEnabled = false; btnAction.backgroundTintList = ContextCompat.getColorStateList(this, R.color.driver_black_bg)
+        tvStatusTitle.text = "Їду до клієнта"
+        tvDestinationLabel.text = currentOrder?.fromAddress ?: "Адреса посадки"
+        btnAction.text = "ОЧІКУВАННЯ ПОЗИЦІЇ..."
+        btnAction.isEnabled = false
+        btnAction.backgroundTintList = ContextCompat.getColorStateList(this, R.color.driver_black_bg)
+
+        // ХОВАЄМО ТАЙМЕР (ЯКЩО ВІН БУВ)
+        stopWaitingTimer()
+        layoutWaitingInfo.visibility = View.GONE
     }
 }
