@@ -7,6 +7,18 @@ import retrofit2.Call
 
 // --- DTO КЛАССЫ ---
 
+data class ChatMessageDto(
+    val id: Long?,
+    val orderId: Long,
+    val senderRole: String, // "CLIENT" или "DRIVER"
+    val senderId: Long,
+    val content: String,
+    val createdAt: String
+)
+
+data class SendMessageRequest(
+    val content: String
+)
 enum class NewsTarget { CLIENT, DRIVER, ALL }
 data class NewsDto(
     val id: Long,
@@ -117,6 +129,16 @@ interface DriverApiService {
 
     @GET("api/v1/driver/me")
     suspend fun getDriverProfile(): Response<DriverProfileDto>
+
+    // --- CHAT ---
+    @GET("api/v1/chat/{orderId}")
+    suspend fun getChatMessages(@Path("orderId") orderId: Long): Response<List<ChatMessageDto>>
+
+    @POST("api/v1/chat/driver/{orderId}")
+    suspend fun sendChatMessage(
+        @Path("orderId") orderId: Long,
+        @Body request: SendMessageRequest
+    ): Response<ChatMessageDto>
 
     @POST("api/v1/driver/profile/change-phone/request-current")
     suspend fun requestCodeForCurrentPhone(): Response<MessageResponse>

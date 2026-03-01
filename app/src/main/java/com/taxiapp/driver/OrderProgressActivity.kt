@@ -59,6 +59,11 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
     private var waitingTimerHandler = Handler(Looper.getMainLooper())
     private var waitingTimerRunnable: Runnable? = null
 
+    // --- ПЕРЕМЕННЫЕ ЧАТА ---
+    private lateinit var btnChatClient: ImageView
+    private lateinit var tvChatBadge: TextView
+    private var unreadChatMessages = 0
+
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationCallback: LocationCallback
     private var driverMarker: Marker? = null
@@ -154,6 +159,21 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
         btnAction = findViewById(R.id.btn_action)
         btnOptions = findViewById(R.id.btn_options)
 
+        btnChatClient = findViewById(R.id.btn_chat_client)
+        tvChatBadge = findViewById(R.id.tv_chat_badge)
+
+        btnChatClient.setOnClickListener {
+            currentOrder?.id?.let { orderId ->
+                unreadChatMessages = 0
+                updateChatBadgeUI()
+
+                // Открываем экран чата
+                val intent = Intent(this@OrderProgressActivity, ChatActivity::class.java)
+                intent.putExtra("ORDER_ID", orderId)
+                startActivity(intent)
+            }
+        }
+
         findViewById<View>(R.id.btn_back_progress).setOnClickListener {
             val session = com.taxiapp.driver.utils.SessionManager(this)
             session.setOrderMinimized(true)
@@ -187,6 +207,8 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
             }
         }
     }
+
+
 
     private fun showStylishCancellationReasons() {
         if (cancellationReasons.isEmpty()) {
@@ -628,6 +650,11 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
                             currentOrder = currentOrder?.copy(status = "COMPLETED")
                             locationService?.setTargetOrder(null)
                             currentState = RideState.COMPLETED
+
+                            // Сбрасываем чат при завершении поездки
+                            unreadChatMessages = 0
+                            updateChatBadgeUI()
+
                             showRatingDialog()
                         }
                     }
@@ -665,6 +692,23 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
                 val response = ApiClient.getInstance().getApiService(this@OrderProgressActivity).rateClient(RateClientRequest(orderId, score, comment))
                 if (response.isSuccessful) { dialog.dismiss(); finishAndReturnToMap() } else Toast.makeText(this@OrderProgressActivity, "Помилка сервера", Toast.LENGTH_SHORT).show()
             } catch (e: Exception) { Toast.makeText(this@OrderProgressActivity, "Помилка мережі", Toast.LENGTH_SHORT).show() }
+        }
+    }
+
+    fun incrementUnreadMessages() {
+        unreadChatMessages++
+        updateChatBadgeUI()
+        Toast.makeText(this, "Нове повідомлення від клієнта!", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun updateChatBadgeUI() {
+        runOnUiThread {
+            if (unreadChatMessages > 0) {
+                tvChatBadge.visibility = View.VISIBLE
+                tvChatBadge.text = unreadChatMessages.toString()
+            } else {
+                tvChatBadge.visibility = View.GONE
+            }
         }
     }
 

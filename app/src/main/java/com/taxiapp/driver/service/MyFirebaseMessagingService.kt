@@ -3,6 +3,8 @@ package com.taxiapp.driver.service
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import kotlinx.coroutines.launch
+import com.taxiapp.driver.ChatEventBus
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -27,7 +29,15 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         val data = remoteMessage.data
         val type = data["type"]
         Log.d("FCM", "Message received type: $type")
-
+        if (type == "CHAT_MESSAGE") {
+            // Мгновенно отправляем сигнал в нашу внутреннюю шину Kotlin
+            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                // Для клиента: com.taxiapp.client.ChatEventBus.triggerUpdate()
+                // Для водителя: com.taxiapp.driver.ChatEventBus.triggerUpdate()
+                ChatEventBus.triggerUpdate()
+            }
+            return
+        }
         if (type == "ORDER_OFFER" || type == "ORDER_CONFIRMATION") {
             wakeUpScreen()
             val orderId = data["orderId"]?.toLongOrNull()
