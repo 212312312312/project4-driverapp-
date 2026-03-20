@@ -69,10 +69,12 @@ class WebViewActivity : AppCompatActivity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_web_view) // Переконайся, що такий layout є
+        setContentView(R.layout.activity_web_view)
 
         webView = findViewById(R.id.webView)
-        val url = intent.getStringExtra("url") ?: "https://google.com"
+
+        // ИСПРАВЛЕНИЕ БАГА: Читаем "URL" в обоих регистрах, чтобы точно поймать ссылку
+        val url = intent.getStringExtra("URL") ?: intent.getStringExtra("url") ?: "https://google.com"
 
         setupWebView()
         webView.loadUrl(url)
@@ -85,17 +87,19 @@ class WebViewActivity : AppCompatActivity() {
         settings.domStorageEnabled = true
         settings.allowFileAccess = true
         settings.mediaPlaybackRequiresUserGesture = false
-        settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW // Дозволити HTTP та HTTPS
+        settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
 
         // Обробка навігації
         webView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                 val url = request?.url.toString()
 
-                // Якщо сервер перенаправляє на "успіх", закриваємо WebView
-                if (url.contains("/registration-success") || url.contains("/login")) {
-                    Toast.makeText(this@WebViewActivity, "Заявку відправлено!", Toast.LENGTH_LONG).show()
-                    finish() // Повертаємось на LoginActivity
+                // ОБНОВЛЕННАЯ ЛОГИКА: Ловим успешную отправку заявки на авто
+                // Твой React-фронтенд после успешного добавления авто должен
+                // сделать редирект на любой URL со словом "success" (например, /car-success)
+                if (url.contains("success") || url.contains("registration-success") || url.contains("/login")) {
+                    Toast.makeText(this@WebViewActivity, "Заявку відправлено на перевірку!", Toast.LENGTH_LONG).show()
+                    finish() // Закрываем WebView и возвращаемся в CarActivity
                     return true
                 }
                 return false
@@ -109,18 +113,13 @@ class WebViewActivity : AppCompatActivity() {
                 filePathCallback: ValueCallback<Array<Uri>>?,
                 fileChooserParams: FileChooserParams?
             ): Boolean {
-                // Скасувати попередній запит, якщо є
                 if (this@WebViewActivity.filePathCallback != null) {
                     this@WebViewActivity.filePathCallback?.onReceiveValue(null)
                 }
                 this@WebViewActivity.filePathCallback = filePathCallback
 
-                // Перевірка дозволів перед відкриттям
                 if (!hasPermissions()) {
                     requestPermissions()
-                    // Важливо: повертаємо false або скасовуємо callback, бо ми ще не відкрили діалог
-                    // Але тут краще повернути true і запустити вибір, якщо дозволи вже є
-                    // Спрощена логіка: запускаємо вибір
                 }
 
                 launchFileChooser()
