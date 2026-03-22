@@ -87,6 +87,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private var manualLocationMarker: Marker? = null
 
     private var isSearchActive = false
+    private var restoreDialog: android.app.Dialog? = null
 
     companion object {
         private const val REQUEST_CODE_HOME_SECTOR = 1001
@@ -140,8 +141,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         setupLocationCallback()
         
         checkPermissionsAndStart()
-        checkActiveOrderOnStart()
-        updateFcmToken()
     }
 
     private fun updateFcmToken() {
@@ -163,6 +162,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     override fun onResume() {
         super.onResume()
+
+        // 1. ГОЛОВНА ПЕРЕВІРКА: Якщо акаунт на видалення - блокуємо все!
+        if (sessionManager.isPendingDeletion()) {
+            showRestoreDialog()
+            return // <--- Важливо! Не пускаємо код далі, поки висить діалог
+        }
         updateLockIconState()
         updateOrdersBadge()
         checkActiveOrderOnStart() 
@@ -784,6 +789,71 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
+            }
+        }
+    }
+
+    private fun checkPendingDeletionStatus() {
+        if (sessionManager.isPendingDeletion()) {
+            showRestoreDialog()
+        }
+    }
+
+    private fun showRestoreDialog() {
+        if (restoreDialog?.isShowing == true) return // Щоб не створити 10 діалогів
+
+        restoreDialog = android.app.Dialog(this)
+        restoreDialog?.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
+        restoreDialog?.setContentView(R.layout.dialog_restore_account)
+        restoreDialog?.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
+        restoreDialog?.window?.setLayout(
+            android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+            android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+        restoreDialog?.setCancelable(false) // Забороняємо клікати по карті
+
+        val btnCancel = restoreDialog?.findViewById<androidx.appcompat.widget.AppCompatButton>(R.id.btnCancelRestore)
+        val btnConfirm = restoreDialog?.findViewById<androidx.appcompat.widget.AppCompatButton>(R.id.btnConfirmRestore)
+
+        btnCancel?.setOnClickListener {
+            restoreDialog?.dismiss()
+            sessionManager.saveAuthToken("")
+            val intent = Intent(this@MainActivity, WelcomeActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            startActivity(intent)
+            finish()
+        }
+
+        btnConfirm?.setOnClickListener {
+            // Не закриваємо діалог одразу, нехай висить поки йде запит
+            btnConfirm.isEnabled = false
+            btnConfirm.text = "Відновлення..."
+            restoreAccount()
+        }
+
+        restoreDialog?.show()
+    }
+
+    private fun restoreAccount() {
+        lifecycleScope.launch {
+            try {
+                val response = ApiClient.getInstance().getApiService(this@MainActivity).restoreAccount()
+                if (response.isSuccessful) {
+                    sessionManager.setPendingDeletion(false)
+                    restoreDialog?.dismiss()
+                    Toast.makeText(this@MainActivity, "Акаунт успішно відновлено!", Toast.LENGTH_SHORT).show()
+
+                    // ПЕРЕЗАВАНТАЖУЄМО ЕКРАН, щоб запрацювала карта та замовлення
+                    recreate()
+                } else {
+                    Toast.makeText(this@MainActivity, "Помилка відновлення", Toast.LENGTH_SHORT).show()
+                    restoreDialog?.dismiss()
+                    showRestoreDialog() // Показуємо знову, якщо помилка
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@MainActivity, "Помилка мережі", Toast.LENGTH_SHORT).show()
+                restoreDialog?.dismiss()
+                showRestoreDialog()
             }
         }
     }

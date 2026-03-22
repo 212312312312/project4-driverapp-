@@ -11,6 +11,7 @@ class SessionManager(context: Context) {
     companion object {
         const val USER_TOKEN = "user_token"
         const val KEY_DRIVER_ID = "driver_id"
+        const val KEY_PENDING_DELETION = "pending_deletion"
         const val KEY_DRIVER_NAME = "driver_name"
         const val KEY_DRIVER_PHONE = "driver_phone"
         const val KEY_FCM_TOKEN = "fcm_token"
@@ -53,6 +54,14 @@ class SessionManager(context: Context) {
     fun isStatusReminderEnabled(): Boolean {
         // За замовчуванням увімкнено (true)
         return prefs.getBoolean(KEY_STATUS_REMINDER, true)
+    }
+
+    fun setPendingDeletion(isPending: Boolean) {
+        prefs.edit().putBoolean(KEY_PENDING_DELETION, isPending).apply()
+    }
+
+    fun isPendingDeletion(): Boolean {
+        return prefs.getBoolean(KEY_PENDING_DELETION, false)
     }
 
     fun getNavigator(): String {
@@ -107,7 +116,8 @@ class SessionManager(context: Context) {
     }
 
     fun isLoggedIn(): Boolean {
-        return fetchAuthToken() != null
+        // Перевіряємо не тільки на null, але й на порожній рядок!
+        return !fetchAuthToken().isNullOrEmpty()
     }
 
     fun saveAuthToken(token: String) {

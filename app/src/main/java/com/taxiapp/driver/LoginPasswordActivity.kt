@@ -66,7 +66,13 @@ class LoginPasswordActivity : AppCompatActivity() {
                     .login(LoginRequest(phone, pass))
 
                 if (response.isSuccessful && response.body() != null) {
-                    saveSession(response.body()!!)
+                    val loginData = response.body()!!
+
+                    // Зберігаємо статус видалення для головного екрану!
+                    sessionManager.setPendingDeletion(loginData.isPendingDeletion == true)
+
+                    // І просто пускаємо далі (в AccountSelection / MainActivity)
+                    saveSession(loginData)
                 } else {
                     val errorMsg = if (response.code() == 401) "Невірний номер або пароль" else "Помилка входу"
                     Toast.makeText(this@LoginPasswordActivity, errorMsg, Toast.LENGTH_SHORT).show()
@@ -98,5 +104,57 @@ class LoginPasswordActivity : AppCompatActivity() {
         binding.btnLogin.isEnabled = !loading
         binding.etPhone.isEnabled = !loading
         binding.etPassword.isEnabled = !loading
+    }
+
+
+    private fun showRestoreDialog(loginData: com.taxiapp.driver.network.LoginResponse) {
+        val dialog = android.app.Dialog(this)
+        dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
+        dialog.setContentView(R.layout.dialog_restore_account)
+        dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
+        dialog.window?.setLayout(
+            android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+            android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+        dialog.setCancelable(false) // Щоб не можна було закрити, клікнувши поруч
+
+        val btnCancel = dialog.findViewById<androidx.appcompat.widget.AppCompatButton>(R.id.btnCancelRestore)
+        val btnConfirm = dialog.findViewById<androidx.appcompat.widget.AppCompatButton>(R.id.btnConfirmRestore)
+
+        btnCancel.setOnClickListener {
+            dialog.dismiss()
+            sessionManager.saveAuthToken("") // Очищаємо токен, якщо водій передумав
+            setLoading(false)
+        }
+
+        btnConfirm.setOnClickListener {
+            dialog.dismiss()
+            restoreAccountAndLogin(loginData)
+        }
+
+        dialog.show()
+    }
+
+    private fun restoreAccountAndLogin(loginData: com.taxiapp.driver.network.LoginResponse) {
+        setLoading(true)
+        lifecycleScope.launch {
+            try {
+                // Щоб сервер нас пропустив для відновлення, нам потрібен токен з loginData
+                sessionManager.saveAuthToken(loginData.token)
+
+                val response = ApiClient.getInstance().getApiService(this@LoginPasswordActivity).restoreAccount()
+                if (response.isSuccessful) {
+                    saveSession(loginData) // Продовжуємо стандартний логін
+                } else {
+                    sessionManager.saveAuthToken("") // Очищаємо токен у разі помилки
+                    Toast.makeText(this@LoginPasswordActivity, "Помилка відновлення акаунту", Toast.LENGTH_SHORT).show()
+                    setLoading(false)
+                }
+            } catch (e: Exception) {
+                sessionManager.saveAuthToken("")
+                Toast.makeText(this@LoginPasswordActivity, "Помилка мережі", Toast.LENGTH_SHORT).show()
+                setLoading(false)
+            }
+        }
     }
 }

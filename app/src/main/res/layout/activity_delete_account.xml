@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/driver_black_bg"> <RelativeLayout
+    android:layout_width="match_parent"
+    android:layout_height="?attr/actionBarSize"
+    android:background="#1E1E1E"
+    android:elevation="4dp">
+
+    <ImageView
+        android:id="@+id/btnBack"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:padding="12dp"
+        android:src="@drawable/ic_arrow_back_black"
+        app:tint="@color/white"
+        android:layout_centerVertical="true"
+        android:background="?attr/selectableItemBackgroundBorderless"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Видалення акаунту"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="@color/white"
+        android:layout_centerInParent="true"/>
+</RelativeLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:padding="20dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/white"
+                android:textSize="15sp"
+                android:lineSpacingExtra="6dp"
+                android:text="Перед тим, як ви відправите запит на видалення, ми повинні сповістити вас про те, що:\n\n• Акаунт не видаляється, якщо на балансі недостатньо коштів, спершу його потрібно поповнити;\n\n• Якщо ваш обліковий запис підключено до автопарку, перед видаленням акаунта подайте запит на вихід з автопарку та дочекайтеся його підтвердження;\n\n• Поточний баланс, транзакції та статистику буде анульовано, а доступ до них стане неможливим;\n\n• Усі бонусні програми, в яких ви берете участь, будуть анульовані, а кошти не будуть виплачені;\n\n• Заявка буде розглянута після 30 днів з моменту подачі, акаунт буде заблоковано упродовж цього часу і ви не зможете користуватися додатком.\n\nПісля видалення драйверського акаунту буде видалено і кур'єрський акаунт (якщо такий був зареєстрований)." />
+        </LinearLayout>
+    </ScrollView>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:background="#1E1E1E">
+
+        <Button
+            android:id="@+id/btnConfirmDelete"
+            android:layout_width="match_parent"
+            android:layout_height="55dp"
+            android:text="Підтвердити"
+            android:textColor="@color/white"
+            android:backgroundTint="#D32F2F"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            app:cornerRadius="8dp" />
+
+    </LinearLayout>
+
+</LinearLayout>

@@ -302,9 +302,17 @@ class LoginActivity : AppCompatActivity() {
                 val response = ApiClient.getInstance().getApiService(this@LoginActivity)
                     .verifyDriverLoginSms(SmsVerifyDto(phone, code))
 
+                // --- ПОЧАТОК ЗМІН ---
                 if (response.isSuccessful && response.body() != null) {
-                    saveSession(response.body()!!)
+                    val loginData = response.body()!!
+
+                    // Зберігаємо статус видалення для головного екрану!
+                    sessionManager.setPendingDeletion(loginData.isPendingDeletion == true)
+
+                    // Зберігаємо сесію та переходимо далі
+                    saveSession(loginData)
                 } else {
+                    // --- КІНЕЦЬ ЗМІН ---
                     Toast.makeText(this@LoginActivity, "Невірний код", Toast.LENGTH_SHORT).show()
                     setLoading(false)
                     binding.etCodeHidden.text.clear()

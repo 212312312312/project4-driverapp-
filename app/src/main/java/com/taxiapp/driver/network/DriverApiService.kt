@@ -127,8 +127,16 @@ interface DriverApiService {
 
     // --- ПРОФИЛЬ И НАСТРОЙКИ ---
 
+
+    @POST("api/v1/driver/profile/delete-request")
+    suspend fun requestAccountDeletion(@Body emptyBody: Map<String, String> = emptyMap()): Response<MessageResponse>
+
+    @POST("api/v1/driver/profile/restore")
+    suspend fun restoreAccount(@Body emptyBody: Map<String, String> = emptyMap()): Response<Unit>
+
     @GET("api/v1/driver/me")
     suspend fun getDriverProfile(): Response<DriverProfileDto>
+
 
     // --- CHAT ---
     @GET("api/v1/chat/{orderId}")

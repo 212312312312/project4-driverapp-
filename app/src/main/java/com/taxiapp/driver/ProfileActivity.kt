@@ -42,7 +42,8 @@ class ProfileActivity : AppCompatActivity() {
         }
 
         findViewById<TextView>(R.id.btn_delete_account).setOnClickListener {
-            Toast.makeText(this, "Щоб видалити акаунт, зверніться до диспетчера", Toast.LENGTH_LONG).show()
+            val intent = Intent(this, DeleteAccountActivity::class.java)
+            startActivity(intent)
         }
 
         // --- НОВАЯ ЛОГИКА ---
@@ -131,6 +132,31 @@ class ProfileActivity : AppCompatActivity() {
             parts.size >= 2 -> parts[1]
             parts.isNotEmpty() -> parts[0]
             else -> "Водій"
+        }
+    }
+
+    private fun requestDeletion() {
+        lifecycleScope.launch {
+            try {
+                val response = ApiClient.getInstance().getApiService(this@ProfileActivity).requestAccountDeletion()
+                if (response.isSuccessful) {
+                    Toast.makeText(this@ProfileActivity, "Акаунт в черзі на видалення", Toast.LENGTH_LONG).show()
+
+                    // Очищаємо сесію (токени тощо)
+                    sessionManager.saveAuthToken("")
+                    sessionManager.saveDriverId(-1L)
+
+                    // Викидаємо на екран логіну
+                    val intent = Intent(this@ProfileActivity, LoginActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    startActivity(intent)
+                    finish()
+                } else {
+                    Toast.makeText(this@ProfileActivity, "Помилка при видаленні", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@ProfileActivity, "Помилка мережі", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 }

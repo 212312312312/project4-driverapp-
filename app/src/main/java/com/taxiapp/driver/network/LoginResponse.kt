@@ -19,5 +19,9 @@ data class LoginResponse(
     val role: String?,
 
     @SerializedName("isNewUser") // Сервер шлет "isNewUser"
-    val isNew: Boolean? = false
+    val isNew: Boolean? = false,
+
+    // --- ДОДАНО НОВЕ ПОЛЕ ---
+    @SerializedName("pendingDeletion", alternate = ["isPendingDeletion"])
+    val isPendingDeletion: Boolean? = false
 )
