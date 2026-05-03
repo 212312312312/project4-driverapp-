@@ -3,7 +3,12 @@ package com.taxiapp.driver.network
 import android.content.Context
 import com.google.gson.GsonBuilder
 import com.taxiapp.driver.BuildConfig
+import com.taxiapp.driver.utils.SessionManager
+import okhttp3.Authenticator
 import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+import okhttp3.Route
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -16,32 +21,63 @@ class ApiClient private constructor() {
     private var apiService: DriverApiService? = null
     private var googleMapsApi: GoogleMapsApi? = null
 
-    // Клиент для сервера (Backend)
     fun getApiService(context: Context): DriverApiService {
         if (apiService == null) {
-            // Логирование запросов (полезно для отладки)
             val logging = HttpLoggingInterceptor().apply {
                 level = HttpLoggingInterceptor.Level.BODY
             }
 
-            // Интерцептор для добавления Токена
             val authInterceptor = AuthInterceptor(context.applicationContext)
+
+            // --- НОВЫЙ АВТОРИЗАТОР ДЛЯ РЕФРЕША ---
+            val tokenAuthenticator = object : Authenticator {
+                override fun authenticate(route: Route?, response: Response): Request? {
+                    if (response.priorResponse?.code == 401) return null
+
+                    val sm = sessionManager ?: return null
+                    val refreshToken = sm.fetchRefreshToken() ?: return null
+
+                    try {
+                        val refreshCall = apiService?.refreshTokenSync(TokenRefreshRequestDto(refreshToken))
+                        val refreshResponse = refreshCall?.execute()
+
+                        if (refreshResponse != null && refreshResponse.isSuccessful && refreshResponse.body() != null) {
+                            val loginResponse = refreshResponse.body()!!
+
+                            sm.saveAuthToken(loginResponse.token)
+                            if (!loginResponse.refreshToken.isNullOrEmpty()) {
+                                sm.saveRefreshToken(loginResponse.refreshToken)
+                            }
+
+                            return response.request.newBuilder()
+                                .header("Authorization", "Bearer ${loginResponse.token}")
+                                .build()
+                        } else {
+                            sm.clearSession()
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                    return null
+                }
+            }
+            // ------------------------------------
 
             val client = OkHttpClient.Builder()
                 .addInterceptor(authInterceptor)
+                .authenticator(tokenAuthenticator) // <-- ПОДКЛЮЧЕНО К КЛИЕНТУ
                 .addInterceptor(logging)
                 .connectTimeout(30, TimeUnit.SECONDS)
                 .readTimeout(30, TimeUnit.SECONDS)
                 .writeTimeout(30, TimeUnit.SECONDS)
                 .build()
 
-            // Настройка Gson с setLenient (Важно для обработки текстовых ответов от LiqPay/Сервера)
             val gson = GsonBuilder()
                 .setLenient()
                 .create()
 
             val retrofit = Retrofit.Builder()
-                .baseUrl(BuildConfig.BASE_URL) // Берет URL из build.gradle (твои 192.168...)
+                .baseUrl(BuildConfig.BASE_URL)
                 .addConverterFactory(GsonConverterFactory.create(gson))
                 .client(client)
                 .build()
@@ -51,7 +87,6 @@ class ApiClient private constructor() {
         return apiService!!
     }
 
-    // Клиент для Google Maps (Маршруты)
     fun getGoogleMapsApi(): GoogleMapsApi {
         if (googleMapsApi == null) {
             val retrofit = Retrofit.Builder()
@@ -64,7 +99,6 @@ class ApiClient private constructor() {
         return googleMapsApi!!
     }
 
-    // Сброс клиента (при выходе из аккаунта)
     fun reset() {
         apiService = null
     }
@@ -73,6 +107,8 @@ class ApiClient private constructor() {
         @Volatile
         private var instance: ApiClient? = null
 
+        var sessionManager: SessionManager? = null // <-- ДОБАВЛЕНО ДЛЯ ДОСТУПА ИЗ APP
+
         fun getInstance(): ApiClient {
             return instance ?: synchronized(this) {
                 instance ?: ApiClient().also { instance = it }
@@ -80,8 +116,6 @@ class ApiClient private constructor() {
         }
     }
 }
-
-// --- Интерфейсы и DTO для Google Maps ---
 
 interface GoogleMapsApi {
     @GET("directions/json")

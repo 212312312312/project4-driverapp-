@@ -15,14 +15,12 @@ class LoginViewModel(
     private val sessionManager: SessionManager
 ) : ViewModel() {
 
-    // Состояния, за которыми следит Activity
     private val _loginResult = MutableLiveData<Result<Boolean>>()
     val loginResult: LiveData<Result<Boolean>> = _loginResult
 
     private val _isLoading = MutableLiveData<Boolean>()
     val isLoading: LiveData<Boolean> = _isLoading
 
-    // ИСПРАВЛЕНО: license -> password (так как в UI у нас поле для пароля)
     fun login(phone: String, password: String) {
         if (phone.isBlank() || password.isBlank()) {
             _loginResult.value = Result.failure(IllegalArgumentException("Заполните все поля"))
@@ -33,19 +31,17 @@ class LoginViewModel(
 
         viewModelScope.launch {
             try {
-                // 1. Делаем запрос
-                // Убедись, что LoginRequest принимает (phone, password)
                 val response = apiService.login(LoginRequest(phone, password))
 
-                // 2. Обрабатываем ответ
                 if (response.isSuccessful && response.body() != null) {
-                    val token = response.body()!!.token
+                    val body = response.body()!!
 
-                    // Сохраняем токен
-                    sessionManager.saveAuthToken(token)
+                    // Сохраняем оба токена
+                    sessionManager.saveAuthToken(body.token)
+                    body.refreshToken?.let { sessionManager.saveRefreshToken(it) } // <-- СОХРАНЯЕМ REFRESH
+
                     _loginResult.value = Result.success(true)
                 } else {
-                    // Улучшенная обработка ошибок
                     val errorMessage = when (response.code()) {
                         401, 403 -> "Неверный телефон или пароль"
                         404 -> "Пользователь не найден"
@@ -59,7 +55,6 @@ class LoginViewModel(
             } catch (e: Exception) {
                 _loginResult.value = Result.failure(e)
             } finally {
-                // Скрываем загрузку в любом случае
                 _isLoading.value = false
             }
         }

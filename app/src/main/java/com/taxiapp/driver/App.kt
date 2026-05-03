@@ -8,6 +8,7 @@ import android.os.Build
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
+import com.taxiapp.driver.network.ApiClient
 import com.taxiapp.driver.service.FloatingWidgetService
 import com.taxiapp.driver.utils.SessionManager
 
@@ -20,10 +21,11 @@ class App : Application(), DefaultLifecycleObserver {
 
         sessionManager = SessionManager(this)
 
-        // Створюємо канали сповіщень
-        createNotificationChannels()
+        // --- ПРИВЯЗЫВАЕМ SESSION MANAGER К API CLIENT ---
+        ApiClient.sessionManager = sessionManager
+        // ------------------------------------------------
 
-        // Підписуємось на події життєвого циклу
+        createNotificationChannels()
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
     }
 
@@ -31,7 +33,6 @@ class App : Application(), DefaultLifecycleObserver {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val manager = getSystemService(NotificationManager::class.java)
 
-            // 1. Канал для Foreground Service (Геолокація) - Низький пріоритет (без звуку)
             val serviceChannel = NotificationChannel(
                 "location_channel",
                 "Геолокація водія",
@@ -39,7 +40,6 @@ class App : Application(), DefaultLifecycleObserver {
             )
             manager.createNotificationChannel(serviceChannel)
 
-            // 2. Канал для Важливих сповіщень (Прибуття) - Високий пріоритет (зі звуком і спливаючим вікном)
             val alertChannel = NotificationChannel(
                 "driver_alert_channel",
                 "Сповіщення про замовлення",
@@ -53,12 +53,10 @@ class App : Application(), DefaultLifecycleObserver {
     }
 
     override fun onStart(owner: LifecycleOwner) {
-        // Ховаємо плаваючу кнопку (швидкого доступу), коли ми в додатку
         stopService(Intent(this, FloatingWidgetService::class.java))
     }
 
     override fun onStop(owner: LifecycleOwner) {
-        // Якщо функція швидкого доступу увімкнена -> показуємо кнопку
         if (sessionManager.isQuickAccessEnabled()) {
             startService(Intent(this, FloatingWidgetService::class.java))
         }

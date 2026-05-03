@@ -7,6 +7,10 @@ import retrofit2.Call
 
 // --- DTO КЛАССЫ ---
 
+// <-- НОВЫЙ DTO ДЛЯ РЕФРЕША -->
+data class TokenRefreshRequestDto(val refreshToken: String)
+// <--------------------------->
+
 data class ChatMessageDto(
     val id: Long?,
     val orderId: Long,
@@ -115,7 +119,12 @@ data class MessageResponse(
 
 interface DriverApiService {
 
-    // --- ВХОД ---
+    // --- ВХОД И РЕФРЕШ ---
+
+    // <-- ЭНДПОИНТ ДЛЯ РЕФРЕША (Синхронный) -->
+    @POST("api/v1/auth/refresh")
+    fun refreshTokenSync(@Body request: TokenRefreshRequestDto): Call<LoginResponse>
+
     @POST("api/v1/auth/login")
     suspend fun login(@Body request: LoginRequest): Response<LoginResponse>
 
@@ -126,8 +135,6 @@ interface DriverApiService {
     suspend fun verifyDriverLoginSms(@Body request: SmsVerifyDto): Response<LoginResponse>
 
     // --- ПРОФИЛЬ И НАСТРОЙКИ ---
-
-
     @POST("api/v1/driver/profile/delete-request")
     suspend fun requestAccountDeletion(@Body emptyBody: Map<String, String> = emptyMap()): Response<MessageResponse>
 
@@ -163,7 +170,6 @@ interface DriverApiService {
     @PUT("api/v1/driver/profile/rnokpp")
     suspend fun updateRnokpp(@Body request: UpdateDriverRequest): Response<MessageResponse>
 
-    // НОВЫЙ МЕТОД: Обновление медицинских данных
     @PATCH("api/v1/driver/profile/medical")
     suspend fun updateDisabilityStatus(@Body request: UpdateDisabilityRequest): Response<MessageResponse>
 
@@ -195,7 +201,7 @@ interface DriverApiService {
     @POST("api/v1/driver/orders/{id}/cancel")
     suspend fun cancelOrder(
         @Path("id") orderId: Long,
-        @Query("reasonId") reasonId: Long? = null // Може бути null, якщо причина не обрана (стара логіка)
+        @Query("reasonId") reasonId: Long? = null
     ): Response<Void>
 
     @POST("api/v1/driver/orders/{id}/confirm")
@@ -219,12 +225,11 @@ interface DriverApiService {
     suspend fun deleteLocation(): Response<Void>
 
     // --- УВЕДОМЛЕНИЯ ---
-    // --- УВЕДОМЛЕНИЯ ---
     @POST("api/v1/driver/orders/{id}/arrive")
-    suspend fun notifyArrived(@Path("id") orderId: Long): Response<Order> // Изменили Void на Order
+    suspend fun notifyArrived(@Path("id") orderId: Long): Response<Order>
 
     @POST("api/v1/driver/orders/{id}/start")
-    suspend fun startTrip(@Path("id") orderId: Long): Response<Order> // Изменили Void на Order
+    suspend fun startTrip(@Path("id") orderId: Long): Response<Order>
 
     @GET("api/v1/driver/orders/active")
     suspend fun getActiveOrder(): Response<Order>

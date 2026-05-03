@@ -6,7 +6,10 @@ data class LoginResponse(
     @SerializedName("token")
     val token: String,
 
-    @SerializedName("userId") // Сервер шлет "userId"
+    @SerializedName("refreshToken") // <-- ДОБАВЛЕНО
+    val refreshToken: String?,
+
+    @SerializedName("userId")
     val userId: Long,
 
     @SerializedName("phoneNumber")
@@ -18,10 +21,9 @@ data class LoginResponse(
     @SerializedName("role")
     val role: String?,
 
-    @SerializedName("isNewUser") // Сервер шлет "isNewUser"
+    @SerializedName("isNewUser")
     val isNew: Boolean? = false,
 
-    // --- ДОДАНО НОВЕ ПОЛЕ ---
     @SerializedName("pendingDeletion", alternate = ["isPendingDeletion"])
     val isPendingDeletion: Boolean? = false
 )
