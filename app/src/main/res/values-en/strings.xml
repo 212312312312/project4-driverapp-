@@ -19,6 +19,13 @@
     <string name="settings_notifications">Notifications</string>
     <string name="settings_notifications_desc">Status change reminders</string>
 
+
+
+    <string name="payment_failed_title">Card Payment Failed!</string>
+    <string name="payment_failed_message">The client\'s card has insufficient funds or is blocked.\n\nThe payment method has been automatically changed to CASH.\nPlease collect cash from the passenger and press "Complete" again.</string>
+    <string name="btn_understood">Understood</string>
+
+
     <string name="feature_coming_soon">This feature is coming soon</string>
     <string name="me_account">My Account</string>
     <string name="acc_phone_placeholder">+380 XX XXX XX XX</string>

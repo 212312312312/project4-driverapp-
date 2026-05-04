@@ -656,6 +656,16 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
                             updateChatBadgeUI()
 
                             showRatingDialog()
+                        } else if (response.code() == 402) {
+                            // Сервер сообщил, что оплата картой не прошла!
+                            // 1. Меняем локально на наличные
+                            currentOrder = currentOrder?.copy(paymentMethod = "CASH")
+                            // 2. Обновляем текст на экране (сменится на "Готівка")
+                            setupOrderData()
+                            // 3. Показываем водителю критический диалог
+                            showPaymentErrorDialog()
+                        } else {
+                            Toast.makeText(this@OrderProgressActivity, "Помилка сервера: ${response.code()}", Toast.LENGTH_SHORT).show()
                         }
                     }
                     RideState.COMPLETED -> { }
@@ -693,6 +703,16 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
                 if (response.isSuccessful) { dialog.dismiss(); finishAndReturnToMap() } else Toast.makeText(this@OrderProgressActivity, "Помилка сервера", Toast.LENGTH_SHORT).show()
             } catch (e: Exception) { Toast.makeText(this@OrderProgressActivity, "Помилка мережі", Toast.LENGTH_SHORT).show() }
         }
+    }
+    private fun showPaymentErrorDialog() {
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(getString(R.string.payment_failed_title))
+            .setMessage(getString(R.string.payment_failed_message))
+            .setCancelable(false) // Запрещаем закрывать кликом мимо диалога
+            .setPositiveButton(getString(R.string.btn_understood)) { dialog, _ ->
+                dialog.dismiss()
+            }
+            .show()
     }
 
     fun incrementUnreadMessages() {

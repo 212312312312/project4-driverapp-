@@ -13,6 +13,11 @@
     <string name="theme_dark">Темна</string>
     <string name="theme_light">Світла</string>
 
+
+    <string name="payment_failed_title">Помилка оплати карткою!</string>
+    <string name="payment_failed_message">На картці клієнта недостатньо коштів або її заблоковано.\n\nСпосіб оплати автоматично змінено на ГОТІВКУ.\nБудь ласка, візьміть гроші з пасажира та натисніть "Завершити" ще раз.</string>
+    <string name="btn_understood">Зрозуміло</string>
+
     <string name="settings_ether_title">Вигляд замовлення</string>
     <string name="settings_ether_preview">Попередній перегляд</string>
     <string name="settings_ether_sector_first">Спочатку сектор</string>
