@@ -271,9 +271,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun setupUI() {
         drawerLayout = findViewById(R.id.drawer_layout)
         navViewContent = findViewById(R.id.nav_view_content)
-        val displayMetrics = resources.displayMetrics
-        val drawerWidth = (displayMetrics.widthPixels * 0.8).toInt()
-        navViewContent.layoutParams.width = drawerWidth
+
 
         tvSearchModeTitle = findViewById(R.id.tvSearchModeTitle)
         tvSearchModeSubtitle = findViewById(R.id.tvSearchModeSubtitle)
@@ -281,7 +279,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         // --- ВИПРАВЛЕНО ТУТ ---
         // Ставимо правильний текст за замовчуванням (Ланцюг + Неактивно)
-        tvSearchModeTitle.text = "⚡ Ланцюг замовлень"
+        tvSearchModeTitle.text = getString(R.string.main_search_chain_title)
         tvSearchModeSubtitle.text = "Натисніть для активації"
         
         // Примусово оновлюємо візуал, щоб він відповідав статусу isSearchActive = false
@@ -461,19 +459,22 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
                     when (state.mode) {
                         DriverSearchMode.MANUAL -> {
-                            tvSearchModeTitle.text = "⚡ Ланцюг замовлень"
+                            // Убираем хардкод, берем чистую строку из ресурсов
+                            tvSearchModeTitle.text = getString(R.string.main_search_chain_title)
                             searchRadiusCircle?.isVisible = true
                             isSearchActive = false
                             sessionManager.saveSearchMode(DriverSearchMode.CHAIN)
                         }
                         DriverSearchMode.CHAIN -> {
-                            tvSearchModeTitle.text = "⚡ Ланцюг замовлень"
+                            // Убираем хардкод, берем чистую строку из ресурсов
+                            tvSearchModeTitle.text = getString(R.string.main_search_chain_title)
                             searchRadiusCircle?.isVisible = true
                             sessionManager.saveSearchMode(DriverSearchMode.CHAIN)
                         }
                         DriverSearchMode.HOME -> {
                             val sectorsText = if (state.homeSectorNames.isNullOrEmpty()) "?" else state.homeSectorNames
-                            tvSearchModeTitle.text = "🏠 Додому ($sectorsText)"
+                            // Убираем эмодзи домика, оставляем строго текст
+                            tvSearchModeTitle.text = "Додому ($sectorsText)"
                             searchRadiusCircle?.isVisible = true
                             sessionManager.saveSearchMode(DriverSearchMode.HOME)
                         }
@@ -590,11 +591,28 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     override fun onMapReady(googleMap: GoogleMap) {
         map = googleMap
-        try { map.setMapStyle(MapStyleOptions.loadRawResourceStyle(this, R.raw.map_style_dark)) } catch (e: Exception) {}
+        try {
+            map.setMapStyle(MapStyleOptions.loadRawResourceStyle(this, R.raw.map_style_dark))
+        } catch (e: Exception) {}
+
+        // --- ПРАВИЛЬНОЕ ЗАКРЕПЛЕНИЕ И СМЕЩЕНИЕ ЦЕНТРА КАРТЫ ---
+        // Переводим 180dp (суммарная высота панелей с отступами) в физические пиксели экрана смартфона
+        val density = resources.displayMetrics.density
+        val paddingBottomInPixels = (180 * density).toInt()
+
+        // Задаем внутренний отступ для карты (слева, сверху, справа, снизу)
+        map.setPadding(0, 0, 0, paddingBottomInPixels)
+        // ------------------------------------------------------
+
         updateMapUI()
         centerMapOnUser()
     }
-
+    private fun resetHotspotsButton() {
+        isHeatmapVisible = false
+        clearHeatmapFromMap()
+        btnHotspots.backgroundTintList = null
+        btnHotspots.imageTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_text_primary))
+    }
     private fun generateGlowBitmap(color: Int): BitmapDescriptor {
         val size = 512
         val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
@@ -608,9 +626,24 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun toggleHeatmap() {
-        if (isSectorsVisible) { clearSectorsFromMap(); isSectorsVisible = false }
-        if (isHeatmapVisible) { clearHeatmapFromMap(); isHeatmapVisible = false; btnHotspots.backgroundTintList = null; Toast.makeText(this, "Рибні місця приховано", Toast.LENGTH_SHORT).show() }
-        else { loadAndDrawHeatmap(); isHeatmapVisible = true; btnHotspots.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_neon_teal)); btnHotspots.imageTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_black_bg)) }
+        if (isSectorsVisible) {
+            clearSectorsFromMap()
+            isSectorsVisible = false
+        }
+
+        if (isHeatmapVisible) {
+            // Если рыбные места уже были включены — выключаем их
+            resetHotspotsButton()
+            Toast.makeText(this, "Рибні місця приховано", Toast.LENGTH_SHORT).show()
+        } else {
+            // Включаем визуальный режим активности ТОЛЬКО при нажатии
+            isHeatmapVisible = true
+            btnHotspots.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_neon_teal))
+            btnHotspots.imageTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_black_bg))
+
+            // Запускаем сетевой запрос
+            loadAndDrawHeatmap()
+        }
     }
 
     private fun loadAndDrawHeatmap() {
@@ -619,10 +652,24 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 val response = ApiClient.getInstance().getApiService(this@MainActivity).getHeatmap()
                 if (response.isSuccessful && response.body() != null) {
                     val zones = response.body()!!
-                    if (zones.isNotEmpty()) { drawHeatmapGlow(zones); Toast.makeText(this@MainActivity, "Знайдено ${zones.size} активних зон", Toast.LENGTH_SHORT).show() }
-                    else Toast.makeText(this@MainActivity, "Зараз немає скупчень замовлень", Toast.LENGTH_SHORT).show()
-                } else Toast.makeText(this@MainActivity, "Не вдалося отримати дані Heatmap", Toast.LENGTH_SHORT).show()
-            } catch (e: Exception) { Toast.makeText(this@MainActivity, "Помилка завантаження Heatmap", Toast.LENGTH_SHORT).show() }
+                    if (zones.isNotEmpty()) {
+                        drawHeatmapGlow(zones)
+                        Toast.makeText(this@MainActivity, "Знайдено ${zones.size} active зон", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(this@MainActivity, "Зараз немає скупчень замовлень", Toast.LENGTH_SHORT).show()
+                        // Если зон нет, то кнопка не должна гореть активной
+                        resetHotspotsButton()
+                    }
+                } else {
+                    Toast.makeText(this@MainActivity, "Не вдалося отримати дані Heatmap", Toast.LENGTH_SHORT).show()
+                    // Ошибка сервера — гасим кнопку назад в дефолт
+                    resetHotspotsButton()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@MainActivity, "Помилка завантаження Heatmap", Toast.LENGTH_SHORT).show()
+                // Сетевая ошибка — гасим кнопку назад в дефолт, она больше не исчезнет!
+                resetHotspotsButton()
+            }
         }
     }
 
@@ -639,9 +686,18 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun clearHeatmapFromMap() { heatmapOverlays.forEach { it.remove() }; heatmapOverlays.clear() }
 
     private fun toggleSectors() {
-        if (isHeatmapVisible) { clearHeatmapFromMap(); isHeatmapVisible = false; btnHotspots.backgroundTintList = null; btnHotspots.imageTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_neon_teal)) }
-        if (isSectorsVisible) { clearSectorsFromMap(); isSectorsVisible = false; Toast.makeText(this, "Сектори приховано", Toast.LENGTH_SHORT).show() }
-        else { loadAndDrawSectors(); isSectorsVisible = true }
+        if (isHeatmapVisible) {
+            // ИСПРАВЛЕНО: При закрытии хитмапа из таба секторов сбрасываем иконку на driver_text_primary, а не на бирюзовый!
+            resetHotspotsButton()
+        }
+        if (isSectorsVisible) {
+            clearSectorsFromMap()
+            isSectorsVisible = false
+            Toast.makeText(this, "Сектори приховано", Toast.LENGTH_SHORT).show()
+        } else {
+            loadAndDrawSectors()
+            isSectorsVisible = true
+        }
     }
 
     private fun loadAndDrawSectors() {

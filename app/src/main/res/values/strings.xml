@@ -245,7 +245,7 @@
     <string name="main_tooltip_hotspots">Рибні місця</string>
     <string name="main_tooltip_sectors">Сектори</string>
     <string name="main_tooltip_lock">Закріпити камеру</string>
-    <string name="main_search_chain_title">⚡ Ланцюг замовлень</string>
+    <string name="main_search_chain_title">Ланцюг замовлень</string>
     <string name="main_search_chain_subtitle">Пошук замовлень...</string>
     <string name="main_nav_ether">Ефір</string>
     <string name="main_nav_orders">Замовлення</string>

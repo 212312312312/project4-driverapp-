@@ -198,7 +198,7 @@
     <string name="main_tooltip_hotspots">Hotspots</string>
     <string name="main_tooltip_sectors">Sectors</string>
     <string name="main_tooltip_lock">Lock Camera</string>
-    <string name="main_search_chain_title">⚡ Order Chain</string>
+    <string name="main_search_chain_title">Order Chain</string>
     <string name="main_search_chain_subtitle">Searching for orders...</string>
     <string name="main_nav_ether">Ether</string>
     <string name="main_nav_orders">Orders</string>
