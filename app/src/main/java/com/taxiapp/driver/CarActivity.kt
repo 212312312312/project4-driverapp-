@@ -153,6 +153,7 @@ class CarActivity : AppCompatActivity() {
         }
     }
 
+    // Изменение внутри метода bindCarDetails в файле CarActivity.kt
     private fun bindCarDetails(car: CarDto) {
         findViewById<TextView>(R.id.tv_car_model).text = "${car.make} ${car.model}"
         findViewById<TextView>(R.id.tv_plate_number).text = car.plateNumber
@@ -171,9 +172,13 @@ class CarActivity : AppCompatActivity() {
         }
 
         val imgCar = findViewById<ImageView>(R.id.img_car_photo)
-        if (!car.photoUrl.isNullOrEmpty()) {
+
+        // ИСПРАВЛЕНО: Умный фолбек на стороне клиента. Если сервер прислал пустой photoUrl, приложение само берет photoRight
+        val finalPhotoUrl = if (!car.photoUrl.isNullOrEmpty()) car.photoUrl else car.photoRight
+
+        if (!finalPhotoUrl.isNullOrEmpty()) {
             imgCar.clearColorFilter()
-            Glide.with(this).load(car.photoUrl).centerCrop().into(imgCar)
+            Glide.with(this).load(finalPhotoUrl).centerCrop().into(imgCar)
         } else {
             imgCar.setImageResource(R.drawable.ic_car)
             imgCar.setColorFilter(Color.parseColor("#444444"))
