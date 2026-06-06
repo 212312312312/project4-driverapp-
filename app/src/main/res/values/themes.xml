@@ -5,6 +5,9 @@
         <item name="colorOnPrimary">@color/driver_neon_teal</item>
         <item name="android:statusBarColor">@color/driver_black_bg</item>
         <item name="android:windowLightStatusBar">false</item>
+
+        <item name="android:fontFamily">@font/app_font_family</item>
+        <item name="fontFamily">@font/app_font_family</item>
     </style>
 
     <style name="Shape.Card.Top" parent="">
@@ -14,11 +17,13 @@
         <item name="cornerSizeBottomLeft">4dp</item>
         <item name="cornerSizeBottomRight">4dp</item>
     </style>
+
     <style name="RatingBarNoRipple" parent="Widget.AppCompat.RatingBar">
         <item name="colorControlNormal">@color/driver_text_secondary</item>
         <item name="colorControlActivated">@color/taxi_yellow</item>
         <item name="android:colorControlHighlight">@android:color/transparent</item>
     </style>
+
     <style name="Shape.Card.FlatTop" parent="">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSizeTopLeft">0dp</item>
@@ -55,6 +60,8 @@
         <item name="android:textColor">@color/white</item>
         <item name="android:layout_gravity">center_vertical</item>
         <item name="android:layout_marginStart">16dp</item>
+        <item name="android:fontFamily">@font/app_font_family</item>
+        <item name="fontFamily">@font/app_font_family</item>
     </style>
 
     <style name="MenuIconStyle">
@@ -92,6 +99,8 @@
         <item name="android:layout_weight">1</item>
         <item name="android:textSize">16sp</item>
         <item name="android:textColor">@color/driver_text_primary</item>
+        <item name="android:fontFamily">@font/app_font_family</item>
+        <item name="fontFamily">@font/app_font_family</item>
     </style>
 
     <style name="InfoButtonIconStyle">
@@ -100,6 +109,7 @@
         <item name="android:src">@drawable/ic_chevron</item>
         <item name="tint">@color/driver_text_secondary</item>
     </style>
+
     <style name="ListTextStyle">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
@@ -109,7 +119,10 @@
         <item name="drawableStartCompat">@drawable/ic_list_dot</item>
         <item name="drawableTint">@color/driver_text_secondary</item>
         <item name="android:drawablePadding">12dp</item>
+        <item name="android:fontFamily">@font/app_font_family</item>
+        <item name="fontFamily">@font/app_font_family</item>
     </style>
+
     <style name="OtpDigitStyle">
         <item name="android:layout_width">0dp</item>
         <item name="android:layout_height">match_parent</item>
@@ -120,5 +133,7 @@
         <item name="android:textColor">@color/driver_text_primary</item>
         <item name="android:textSize">24sp</item>
         <item name="android:textStyle">bold</item>
+        <item name="android:fontFamily">@font/app_font_family</item>
+        <item name="fontFamily">@font/app_font_family</item>
     </style>
 </resources>

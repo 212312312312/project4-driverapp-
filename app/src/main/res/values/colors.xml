@@ -1,8 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="driver_black_bg">#F4F6F8</color>       <color name="driver_card_bg">#FFFFFF</color>        <color name="driver_neon_teal">#0097A7</color>      <color name="driver_teal_dim">#B2EBF2</color>
+    <color name="driver_black_bg">#FFFFFF</color>
+    <color name="driver_card_bg">#F3F4F6</color>
 
-    <color name="driver_text_primary">#212121</color>   <color name="driver_text_secondary">#757575</color> <color name="driver_text_black">#000000</color>
+    <color name="driver_neon_teal">#33CCA1</color>
+    <color name="driver_teal_dim">#A3EAD5</color>
+
+    <color name="driver_text_primary">#212121</color>
+    <color name="driver_text_secondary">#757575</color>
+    <color name="driver_text_black">#000000</color>
 
     <color name="driver_error">#D32F2F</color>
     <color name="driver_error_red">#B71C1C</color>
