@@ -1,10 +1,10 @@
 package com.taxiapp.driver
 
 import android.content.Intent
+import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.text.InputType
-import android.util.Log
 import android.view.View
 import android.widget.EditText
 import android.widget.TextView
@@ -14,35 +14,73 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.tabs.TabLayout
 import com.taxiapp.driver.network.ApiClient
 import com.taxiapp.driver.network.InitPaymentRequest
 import kotlinx.coroutines.launch
 
 class WalletActivity : AppCompatActivity() {
 
+    private lateinit var walletTabs: TabLayout
+    private lateinit var tvBalanceLabel: TextView
     private lateinit var tvBalance: TextView
+    private lateinit var btnTopUp: View
+    private lateinit var layoutFundsButtons: View // Ссылка на контейнер кнопок
     private lateinit var adapter: WalletAdapter
     private lateinit var rvTransactions: RecyclerView
+
+    private var commissionBalance: Double = 0.00
+    private var orderEarningsBalance: Double = 1450.00 // Баланс за заказы
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_wallet)
 
-        tvBalance = findViewById(R.id.tv_main_balance)
-        rvTransactions = findViewById(R.id.rv_transactions)
+        initViews()
+        setupListeners()
+        setupRecyclerView()
 
-        // Настраиваем список
+        loadData()
+    }
+
+    private fun initViews() {
+        walletTabs = findViewById(R.id.wallet_tabs)
+        tvBalanceLabel = findViewById(R.id.tv_balance_label)
+        tvBalance = findViewById(R.id.tv_main_balance)
+        btnTopUp = findViewById(R.id.btn_top_up)
+        layoutFundsButtons = findViewById(R.id.layout_funds_buttons)
+        rvTransactions = findViewById(R.id.rv_transactions)
+    }
+
+    private fun setupListeners() {
+        findViewById<View>(R.id.btn_back).setOnClickListener { finish() }
+        btnTopUp.setOnClickListener { showTopUpDialog() }
+
+        walletTabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab?) {
+                updateUIState(tab?.position == 0)
+            }
+            override fun onTabUnselected(tab: TabLayout.Tab?) {}
+            override fun onTabReselected(tab: TabLayout.Tab?) {}
+        })
+
+        findViewById<View>(R.id.btn_my_cards).setOnClickListener {
+            Toast.makeText(this, "Ваші картки: в розробці", Toast.LENGTH_SHORT).show()
+        }
+        findViewById<View>(R.id.btn_my_funds).setOnClickListener {
+            Toast.makeText(this, "Ваші кошти: в розробці", Toast.LENGTH_SHORT).show()
+        }
+        findViewById<View>(R.id.btn_top_up).setOnClickListener {
+            val intent = Intent(this, TopUpActivity::class.java)
+            intent.putExtra("CURRENT_BALANCE", commissionBalance) // Передаем double баланса для красивого парсинга
+            startActivity(intent)
+        }
+    }
+
+    private fun setupRecyclerView() {
         adapter = WalletAdapter()
         rvTransactions.layoutManager = LinearLayoutManager(this)
         rvTransactions.adapter = adapter
-
-        findViewById<View>(R.id.btn_back).setOnClickListener { finish() }
-
-        findViewById<View>(R.id.btn_top_up).setOnClickListener {
-            showTopUpDialog()
-        }
-
-        loadData()
     }
 
     override fun onResume() {
@@ -50,14 +88,39 @@ class WalletActivity : AppCompatActivity() {
         loadData()
     }
 
-    // ... (Методы showTopUpDialog и initiatePayment оставляем как были в прошлом шаге) ...
-    // Вставь их сюда, если нужно, я сократил для удобства чтения.
+    // --- УПРАВЛЕНИЕ ОТОБРАЖЕНИЕМ И ВИДИМОСТЬЮ БЛОКОВ (Исправление по примечанию) ---
+    private fun updateUIState(isCommissionTab: Boolean) {
+        if (isCommissionTab) {
+            tvBalanceLabel.text = "Поточний баланс" // Текст с большой буквы, без капса
+            btnTopUp.visibility = View.VISIBLE
+            layoutFundsButtons.visibility = View.GONE // Кнопки Скрыты на вкладке Баланс
+            renderBalance(commissionBalance)
+        } else {
+            tvBalanceLabel.text = "Гроші за замовлення" // Текст с большой буквы, без капса
+            btnTopUp.visibility = View.GONE // Кнопка пополнения Скрыта на Операциях
+            layoutFundsButtons.visibility = View.VISIBLE // Кнопки карт и выплат Доступны ТОЛЬКО тут
+            renderBalance(orderEarningsBalance)
+        }
+    }
+
+    private fun renderBalance(amount: Double) {
+        tvBalance.text = "%.2f ₴".format(amount)
+        if (amount < 0) {
+            tvBalance.setTextColor(getColor(R.color.driver_error_red))
+        } else {
+            tvBalance.setTextColor(getColor(R.color.driver_neon_teal))
+        }
+    }
+
     private fun showTopUpDialog() {
         val input = EditText(this)
         input.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
         input.hint = "100"
         val container = android.widget.FrameLayout(this)
-        val params = android.widget.FrameLayout.LayoutParams(android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT)
+        val params = android.widget.FrameLayout.LayoutParams(
+            android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+            android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+        )
         params.leftMargin = 50; params.rightMargin = 50
         input.layoutParams = params
         container.addView(input)
@@ -95,34 +158,21 @@ class WalletActivity : AppCompatActivity() {
     private fun loadData() {
         lifecycleScope.launch {
             try {
-                // 1. Загружаем баланс
                 val profileResp = ApiClient.getInstance().getApiService(this@WalletActivity).getDriverProfile()
                 if (profileResp.isSuccessful && profileResp.body() != null) {
-                    val balance = profileResp.body()!!.balance
-                    tvBalance.text = "%.2f ₴".format(balance)
-
-                    // Меняем цвет баланса (Красный если < 0, Зеленый/Тиловый если >= 0)
-                    if (balance < 0) {
-                        tvBalance.setTextColor(getColor(R.color.driver_error_red))
-                    } else {
-                        tvBalance.setTextColor(getColor(R.color.driver_neon_teal))
-                    }
+                    commissionBalance = profileResp.body()!!.balance
+                    updateUIState(walletTabs.selectedTabPosition == 0)
                 }
 
-                // 2. Загружаем историю транзакций
                 val txResp = ApiClient.getInstance().getApiService(this@WalletActivity).getWalletTransactions()
                 if (txResp.isSuccessful && txResp.body() != null) {
                     val list = txResp.body()!!
-
-                    if (list.isEmpty()) {
-                        // Можно показать текст "История пуста" (если есть такой TextView в layout)
-                    } else {
+                    if (list.isNotEmpty()) {
                         adapter.submitList(list)
                     }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
-                // Не показываем ошибку пользователю, если просто нет инета, чтобы не раздражать
             }
         }
     }

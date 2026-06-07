@@ -5,91 +5,90 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/driver_card_bg">
+    android:background="@color/driver_black_bg">
 
-    <LinearLayout
+    <RelativeLayout
         android:id="@+id/header"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:padding="16dp"
+        android:layout_marginTop="32dp"
+        android:layout_marginBottom="16dp"
+        android:layout_marginHorizontal="24dp"
         app:layout_constraintTop_toTopOf="parent">
 
-        <ImageButton
+        <ImageView
             android:id="@+id/btn_back"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:background="@drawable/bg_round_button"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
             android:src="@drawable/ic_arrow_back_black"
-            android:padding="10dp"
-            app:tint="@color/white" />
+            app:tint="@color/driver_text_primary"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:focusable="true"
+            android:layout_centerVertical="true"
+            android:layout_alignParentStart="true" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_toEndOf="@id/btn_back"
+            android:layout_marginStart="16dp"
             android:text="@string/car_title"
-            android:textColor="@color/white"
-            android:textSize="20sp"
+            android:textColor="@color/driver_text_primary"
+            android:textSize="22sp"
             android:textStyle="bold"
-            android:layout_marginStart="16dp" />
-    </LinearLayout>
+            android:layout_centerVertical="true" />
+    </RelativeLayout>
 
-    <LinearLayout
-        android:id="@+id/layout_switcher"
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/car_tabs"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:background="#1E1E1E"
-        android:padding="4dp"
-        android:layout_marginHorizontal="16dp"
+        android:background="@color/driver_black_bg"
+        app:tabIndicatorColor="@color/driver_neon_teal"
+        app:tabSelectedTextColor="@color/driver_neon_teal"
+        app:tabTextColor="@color/driver_text_secondary"
+        app:tabRippleColor="@android:color/transparent"
+        app:tabTextAppearance="@style/CarTabTextStyle"
+        app:tabSelectedTextAppearance="@style/CarTabTextStyle"
         app:layout_constraintTop_toBottomOf="@id/header">
 
-        <TextView
-            android:id="@+id/tab_active"
-            android:layout_width="0dp"
+        <com.google.android.material.tabs.TabItem
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/car_tab_active"
-            android:gravity="center"
-            android:paddingVertical="8dp"
-            android:background="@drawable/bg_round_button"
-            android:backgroundTint="#333333"
-            android:textColor="@color/white"
-            android:textStyle="bold" />
+            android:text="@string/car_tab_active" />
 
-        <TextView
-            android:id="@+id/tab_list"
-            android:layout_width="0dp"
+        <com.google.android.material.tabs.TabItem
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/car_tab_list"
-            android:gravity="center"
-            android:paddingVertical="8dp"
-            android:textColor="#888888" />
-    </LinearLayout>
+            android:text="@string/car_tab_list" />
+    </com.google.android.material.tabs.TabLayout>
 
     <ScrollView
         android:id="@+id/scroll_details"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="8dp"
         android:visibility="visible"
-        app:layout_constraintTop_toBottomOf="@id/layout_switcher"
-        app:layout_constraintBottom_toBottomOf="parent">
+        android:overScrollMode="never"
+        android:scrollbars="none"
+        app:layout_constraintTop_toBottomOf="@id/car_tabs"
+        app:layout_constraintBottom_toTopOf="@id/btn_add_car">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingBottom="80dp">
-            <androidx.cardview.widget.CardView
+            android:paddingBottom="24dp">
+
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="200dp"
-                android:layout_marginHorizontal="16dp"
-                app:cardCornerRadius="12dp"
-                app:cardBackgroundColor="#1E1E1E"
-                app:cardElevation="0dp">
+                app:cardCornerRadius="0dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp"
+                app:cardBackgroundColor="@color/driver_card_bg"
+                android:layout_marginBottom="12dp">
 
                 <ImageView
                     android:id="@+id/img_car_photo"
@@ -97,151 +96,177 @@
                     android:layout_height="match_parent"
                     android:scaleType="centerCrop"
                     android:src="@drawable/ic_car" />
-            </androidx.cardview.widget.CardView>
+            </com.google.android.material.card.MaterialCardView>
 
-            <androidx.constraintlayout.widget.ConstraintLayout
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:paddingHorizontal="20dp"
-                android:layout_marginTop="16dp">
+                app:cardCornerRadius="0dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp"
+                app:cardBackgroundColor="@color/driver_card_bg"
+                android:layout_marginBottom="12dp">
 
-                <TextView
-                    android:id="@+id/tv_car_model"
-                    android:layout_width="0dp"
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/car_status_loading"
-                    android:textColor="@color/white"
-                    android:textSize="22sp"
-                    android:textStyle="bold"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintEnd_toStartOf="@id/tv_plate_number"
-                    app:layout_constraintTop_toTopOf="parent"
-                    android:layout_marginEnd="8dp" />
-                <TextView
-                    android:id="@+id/tv_plate_number"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/car_plate_placeholder"
-                    android:background="@drawable/bg_license_plate"
-                    android:paddingHorizontal="10dp"
-                    android:paddingVertical="4dp"
-                    android:textColor="#FFFFFF"
-                    android:textSize="15sp"
-                    android:textStyle="bold"
-                    android:fontFamily="sans-serif-medium"
-                    android:layout_marginStart="8dp"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintTop_toTopOf="@id/tv_car_model"
-                    app:layout_constraintBottom_toBottomOf="@id/tv_car_model" />
-
-                <LinearLayout
-                    android:id="@+id/layout_color_type"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginTop="8dp"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/tv_car_model">
-
-                    <View
-                        android:id="@+id/view_car_color"
-                        android:layout_width="16dp"
-                        android:layout_height="16dp"
-                        android:background="@drawable/bg_round_button"
-                        android:backgroundTint="#CCCCCC" />
+                    android:paddingHorizontal="24dp"
+                    android:paddingVertical="14dp">
 
                     <TextView
-                        android:id="@+id/tv_car_type"
+                        android:id="@+id/tv_car_model"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:text="@string/car_status_loading"
+                        android:textColor="@color/driver_text_primary"
+                        android:textSize="22sp"
+                        android:textStyle="bold"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintEnd_toStartOf="@id/tv_plate_number"
+                        app:layout_constraintTop_toTopOf="parent"
+                        android:layout_marginEnd="8dp" />
+
+                    <TextView
+                        android:id="@+id/tv_plate_number"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/car_label_type"
-                        android:textColor="#AAAAAA"
+                        android:text="@string/car_plate_placeholder"
+                        android:background="@drawable/bg_license_plate"
+                        android:paddingHorizontal="10dp"
+                        android:paddingVertical="4dp"
+                        android:textColor="#FFFFFF"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:fontFamily="sans-serif-medium"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toTopOf="@id/tv_car_model"
+                        app:layout_constraintBottom_toBottomOf="@id/tv_car_model" />
+
+                    <LinearLayout
+                        android:id="@+id/layout_color_type"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="8dp"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/tv_car_model">
+
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/view_car_color"
+                            android:layout_width="16dp"
+                            android:layout_height="16dp"
+                            app:cardCornerRadius="4dp"
+                            app:cardElevation="0dp"
+                            app:strokeWidth="0dp"
+                            app:cardBackgroundColor="#CCCCCC" />
+
+                        <TextView
+                            android:id="@+id/tv_car_type"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/car_label_type"
+                            android:textColor="@color/driver_text_secondary"
+                            android:textSize="14sp"
+                            android:layout_marginStart="8dp" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tv_car_year"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/car_year_placeholder"
+                        android:textColor="@color/driver_text_secondary"
                         android:textSize="14sp"
-                        android:layout_marginStart="8dp" />
-                </LinearLayout>
+                        android:layout_marginTop="4dp"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/tv_plate_number" />
+                </androidx.constraintlayout.widget.ConstraintLayout>
+            </com.google.android.material.card.MaterialCardView>
 
-                <TextView
-                    android:id="@+id/tv_car_year"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/car_year_placeholder"
-                    android:textColor="#666666"
-                    android:textSize="14sp"
-                    android:layout_marginTop="4dp"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/tv_plate_number" />
-
-            </androidx.constraintlayout.widget.ConstraintLayout>
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="#222222"
-                android:layout_marginVertical="20dp" />
-
-            <LinearLayout
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/btn_branding"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:paddingHorizontal="16dp">
+                app:cardCornerRadius="0dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp"
+                app:cardBackgroundColor="@color/driver_card_bg"
+                android:layout_marginBottom="2dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground">
 
-                <LinearLayout
-                    android:id="@+id/btn_branding"
+                <RelativeLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:background="@drawable/bg_round_button"
-                    android:backgroundTint="#1E1E1E"
-                    android:padding="16dp"
-                    android:layout_marginBottom="12dp">
+                    android:paddingHorizontal="24dp"
+                    android:paddingVertical="16dp">
+
                     <TextView
-                        android:layout_width="0dp"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
                         android:text="@string/car_btn_add_branding"
-                        android:textColor="@color/white"
-                        android:textSize="16sp" />
+                        android:textColor="@color/driver_text_primary"
+                        android:textSize="16sp"
+                        android:layout_alignParentStart="true"
+                        android:layout_centerVertical="true" />
+
                     <ImageView
                         android:layout_width="20dp"
                         android:layout_height="20dp"
                         android:src="@drawable/ic_chevron"
-                        app:tint="#666666" />
-                </LinearLayout>
+                        app:tint="@color/driver_text_secondary"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true" />
+                </RelativeLayout>
+            </com.google.android.material.card.MaterialCardView>
 
-                <LinearLayout
-                    android:id="@+id/btn_services"
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/btn_services"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="0dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp"
+                app:cardBackgroundColor="@color/driver_card_bg"
+                android:layout_marginBottom="16dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground">
+
+                <RelativeLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:background="@drawable/bg_round_button"
-                    android:backgroundTint="#1E1E1E"
-                    android:padding="16dp"
-                    android:layout_marginBottom="24dp">
+                    android:paddingHorizontal="24dp"
+                    android:paddingVertical="16dp">
+
                     <TextView
-                        android:layout_width="0dp"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
                         android:text="@string/car_btn_add_services"
-                        android:textColor="@color/white"
-                        android:textSize="16sp" />
+                        android:textColor="@color/driver_text_primary"
+                        android:textSize="16sp"
+                        android:layout_alignParentStart="true"
+                        android:layout_centerVertical="true" />
+
                     <ImageView
                         android:layout_width="20dp"
                         android:layout_height="20dp"
                         android:src="@drawable/ic_chevron"
-                        app:tint="#666666" />
-                </LinearLayout>
-            </LinearLayout>
+                        app:tint="@color/driver_text_secondary"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true" />
+                </RelativeLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/car_label_classes_services"
-                android:textColor="#666666"
+                android:textColor="@color/driver_text_secondary"
                 android:textSize="14sp"
-                android:layout_marginStart="20dp"
+                android:layout_marginStart="24dp"
                 android:layout_marginBottom="8dp" />
 
             <LinearLayout
@@ -249,33 +274,45 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:paddingHorizontal="16dp">
-            </LinearLayout>
+                android:layout_marginBottom="16dp" />
 
-            <LinearLayout
+            <com.google.android.material.card.MaterialCardView
                 android:id="@+id/btn_documents"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:background="@drawable/bg_round_button"
-                android:backgroundTint="#1E1E1E"
-                android:padding="16dp"
-                android:layout_marginHorizontal="16dp"
-                android:layout_marginTop="24dp">
-                <TextView
-                    android:layout_width="0dp"
+                app:cardCornerRadius="0dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp"
+                app:cardBackgroundColor="@color/driver_card_bg"
+                android:layout_marginBottom="24dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground">
+
+                <RelativeLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/car_btn_documents"
-                    android:textColor="@color/white"
-                    android:textSize="16sp" />
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:src="@drawable/ic_chevron"
-                    app:tint="#666666" />
-            </LinearLayout>
+                    android:paddingHorizontal="24dp"
+                    android:paddingVertical="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/car_btn_documents"
+                        android:textColor="@color/driver_text_primary"
+                        android:textSize="16sp"
+                        android:layout_alignParentStart="true"
+                        android:layout_centerVertical="true" />
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:src="@drawable/ic_chevron"
+                        app:tint="@color/driver_text_secondary"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true" />
+                </RelativeLayout>
+            </com.google.android.material.card.MaterialCardView>
 
         </LinearLayout>
     </ScrollView>
@@ -284,31 +321,51 @@
         android:id="@+id/recycler_cars"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginTop="16dp"
-        android:padding="8dp"
+        android:layout_marginTop="8dp"
         android:clipToPadding="false"
         android:visibility="gone"
-        app:layout_constraintTop_toBottomOf="@id/layout_switcher"
-        app:layout_constraintBottom_toBottomOf="parent" />
+        app:layout_constraintTop_toBottomOf="@id/car_tabs"
+        app:layout_constraintBottom_toTopOf="@id/btn_add_car" />
 
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/btn_add_car"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_margin="24dp"
-        android:src="@android:drawable/ic_input_add"
-        android:contentDescription="@string/car_cd_add_new"
-        android:backgroundTint="#000000"
-        app:tint="#FFFFFF"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:layout_marginHorizontal="9dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="16dp"
+        android:background="@drawable/bg_driver_btn"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btn_save_action"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:text="@string/car_cd_add_new"
+            android:textAllCaps="false"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="@color/white"
+            android:background="@android:color/transparent"
+            android:elevation="0dp"
+            android:stateListAnimator="@null"
+            android:clickable="false"
+            android:focusable="false"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
     <ProgressBar
         android:id="@+id/progress_bar"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:visibility="gone"
+        android:indeterminateTint="@color/driver_text_primary"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"

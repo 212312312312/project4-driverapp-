@@ -6,15 +6,16 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
-import com.taxiapp.driver.network.CarDto // <-- Используем CarDto
+import com.taxiapp.driver.network.CarDto
 
 class CarAdapter(
-    private val onCarClick: (CarDto) -> Unit // <-- CarDto
+    private val onCarClick: (CarDto) -> Unit
 ) : RecyclerView.Adapter<CarAdapter.CarViewHolder>() {
 
-    private var cars: List<CarDto> = emptyList() // <-- CarDto
+    private var cars: List<CarDto> = emptyList()
     private var activeCarId: Long? = null
 
     fun submitList(newList: List<CarDto>, activeId: Long?) {
@@ -42,15 +43,19 @@ class CarAdapter(
         private val imgCheck: ImageView = itemView.findViewById(R.id.img_check_active)
         private val tvAction: TextView = itemView.findViewById(R.id.tv_click_to_activate)
 
-        fun bind(car: CarDto) { // <-- CarDto
+        fun bind(car: CarDto) {
             tvModel.text = "${car.make} ${car.model}"
             tvPlate.text = car.plateNumber
+
+            // Получаем семантический цвет из ресурсов Дизайн-Системы
+            val textPrimaryColor = ContextCompat.getColor(itemView.context, R.color.driver_text_primary)
 
             // Статус и цвет
             when (car.status) {
                 "ACTIVE" -> {
                     tvStatus.text = "АКТИВНЕ"
-                    tvStatus.setTextColor(Color.parseColor("#4CAF50"))
+                    // ИЗМЕНЕНО: Цвет статуса активной машины теперь строго driver_text_primary
+                    tvStatus.setTextColor(textPrimaryColor)
                 }
                 "PENDING" -> {
                     tvStatus.text = "НА ПЕРЕВІРЦІ"
@@ -66,7 +71,7 @@ class CarAdapter(
                 }
             }
 
-            // Фото
+            // Фото автомобиля
             if (!car.photoUrl.isNullOrEmpty()) {
                 Glide.with(itemView.context)
                     .load(car.photoUrl)
@@ -77,12 +82,13 @@ class CarAdapter(
                 imgPhoto.setImageResource(R.drawable.ic_car)
             }
 
-            // Активна ли машина?
+            // Проверка: Текущее ли это авто?
             val isActive = (car.id == activeCarId)
             if (isActive) {
                 imgCheck.visibility = View.VISIBLE
                 tvAction.text = "Поточне авто"
-                tvAction.setTextColor(Color.parseColor("#4CAF50"))
+                // ИЗМЕНЕНО: Текст "Поточне авто" теперь строго в цвете driver_text_primary
+                tvAction.setTextColor(textPrimaryColor)
                 itemView.setOnClickListener(null)
             } else {
                 imgCheck.visibility = View.GONE

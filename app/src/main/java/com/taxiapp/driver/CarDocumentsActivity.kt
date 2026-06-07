@@ -2,8 +2,7 @@ package com.taxiapp.driver
 
 import android.graphics.Color
 import android.os.Bundle
-import android.widget.ImageButton
-import android.widget.ImageView
+import android.widget.ImageView // Используем ImageView вместо ImageButton
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -17,7 +16,8 @@ class CarDocumentsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_car_documents)
 
-        findViewById<ImageButton>(R.id.btn_back).setOnClickListener { finish() }
+        // ИСПРАВЛЕНИЕ: Изменили тип на ImageView, чтобы соответствовать новой разметке хедера
+        findViewById<ImageView>(R.id.btn_back).setOnClickListener { finish() }
 
         loadDocuments()
     }

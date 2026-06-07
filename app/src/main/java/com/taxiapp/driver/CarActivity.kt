@@ -6,31 +6,29 @@ import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
-import android.widget.ImageButton
-import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import android.widget.ImageView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
-import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.google.android.material.tabs.TabLayout
+import com.google.android.material.switchmaterial.SwitchMaterial
 import com.taxiapp.driver.network.ApiClient
-import com.taxiapp.driver.network.CarDto // Используем DTO
+import com.taxiapp.driver.network.CarDto
 import com.taxiapp.driver.network.CarTariffDto
 import com.taxiapp.driver.utils.SessionManager
 import kotlinx.coroutines.launch
 
 class CarActivity : AppCompatActivity() {
 
-    // Элементы переключения
-    private lateinit var tabActive: TextView
-    private lateinit var tabList: TextView
+    private lateinit var carTabs: TabLayout
     private lateinit var scrollViewDetails: View
     private lateinit var recyclerCars: RecyclerView
-    private lateinit var btnAddCar: FloatingActionButton
+    private lateinit var btnAddCar: View
     private lateinit var progressBar: View
 
     private lateinit var carAdapter: CarAdapter
@@ -44,13 +42,11 @@ class CarActivity : AppCompatActivity() {
         setupListeners()
         setupRecyclerView()
 
-        // По умолчанию грузим детали активного авто
         loadActiveCarData()
     }
 
     private fun initViews() {
-        tabActive = findViewById(R.id.tab_active)
-        tabList = findViewById(R.id.tab_list)
+        carTabs = findViewById(R.id.car_tabs)
         scrollViewDetails = findViewById(R.id.scroll_details)
         recyclerCars = findViewById(R.id.recycler_cars)
         btnAddCar = findViewById(R.id.btn_add_car)
@@ -58,16 +54,18 @@ class CarActivity : AppCompatActivity() {
     }
 
     private fun setupListeners() {
-        findViewById<ImageButton>(R.id.btn_back).setOnClickListener { finish() }
+        findViewById<ImageView>(R.id.btn_back).setOnClickListener { finish() }
 
-        // Переключение вкладок
-        tabActive.setOnClickListener { switchTab(true) }
-        tabList.setOnClickListener { switchTab(false) }
+        carTabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab?) {
+                switchTab(tab?.position == 0)
+            }
+            override fun onTabUnselected(tab: TabLayout.Tab?) {}
+            override fun onTabReselected(tab: TabLayout.Tab?) {}
+        })
 
-        // Кнопка добавить авто
         btnAddCar.setOnClickListener { openAddCarForm() }
 
-        // Другие кнопки (заглушки или переходы)
         findViewById<View>(R.id.btn_branding).setOnClickListener {
             Toast.makeText(this, "Брендування: в розробці", Toast.LENGTH_SHORT).show()
         }
@@ -88,44 +86,25 @@ class CarActivity : AppCompatActivity() {
         recyclerCars.adapter = carAdapter
     }
 
-    // --- ИСПРАВЛЕННЫЙ МЕТОД ПЕРЕКЛЮЧЕНИЯ ---
     private fun switchTab(showActive: Boolean) {
+        val targetPosition = if (showActive) 0 else 1
+        if (carTabs.selectedTabPosition != targetPosition) {
+            carTabs.getTabAt(targetPosition)?.select()
+        }
+
         if (showActive) {
-            // Вкладка "Активне"
-            tabActive.setTextColor(Color.WHITE)
-            // Сначала устанавливаем ресурс, потому что background мог быть null
-            tabActive.setBackgroundResource(R.drawable.bg_round_button)
-            tabActive.background.setTint(Color.parseColor("#333333"))
-
-            // Сбрасываем вторую вкладку
-            tabList.setTextColor(Color.parseColor("#888888"))
-            tabList.background = null
-
             scrollViewDetails.visibility = View.VISIBLE
             recyclerCars.visibility = View.GONE
             btnAddCar.visibility = View.GONE
-
             loadActiveCarData()
         } else {
-            // Вкладка "Список"
-            tabList.setTextColor(Color.WHITE)
-            // Сначала устанавливаем ресурс
-            tabList.setBackgroundResource(R.drawable.bg_round_button)
-            tabList.background.setTint(Color.parseColor("#333333"))
-
-            // Сбрасываем первую вкладку
-            tabActive.setTextColor(Color.parseColor("#888888"))
-            tabActive.background = null
-
             scrollViewDetails.visibility = View.GONE
             recyclerCars.visibility = View.VISIBLE
             btnAddCar.visibility = View.VISIBLE
-
             loadCarList()
         }
     }
 
-    // --- ЗАГРУЗКА АКТИВНОГО АВТО ---
     private fun loadActiveCarData() {
         lifecycleScope.launch {
             try {
@@ -133,7 +112,7 @@ class CarActivity : AppCompatActivity() {
 
                 if (response.isSuccessful && response.body() != null) {
                     val profile = response.body()!!
-                    val car = profile.car // CarDto
+                    val car = profile.car
                     activeCarId = car?.id
 
                     if (car != null) {
@@ -153,27 +132,30 @@ class CarActivity : AppCompatActivity() {
         }
     }
 
-    // Изменение внутри метода bindCarDetails в файле CarActivity.kt
     private fun bindCarDetails(car: CarDto) {
         findViewById<TextView>(R.id.tv_car_model).text = "${car.make} ${car.model}"
         findViewById<TextView>(R.id.tv_plate_number).text = car.plateNumber
         findViewById<TextView>(R.id.tv_car_year).text = car.year.toString()
         findViewById<TextView>(R.id.tv_car_type).text = car.carType ?: "Седан"
 
-        val colorView = findViewById<View>(R.id.view_car_color)
-        try {
-            if (car.color.startsWith("#")) {
-                colorView.setBackgroundColor(Color.parseColor(car.color))
+        // Исправлен тип элемента на MaterialCardView для поддержки закругленного квадратика
+        val colorView = findViewById<com.google.android.material.card.MaterialCardView>(R.id.view_car_color)
+        val colorStr = car.color.trim()
+
+        val parsedColor = try {
+            if (colorStr.startsWith("#")) {
+                Color.parseColor(colorStr)
             } else {
-                colorView.setBackgroundColor(parseColorName(car.color))
+                parseColorName(colorStr)
             }
         } catch (e: Exception) {
-            colorView.setBackgroundColor(Color.LTGRAY)
+            Color.LTGRAY
         }
 
-        val imgCar = findViewById<ImageView>(R.id.img_car_photo)
+        // Чистая нативная перекраска фона закругленного квадрата
+        colorView.setCardBackgroundColor(parsedColor)
 
-        // ИСПРАВЛЕНО: Умный фолбек на стороне клиента. Если сервер прислал пустой photoUrl, приложение само берет photoRight
+        val imgCar = findViewById<ImageView>(R.id.img_car_photo)
         val finalPhotoUrl = if (!car.photoUrl.isNullOrEmpty()) car.photoUrl else car.photoRight
 
         if (!finalPhotoUrl.isNullOrEmpty()) {
@@ -185,16 +167,13 @@ class CarActivity : AppCompatActivity() {
         }
     }
 
-    // --- ЗАГРУЗКА СПИСКА ---
     private fun loadCarList() {
         progressBar.visibility = View.VISIBLE
         lifecycleScope.launch {
             try {
-                // Сначала узнаем ID активного
                 val profileResp = ApiClient.getInstance().getApiService(this@CarActivity).getDriverProfile()
                 activeCarId = profileResp.body()?.car?.id
 
-                // Теперь список
                 val listResp = ApiClient.getInstance().getApiService(this@CarActivity).getMyCars()
                 if (listResp.isSuccessful && listResp.body() != null) {
                     carAdapter.submitList(listResp.body()!!, activeCarId)
@@ -209,7 +188,7 @@ class CarActivity : AppCompatActivity() {
         }
     }
 
-    // --- СМЕНА АКТИВНОГО АВТО ---
+    // --- ОШИБКА ИСПРАВЛЕНА: лишняя битая строка View.grid@VISIBLE удалена полностью ---
     private fun changeActiveCar(car: CarDto) {
         progressBar.visibility = View.VISIBLE
         lifecycleScope.launch {
@@ -234,7 +213,6 @@ class CarActivity : AppCompatActivity() {
         val token = SessionManager(this).fetchAuthToken()
         if (token.isNullOrEmpty()) return
 
-        // Убираем лишний слэш и формируем URL
         val baseUrl = BuildConfig.BASE_URL.trimEnd('/')
         val fullUrl = "$baseUrl/api/v1/driver/forms/add-car?token=$token"
 
@@ -250,25 +228,71 @@ class CarActivity : AppCompatActivity() {
         container.removeAllViews()
         if (tariffs.isNullOrEmpty()) return
 
+        val thumbStates = android.content.res.ColorStateList(
+            arrayOf(
+                intArrayOf(android.R.attr.state_checked),
+                intArrayOf(-android.R.attr.state_checked)
+            ),
+            intArrayOf(
+                androidx.core.content.ContextCompat.getColor(this, R.color.driver_neon_teal),
+                androidx.core.content.ContextCompat.getColor(this, R.color.driver_text_secondary)
+            )
+        )
+
+        val trackStates = android.content.res.ColorStateList(
+            arrayOf(
+                intArrayOf(android.R.attr.state_checked),
+                intArrayOf(-android.R.attr.state_checked)
+            ),
+            intArrayOf(
+                Color.parseColor("#4D00E5FF"),
+                Color.parseColor("#33FFFFFF")
+            )
+        )
+
         for (tariff in tariffs) {
-            val tariffView = LayoutInflater.from(this).inflate(R.layout.item_filter, container, false)
-            val tvName = tariffView.findViewById<TextView>(R.id.tv_filter_name)
-            tvName.text = "${tariff.name}\nУвімкнено"
+            val tariffView = LayoutInflater.from(this).inflate(R.layout.item_car_tariff, container, false)
+
+            val tvName = tariffView.findViewById<TextView>(R.id.tv_tariff_name)
+            val switchToggle = tariffView.findViewById<SwitchMaterial>(R.id.switch_tariff_toggle)
+
+            tvName.text = tariff.name
+
+            switchToggle.thumbTintList = thumbStates
+            switchToggle.trackTintList = trackStates
+
+            switchToggle.isChecked = true
+
             container.addView(tariffView)
         }
     }
 
     private fun parseColorName(name: String): Int {
-        return when (name.lowercase()) {
-            "білий", "white" -> Color.WHITE
-            "чорний", "black" -> Color.BLACK
-            "червоний", "red" -> Color.RED
-            "синій", "blue" -> Color.BLUE
-            "зелений", "green" -> Color.GREEN
-            "жовтий", "yellow" -> Color.YELLOW
-            "сірий", "gray", "grey" -> Color.GRAY
-            "сріблястий", "silver" -> Color.LTGRAY
-            else -> Color.LTGRAY
+        // Приводим первую букву к заглавной, остальные — к строчным (например: "Белый", "White")
+        val cleaned = name.trim().lowercase().replaceFirstChar { it.uppercase() }
+
+        return when (cleaned) {
+            "Білий", "Белый", "White" -> Color.WHITE
+            "Чорний", "Черный", "Black" -> Color.BLACK
+            "Червоний", "Красный", "Red" -> Color.RED
+            "Синій", "Голубой", "Синий", "Blue" -> Color.BLUE
+            "Зелений", "Зеленый", "Green" -> Color.GREEN
+            "Жовтий", "Желтый", "Yellow" -> Color.YELLOW
+            "Сірий", "Серый", "Gray", "Grey" -> Color.GRAY
+            "Сріблястий", "Серебристый", "Silver" -> Color.LTGRAY
+            else -> {
+                // Для HEX-кодов (например, "FF5722") используем полный верхний регистр
+                val hexCleaned = name.trim().uppercase()
+                if (hexCleaned.matches(Regex("[0-9A-F]{6}")) || hexCleaned.matches(Regex("[0-9A-F]{8}"))) {
+                    try {
+                        Color.parseColor("#$hexCleaned")
+                    } catch (e: Exception) {
+                        Color.LTGRAY
+                    }
+                } else {
+                    Color.LTGRAY
+                }
+            }
         }
     }
 }
