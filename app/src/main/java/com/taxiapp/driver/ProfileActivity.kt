@@ -2,7 +2,6 @@ package com.taxiapp.driver
 
 import android.content.Intent
 import android.os.Bundle
-import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
@@ -37,16 +36,18 @@ class ProfileActivity : AppCompatActivity() {
     }
 
     private fun setupUI() {
-        findViewById<ImageButton>(R.id.btn_back).setOnClickListener {
+        // ИСПРАВЛЕНО: Теперь ищем как ImageView, чтобы соответствовать новому XML хедера
+        findViewById<ImageView>(R.id.btn_back).setOnClickListener {
             finish()
         }
 
-        findViewById<TextView>(R.id.btn_delete_account).setOnClickListener {
+        // АДАПТИРОВАНО: Тип изменен на MaterialButton (или универсальный View) под новую верстку
+        findViewById<com.google.android.material.button.MaterialButton>(R.id.btn_delete_account).setOnClickListener {
             val intent = Intent(this, DeleteAccountActivity::class.java)
             startActivity(intent)
         }
 
-        // --- НОВАЯ ЛОГИКА ---
+        // --- ОСТАЛЬНАЯ ИНТЕРАКТИВНАЯ ЛОГИКА ---
 
         // 1. Смена телефона
         findViewById<android.view.View>(R.id.btn_edit_phone).setOnClickListener {
@@ -62,7 +63,7 @@ class ProfileActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
-        // 3. Статус инвалидности (ОБНОВЛЕНО)
+        // 3. Статус инвалидности
         findViewById<android.view.View>(R.id.btn_disability_status).setOnClickListener {
             val intent = Intent(this, DisabilityStatusActivity::class.java)
             startActivity(intent)
@@ -142,11 +143,11 @@ class ProfileActivity : AppCompatActivity() {
                 if (response.isSuccessful) {
                     Toast.makeText(this@ProfileActivity, "Акаунт в черзі на видалення", Toast.LENGTH_LONG).show()
 
-                    // Очищаємо сесію (токени тощо)
+                    // Очищаем сессию (токены и т.д.)
                     sessionManager.saveAuthToken("")
                     sessionManager.saveDriverId(-1L)
 
-                    // Викидаємо на екран логіну
+                    // Выбрасываем на экран логина
                     val intent = Intent(this@ProfileActivity, LoginActivity::class.java)
                     intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                     startActivity(intent)

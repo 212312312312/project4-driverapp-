@@ -1,89 +1,295 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="@color/driver_card_bg"
-    android:padding="20dp">
+    android:background="@color/driver_black_bg"> <RelativeLayout
+    android:id="@+id/header"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="32dp"
+    android:layout_marginBottom="16dp"
+    android:layout_marginHorizontal="24dp"
+    app:layout_constraintTop_toTopOf="parent"
+    app:layout_constraintStart_toStartOf="parent"
+    app:layout_constraintEnd_toEndOf="parent">
 
-    <ImageButton
+    <ImageView
         android:id="@+id/btn_back"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:background="@null"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
         android:src="@drawable/ic_arrow_back_black"
-        app:tint="@color/white" />
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:clickable="true"
+        android:focusable="true"
+        app:tint="@color/driver_text_primary"
+        android:layout_centerVertical="true"
+        android:layout_alignParentStart="true"/>
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/cp_title"
-        android:textColor="@color/white"
-        android:textSize="24sp"
+        android:textSize="22sp"
         android:textStyle="bold"
-        android:layout_marginTop="20dp"
-        android:layout_marginBottom="30dp" />
+        android:textColor="@color/driver_text_primary"
+        android:layout_centerVertical="true"
+        android:layout_toEndOf="@id/btn_back"
+        android:layout_marginStart="16dp"/>
+</RelativeLayout>
 
     <ViewFlipper
         android:id="@+id/view_flipper"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="0dp"
+        android:layout_marginTop="24dp"
+        app:layout_constraintTop_toBottomOf="@id/header"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:orientation="vertical">
-            <TextView android:text="@string/cp_msg_current_send"
-                android:textColor="#AAA" android:layout_marginBottom="20dp"
-                android:layout_width="match_parent" android:layout_height="wrap_content" />
-            <Button android:id="@+id/btn_send_current" android:text="@string/cp_btn_send_code"
-                android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:backgroundTint="@color/driver_neon_teal" />
-        </LinearLayout>
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
 
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:orientation="vertical">
-            <TextView android:text="@string/cp_msg_current_enter" android:textColor="#AAA"
-                android:layout_marginBottom="10dp" android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
-            <EditText android:id="@+id/et_current_code" android:inputType="number"
-                android:hint="@string/cp_hint_code" android:textColor="@color/white"
-                android:background="@drawable/bg_driver_input" android:padding="16dp"
-                android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginBottom="20dp" />
-            <Button android:id="@+id/btn_verify_current" android:text="@string/cp_btn_confirm"
-                android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:backgroundTint="@color/driver_neon_teal" />
-        </LinearLayout>
+            <TextView
+                android:id="@+id/tv_msg_step1"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="24dp"
+                android:text="@string/cp_msg_current_send"
+                android:textColor="@color/driver_text_primary"
+                android:textSize="15sp"
+                android:lineSpacingExtra="4dp"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
 
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:orientation="vertical">
-            <TextView android:text="@string/cp_msg_new_phone" android:textColor="#AAA"
-                android:layout_marginBottom="10dp" android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
-            <EditText android:id="@+id/et_new_phone" android:inputType="phone"
-                android:hint="@string/cp_hint_phone_ua" android:textColor="@color/white"
-                android:background="@drawable/bg_driver_input" android:padding="16dp"
-                android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginBottom="20dp" />
-            <Button android:id="@+id/btn_send_new" android:text="@string/cp_btn_next"
-                android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:backgroundTint="@color/driver_neon_teal" />
-        </LinearLayout>
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:layout_marginHorizontal="9dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="16dp"
+                android:background="@drawable/bg_driver_btn"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent">
 
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:orientation="vertical">
-            <TextView android:text="@string/cp_msg_new_enter"
-                android:textColor="#AAA" android:layout_marginBottom="10dp"
-                android:layout_width="match_parent" android:layout_height="wrap_content" />
-            <EditText android:id="@+id/et_new_code" android:inputType="number"
+                <Button
+                    android:id="@+id/btn_send_current"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:text="@string/cp_btn_send_code"
+                    android:textAllCaps="false"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/driver_text_black"
+                    android:background="@android:color/transparent"
+                    android:elevation="0dp"
+                    android:stateListAnimator="@null"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent" />
+            </androidx.constraintlayout.widget.ConstraintLayout>
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <TextView
+                android:id="@+id/tv_msg_step2"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="24dp"
+                android:text="@string/cp_msg_current_enter"
+                android:textColor="@color/driver_text_primary"
+                android:textSize="15sp"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+            <EditText
+                android:id="@+id/et_current_code"
+                android:layout_width="0dp"
+                android:layout_height="54dp"
+                android:layout_marginTop="12dp"
+                android:layout_marginHorizontal="24dp"
+                android:inputType="number"
                 android:hint="@string/cp_hint_code"
-                android:textColor="@color/white" android:background="@drawable/bg_driver_input"
-                android:padding="16dp" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:layout_marginBottom="20dp" />
-            <Button android:id="@+id/btn_confirm_all" android:text="@string/cp_btn_finish"
-                android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:backgroundTint="@color/driver_neon_teal" />
-        </LinearLayout>
+                android:textColor="@color/driver_text_primary"
+                android:textColorHint="@color/driver_text_secondary"
+                android:background="@drawable/bg_driver_input"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="0dp"
+                android:gravity="center_vertical"
+                android:textSize="16sp"
+                app:layout_constraintTop_toBottomOf="@id/tv_msg_step2"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:layout_marginHorizontal="9dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="16dp"
+                android:background="@drawable/bg_driver_btn"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent">
+
+                <Button
+                    android:id="@+id/btn_verify_current"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:text="@string/cp_btn_confirm"
+                    android:textAllCaps="false"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/driver_text_black"
+                    android:background="@android:color/transparent"
+                    android:elevation="0dp"
+                    android:stateListAnimator="@null"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent" />
+            </androidx.constraintlayout.widget.ConstraintLayout>
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <TextView
+                android:id="@+id/tv_msg_step3"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="24dp"
+                android:text="@string/cp_msg_new_phone"
+                android:textColor="@color/driver_text_primary"
+                android:textSize="15sp"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+            <EditText
+                android:id="@+id/et_new_phone"
+                android:layout_width="0dp"
+                android:layout_height="54dp"
+                android:layout_marginTop="12dp"
+                android:layout_marginHorizontal="24dp"
+                android:inputType="phone"
+                android:hint="@string/cp_hint_phone_ua"
+                android:textColor="@color/driver_text_primary"
+                android:textColorHint="@color/driver_text_secondary"
+                android:background="@drawable/bg_driver_input"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="0dp"
+                android:gravity="center_vertical"
+                android:textSize="16sp"
+                app:layout_constraintTop_toBottomOf="@id/tv_msg_step3"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:layout_marginHorizontal="9dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="16dp"
+                android:background="@drawable/bg_driver_btn"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent">
+
+                <Button
+                    android:id="@+id/btn_send_new"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:text="@string/cp_btn_next"
+                    android:textAllCaps="false"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/driver_text_black"
+                    android:background="@android:color/transparent"
+                    android:elevation="0dp"
+                    android:stateListAnimator="@null"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent" />
+            </androidx.constraintlayout.widget.ConstraintLayout>
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <TextView
+                android:id="@+id/tv_msg_step4"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="24dp"
+                android:text="@string/cp_msg_new_enter"
+                android:textColor="@color/driver_text_primary"
+                android:textSize="15sp"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+            <EditText
+                android:id="@+id/et_new_code"
+                android:layout_width="0dp"
+                android:layout_height="54dp"
+                android:layout_marginTop="12dp"
+                android:layout_marginHorizontal="24dp"
+                android:inputType="number"
+                android:hint="@string/cp_hint_code"
+                android:textColor="@color/driver_text_primary"
+                android:textColorHint="@color/driver_text_secondary"
+                android:background="@drawable/bg_driver_input"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="0dp"
+                android:gravity="center_vertical"
+                android:textSize="16sp"
+                app:layout_constraintTop_toBottomOf="@id/tv_msg_step4"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:layout_marginHorizontal="9dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="16dp"
+                android:background="@drawable/bg_driver_btn"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent">
+
+                <Button
+                    android:id="@+id/btn_confirm_all"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:text="@string/cp_btn_finish"
+                    android:textAllCaps="false"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/driver_text_black"
+                    android:background="@android:color/transparent"
+                    android:elevation="0dp"
+                    android:stateListAnimator="@null"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent" />
+            </androidx.constraintlayout.widget.ConstraintLayout>
+        </androidx.constraintlayout.widget.ConstraintLayout>
 
     </ViewFlipper>
-</LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

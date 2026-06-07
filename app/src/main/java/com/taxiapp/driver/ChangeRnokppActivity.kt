@@ -3,11 +3,12 @@ package com.taxiapp.driver
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.widget.Button
 import android.widget.EditText
-import android.widget.ImageButton
-import android.widget.TextView
+import android.widget.ImageView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.taxiapp.driver.network.ApiClient
 import com.taxiapp.driver.network.UpdateDriverRequest
@@ -16,7 +17,7 @@ import kotlinx.coroutines.launch
 class ChangeRnokppActivity : AppCompatActivity() {
 
     private lateinit var etRnokpp: EditText
-    private lateinit var btnSave: TextView
+    private lateinit var btnSave: Button
     private var currentRnokpp: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -29,7 +30,7 @@ class ChangeRnokppActivity : AppCompatActivity() {
     }
 
     private fun setupUI() {
-        findViewById<ImageButton>(R.id.btn_back).setOnClickListener { finish() }
+        findViewById<ImageView>(R.id.btn_back).setOnClickListener { finish() }
 
         etRnokpp = findViewById(R.id.et_rnokpp)
         btnSave = findViewById(R.id.btn_save_rnokpp)
@@ -59,17 +60,20 @@ class ChangeRnokppActivity : AppCompatActivity() {
     }
 
     private fun validateInput(input: String) {
-        // Кнопка активна, только если 10 цифр и нет звездочек (*)
         val isValid = input.length == 10 && input.all { it.isDigit() }
 
         btnSave.isEnabled = isValid
+
+        val btnContainer = findViewById<android.view.View>(R.id.btn_container_layout)
+
         if (isValid) {
-            btnSave.setTextColor(getColor(R.color.white))
-            btnSave.setBackgroundResource(R.drawable.bg_round_button) // Зеленый или активный фон
+            // Кнопка активна: убираем прозрачность и красим текст в БЕЛЫЙ
+            btnContainer?.alpha = 1.0f
+            btnSave.setTextColor(ContextCompat.getColor(this, R.color.white))
         } else {
-            // ИСПРАВЛЕНО: используем существующий цвет
-            btnSave.setTextColor(getColor(R.color.driver_text_secondary))
-            btnSave.setBackgroundResource(R.drawable.bg_round_button_gray) // Серый фон
+            // Кнопка не активна: тушим контейнер и красим текст в ТУСКЛО-СЕРЫЙ
+            btnContainer?.alpha = 0.4f
+            btnSave.setTextColor(ContextCompat.getColor(this, R.color.driver_text_secondary))
         }
     }
 
@@ -81,7 +85,7 @@ class ChangeRnokppActivity : AppCompatActivity() {
 
                 if (response.isSuccessful) {
                     Toast.makeText(this@ChangeRnokppActivity, "РНОКПП успішно збережено", Toast.LENGTH_SHORT).show()
-                    finish() // Закрываем экран
+                    finish()
                 } else {
                     Toast.makeText(this@ChangeRnokppActivity, "Помилка: ${response.message()}", Toast.LENGTH_SHORT).show()
                 }

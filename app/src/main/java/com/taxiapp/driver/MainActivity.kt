@@ -60,7 +60,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var sessionManager: SessionManager
-    private lateinit var switchOnline: SwitchMaterial
+    private lateinit var btnStatusToggle: View
+    private lateinit var switchThumbCard: com.google.android.material.card.MaterialCardView
+    private lateinit var tvSwitchStatusText: TextView
+    private var isDriverOnline = false // Локальное состояние онлайна воителя
+    private var searchBorderAnimator: android.animation.ObjectAnimator? = null
     private lateinit var map: GoogleMap
     private lateinit var btnLockLocation: ImageButton
     private lateinit var btnHotspots: ImageButton
@@ -72,7 +76,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationCallback: LocationCallback
-    
+    private var originalContainerElevation: Float = -1f
     private var searchRadiusCircle: Circle? = null
     private var currentSearchRadiusKm: Double = 3.0
     private var currentDriverLocation: LatLng? = null
@@ -293,8 +297,19 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             bottomSheet.show(supportFragmentManager, "SearchSettings")
         }
 
-        switchOnline = findViewById(R.id.switch_online)
-        switchOnline.setOnClickListener { updateDriverStatus(switchOnline.isChecked) }
+        btnStatusToggle = findViewById(R.id.btn_status_toggle)
+        switchThumbCard = findViewById(R.id.switch_thumb_card)
+        tvSwitchStatusText = findViewById(R.id.tv_switch_status_text)
+
+        btnStatusToggle.setOnClickListener {
+            // Мгновенно меняем локальный стейт (Optimistic UI)
+            isDriverOnline = !isDriverOnline
+            // Сразу запускаем анимацию скольжения капсулы, не дожидаясь ответа сервера
+            setOnlineVisualState(isDriverOnline, animate = true)
+
+            // Отправляем запрос на сервер в фоновом режиме
+            updateDriverStatus(isDriverOnline)
+        }
 
         findViewById<View>(R.id.btn_nav_ether).setOnClickListener { startActivity(Intent(this, EtherActivity::class.java)) }
         btnNavOrders = findViewById(R.id.btn_nav_orders)
@@ -347,10 +362,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
 
         navViewContent.findViewById<View>(R.id.btn_logout).setOnClickListener {
-            switchOnline.isChecked = false
+            setOnlineVisualState(false, animate = false) // Переводим тумблер в Офлайн без анимации
             lifecycleScope.launch {
-                try { 
-                    ApiClient.getInstance().getApiService(this@MainActivity).updateStatus(UpdateDriverStatusRequest(false, 0.0, 0.0)) 
+                try {
+                    ApiClient.getInstance().getApiService(this@MainActivity).updateStatus(UpdateDriverStatusRequest(false, 0.0, 0.0))
                 } catch (e: Exception) {
                 } finally {
                     val intent = Intent(this@MainActivity, AccountSelectionActivity::class.java)
@@ -362,6 +377,30 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
 
         updateSearchStatusUI()
+    }
+
+    private fun setOnlineVisualState(online: Boolean, animate: Boolean) {
+        this.isDriverOnline = online
+        val trackContainer = findViewById<android.view.ViewGroup>(R.id.switch_track_container)
+
+        if (animate) {
+            // Запускает встроенный менеджер переходов для плавной анимации элементов внутри FrameLayout
+            android.transition.TransitionManager.beginDelayedTransition(trackContainer)
+        }
+
+        val params = switchThumbCard.layoutParams as android.widget.FrameLayout.LayoutParams
+        if (online) {
+            params.gravity = android.view.Gravity.END
+            switchThumbCard.setCardBackgroundColor(androidx.core.content.ContextCompat.getColor(this, R.color.driver_neon_teal))
+            tvSwitchStatusText.text = "Онлайн"
+            tvSwitchStatusText.setTextColor(android.graphics.Color.BLACK)
+        } else {
+            params.gravity = android.view.Gravity.START
+            switchThumbCard.setCardBackgroundColor(android.graphics.Color.parseColor("#2A2A2A"))
+            tvSwitchStatusText.text = "Офлайн"
+            tvSwitchStatusText.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.driver_text_primary))
+        }
+        switchThumbCard.layoutParams = params
     }
 
     private fun showDispatcherBottomSheet() {
@@ -431,17 +470,56 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun updateSearchBlockVisuals(isActive: Boolean) {
+        val cardSearchContainer = findViewById<com.google.android.material.card.MaterialCardView>(R.id.cardSearchContainer)
+        val cardSearchMode = findViewById<com.google.android.material.card.MaterialCardView>(R.id.cardSearchMode)
+        val borderAnimView = findViewById<View>(R.id.search_border_animator)
+
+        // Запоминаем нативную тень карточки при самом первом запуске
+        if (originalContainerElevation == -1f) {
+            originalContainerElevation = cardSearchContainer.cardElevation
+        }
+
         if (isActive) {
-            btnToggleSearchMode.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_neon_teal))
-            tvSearchModeTitle.setTextColor(Color.BLACK)
-            tvSearchModeSubtitle.setTextColor(Color.DKGRAY)
+            // 1. ИСПРАВЛЕНИЕ ДОРОЖКИ: Делаем фон подложки прозрачным, чтобы сквозь 2dp-бордер была видна карта
+            cardSearchContainer.setCardBackgroundColor(android.graphics.Color.TRANSPARENT)
+            cardSearchContainer.cardElevation = 0f // Отключаем тень подложки на время анимации
+            cardSearchContainer.clipToOutline = true // Важно! Обрезаем вращающийся световой круг строго по углам 8dp контейнера
+
+            // Саму рабочую кнопку делаем бирюзовой
+            cardSearchMode.setCardBackgroundColor(androidx.core.content.ContextCompat.getColor(this, R.color.driver_neon_teal))
+
+            // Текст горит чистым белым цветом
+            tvSearchModeTitle.setTextColor(android.graphics.Color.WHITE)
+            tvSearchModeSubtitle.setTextColor(android.graphics.Color.parseColor("#E0E0E0"))
             tvSearchModeSubtitle.text = "Пошук замовлень..."
+
+            // 2. ИСПРАВЛЕНИЕ НАПРАВЛЕНИЯ: Меняем углы на 360f -> 0f, чтобы свет бежал вперед
+            borderAnimView.visibility = View.VISIBLE
+            if (searchBorderAnimator == null) {
+                searchBorderAnimator = android.animation.ObjectAnimator.ofFloat(borderAnimView, "rotation", 360f, 0f).apply {
+                    duration = 2000 // Скорость кружения луча
+                    repeatCount = android.animation.ValueAnimator.INFINITE
+                    interpolator = android.view.animation.LinearInterpolator()
+                }
+            }
+            if (searchBorderAnimator?.isRunning == false) {
+                searchBorderAnimator?.start()
+            }
         } else {
-            btnToggleSearchMode.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#CC1E1E1E"))
-            tvSearchModeTitle.setTextColor(ContextCompat.getColor(this, R.color.driver_neon_teal))
-            tvSearchModeSubtitle.setTextColor(ContextCompat.getColor(this, R.color.driver_text_secondary))
-            // Тут ми можемо залишити те, що вже є, або оновити, але setupUI тепер гарантує початковий стан.
+            // 3. Когда поиск отключен: возвращаем исходный монолитный driver_black_bg и восстанавливаем тень
+            cardSearchContainer.setCardBackgroundColor(androidx.core.content.ContextCompat.getColor(this, R.color.driver_black_bg))
+            cardSearchContainer.cardElevation = originalContainerElevation
+
+            cardSearchMode.setCardBackgroundColor(androidx.core.content.ContextCompat.getColor(this, R.color.driver_black_bg))
+
+            // Возвращаем дефолтные неоновые и серые цвета текста
+            tvSearchModeTitle.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.driver_neon_teal))
+            tvSearchModeSubtitle.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.driver_text_secondary))
             tvSearchModeSubtitle.text = "Натисніть для активації"
+
+            // Полностью останавливаем и прячем анимацию контура
+            searchBorderAnimator?.cancel()
+            borderAnimView.visibility = View.GONE
         }
     }
 
@@ -798,18 +876,28 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun updateDriverStatus(isOnline: Boolean) {
-        switchOnline.isEnabled = false
-        LocationServices.getFusedLocationProviderClient(this).lastLocation.addOnSuccessListener { loc -> sendStatusRequest(isOnline, loc?.latitude ?: 0.0, loc?.longitude ?: 0.0) }
-            .addOnFailureListener { sendStatusRequest(isOnline, 0.0, 0.0) }
+        btnStatusToggle.isEnabled = false // Блокируем кнопку на время сетевого запроса
+        LocationServices.getFusedLocationProviderClient(this).lastLocation.addOnSuccessListener { loc ->
+            sendStatusRequest(isOnline, loc?.latitude ?: 0.0, loc?.longitude ?: 0.0)
+        }.addOnFailureListener {
+            sendStatusRequest(isOnline, 0.0, 0.0)
+        }
     }
 
     private fun sendStatusRequest(isOnline: Boolean, lat: Double, lng: Double) {
         lifecycleScope.launch {
             try {
                 val response = ApiClient.getInstance().getApiService(this@MainActivity).updateStatus(UpdateDriverStatusRequest(isOnline, lat, lng))
-                if (response.isSuccessful) switchOnline.text = if (isOnline) "ОНЛАЙН" else "ОФЛАЙН"
-                else switchOnline.isChecked = !isOnline
-            } catch (e: Exception) { switchOnline.isChecked = !isOnline } finally { switchOnline.isEnabled = true }
+                if (!response.isSuccessful) {
+                    // Если сервер вернул ошибку -> откатываем дизайн и состояние назад
+                    setOnlineVisualState(!isOnline, animate = true)
+                }
+            } catch (e: Exception) {
+                // Если упала сеть -> также плавно откатываем бегунок назад
+                setOnlineVisualState(!isOnline, animate = true)
+            } finally {
+                btnStatusToggle.isEnabled = true // Разблокируем переключатель
+            }
         }
     }
 
