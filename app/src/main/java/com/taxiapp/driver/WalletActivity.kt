@@ -30,7 +30,7 @@ class WalletActivity : AppCompatActivity() {
     private lateinit var rvTransactions: RecyclerView
 
     private var commissionBalance: Double = 0.00
-    private var orderEarningsBalance: Double = 1450.00 // Баланс за заказы
+    private var orderEarningsBalance: Double = 0.00 // Зависит от данных с сервера
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -65,10 +65,12 @@ class WalletActivity : AppCompatActivity() {
         })
 
         findViewById<View>(R.id.btn_my_cards).setOnClickListener {
-            Toast.makeText(this, "Ваші картки: в розробці", Toast.LENGTH_SHORT).show()
+            // Переход на экран "Ваші картки"
+            startActivity(Intent(this, CardsActivity::class.java))
         }
         findViewById<View>(R.id.btn_my_funds).setOnClickListener {
-            Toast.makeText(this, "Ваші кошти: в розробці", Toast.LENGTH_SHORT).show()
+            // Переход на экран "Ваші кошти"
+            startActivity(Intent(this, PendingFundsActivity::class.java))
         }
         findViewById<View>(R.id.btn_top_up).setOnClickListener {
             val intent = Intent(this, TopUpActivity::class.java)
@@ -160,7 +162,9 @@ class WalletActivity : AppCompatActivity() {
             try {
                 val profileResp = ApiClient.getInstance().getApiService(this@WalletActivity).getDriverProfile()
                 if (profileResp.isSuccessful && profileResp.body() != null) {
-                    commissionBalance = profileResp.body()!!.balance
+                    val profile = profileResp.body()!!
+                    commissionBalance = profile.balance
+                    orderEarningsBalance = profile.payoutBalance // Настоящий баланс выплат из БД бэкенда
                     updateUIState(walletTabs.selectedTabPosition == 0)
                 }
 

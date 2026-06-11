@@ -22,6 +22,7 @@ class WalletAdapter : ListAdapter<WalletTransactionDto, WalletAdapter.WalletView
         val tvDesc: TextView = itemView.findViewById(R.id.tv_tx_desc)
         val tvAmount: TextView = itemView.findViewById(R.id.tv_tx_amount)
         val tvDate: TextView = itemView.findViewById(R.id.tv_tx_date)
+        val tvBalanceAfter: TextView = itemView.findViewById(R.id.tv_tx_balance_after) // ДОБАВЛЕНО
         val imgIcon: ImageView = itemView.findViewById(R.id.img_tx_icon)
     }
 
@@ -36,6 +37,22 @@ class WalletAdapter : ListAdapter<WalletTransactionDto, WalletAdapter.WalletView
 
         // 1. Описание
         holder.tvDesc.text = item.description ?: "Без опису"
+
+        // ДОБАВЛЕНО: Настройка остатка (залишка) и клика для перехода в детали заказа
+        val tvBalanceAfter = holder.itemView.findViewById<TextView>(R.id.tv_tx_balance_after)
+        if (tvBalanceAfter != null) {
+            tvBalanceAfter.text = "Залишок: %.2f ₴".format(item.balanceAfter)
+            tvBalanceAfter.visibility = View.VISIBLE
+        }
+
+        holder.itemView.setOnClickListener {
+            if (item.orderId != null && item.orderId > 0) {
+                val intent = android.content.Intent(context, HistoryDetailsActivity::class.java).apply {
+                    putExtra("ORDER_ID", item.orderId)
+                }
+                context.startActivity(intent)
+            }
+        }
 
         // 2. Дата (парсинг ISO 8601)
         try {
@@ -79,6 +96,19 @@ class WalletAdapter : ListAdapter<WalletTransactionDto, WalletAdapter.WalletView
                 "PENALTY" -> "Штраф"
                 "WITHDRAWAL" -> "Виведення"
                 else -> item.operationType
+            }
+        }
+
+        // Выводим остаток (залишок) после транзакции
+        holder.tvBalanceAfter.text = "Залишок: %.2f ₴".format(item.balanceAfter)
+
+        // Обработка клика: открываем activity_history_details.xml, если транзакция привязана к заказу
+        holder.itemView.setOnClickListener {
+            if (item.orderId != null && item.orderId > 0) {
+                val intent = android.content.Intent(context, HistoryDetailsActivity::class.java).apply {
+                    putExtra("ORDER_ID", item.orderId) // Прокидываем ID заказа
+                }
+                context.startActivity(intent)
             }
         }
     }

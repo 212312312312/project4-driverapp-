@@ -67,6 +67,17 @@
                 android:fontFamily="@font/app_font_family"
                 android:textColor="@color/driver_text_secondary"
                 android:layout_marginTop="2dp"/>
+
+            <TextView
+                android:id="@+id/tv_tx_balance_after"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                tools:text="Залишок: 1450.00 ₴"
+                android:textSize="12sp"
+                android:fontFamily="@font/app_font_family"
+                android:textColor="@color/driver_text_secondary"
+                android:layout_marginTop="2dp"
+                android:textStyle="italic"/>
         </LinearLayout>
 
         <TextView

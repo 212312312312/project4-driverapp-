@@ -90,6 +90,14 @@
             android:name=".SectorSelectionActivity"
             android:exported="false"
             android:screenOrientation="portrait" />
+        <activity
+            android:name=".CardsActivity"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".PendingFundsActivity"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize" />
 
         <activity
             android:name=".HistoryDetailsActivity"

@@ -292,6 +292,23 @@ interface DriverApiService {
     @GET("api/v1/driver/transactions")
     suspend fun getWalletTransactions(): Response<List<WalletTransactionDto>>
 
+    // ДОБАВЛЕНО: Получение незавершенных транзакций (Экран "Ваші кошти")
+    @GET("api/v1/driver/transactions/pending")
+    suspend fun getPendingWalletTransactions(): Response<List<WalletTransactionDto>>
+
+    // ДОБАВЛЕНО: Эндпоинты для управления картами выплат водителю
+    @POST("api/v1/driver/cards/init")
+    suspend fun initBindCard(): Response<Map<String, String>>
+
+    @GET("api/v1/driver/cards")
+    suspend fun getCards(): Response<List<DriverCardDto>>
+
+    @POST("api/v1/driver/cards/{cardId}/select")
+    suspend fun selectMainCard(@Path("cardId") cardId: Long): Response<MessageResponse>
+
+    @DELETE("api/v1/driver/cards/{cardId}")
+    suspend fun deleteCard(@Path("cardId") cardId: Long): Response<MessageResponse>
+
     @GET("api/v1/driver/stats")
     suspend fun getStats(
         @Query("from") from: String,

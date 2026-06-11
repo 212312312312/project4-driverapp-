@@ -97,9 +97,14 @@ class WebViewActivity : AppCompatActivity() {
                 // ОБНОВЛЕННАЯ ЛОГИКА: Ловим успешную отправку заявки на авто
                 // Твой React-фронтенд после успешного добавления авто должен
                 // сделать редирект на любой URL со словом "success" (например, /car-success)
-                if (url.contains("success") || url.contains("registration-success") || url.contains("/login")) {
-                    Toast.makeText(this@WebViewActivity, "Заявку відправлено на перевірку!", Toast.LENGTH_LONG).show()
-                    finish() // Закрываем WebView и возвращаемся в CarActivity
+                if (url.contains("success") || url.contains("registration-success") || url.contains("/login") || url.contains("payment-success.html")) {
+                    if (url.contains("payment-success.html")) {
+                        Toast.makeText(this@WebViewActivity, "Картку успішно верифіковано!", Toast.LENGTH_LONG).show()
+                        setResult(Activity.RESULT_OK) // Передаем статус успеха для CardsActivity
+                    } else {
+                        Toast.makeText(this@WebViewActivity, "Заявку відправлено на перевірку!", Toast.LENGTH_LONG).show()
+                    }
+                    finish()
                     return true
                 }
                 return false

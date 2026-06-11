@@ -10,8 +10,8 @@
     <color name="driver_text_secondary">#757575</color>
     <color name="driver_text_black">#000000</color>
 
-    <color name="driver_error">#FF6B6B</color>
-    <color name="driver_error_red">#FF6B6B</color>
+    <color name="driver_error">#ff7373</color>
+    <color name="driver_error_red">#ff7373</color>
 
     <color name="purple_200">#FFBB86FC</color>
     <color name="purple_500">#FF6200EE</color>
@@ -24,11 +24,11 @@
 
     <color name="marker_green">#00C853</color>
     <color name="marker_yellow">#FFD600</color>
-    <color name="marker_red">#FF6B6B</color>
+    <color name="marker_red">#ff7373</color>
 
     <color name="activity_green">#2ECC71</color>
     <color name="activity_yellow">#FBC02D</color>
-    <color name="activity_red">#FF6B6B</color>
+    <color name="activity_red">#ff7373</color>
     <color name="activity_text_dark">#333333</color>
     <color name="activity_text_light">#FFFFFF</color>
     <color name="bg_badge">#FF3333</color>

@@ -24,5 +24,6 @@ data class DriverProfileDto(
     @SerializedName("rating") val rating: Double = 5.0,
 
     // --- НОВОЕ ПОЛЕ ---
-    @SerializedName("balance") val balance: Double = 0.0
+    @SerializedName("balance") val balance: Double = 0.0,
+    @SerializedName("payoutBalance") val payoutBalance: Double = 0.0 // ДОБАВЛЕНО: Баланс выплат за безнал и чаевые
 ) : Serializable
