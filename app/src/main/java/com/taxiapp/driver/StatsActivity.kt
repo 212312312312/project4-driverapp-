@@ -7,6 +7,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.taxiapp.driver.network.ApiClient
@@ -20,7 +21,15 @@ import java.util.Locale
 class StatsActivity : AppCompatActivity() {
 
     private lateinit var tvCurrentPeriod: TextView
-    private lateinit var btnPeriodSelector: LinearLayout
+    private lateinit var btnLifetimeStats: ImageView
+
+    // Табы периодов
+    private lateinit var tabDay: LinearLayout
+    private lateinit var tabWeek: LinearLayout
+    private lateinit var tabMonth: LinearLayout
+    private lateinit var tvTabDay: TextView
+    private lateinit var tvTabWeek: TextView
+    private lateinit var tvTabMonth: TextView
 
     private lateinit var tvTotalIncome: TextView
     private lateinit var tvIncomeCard: TextView
@@ -33,24 +42,30 @@ class StatsActivity : AppCompatActivity() {
     private lateinit var tvAvgPrice: TextView
     private lateinit var tvTotalHours: TextView
 
-    // Текущее состояние
     private var selectedPeriodType = PeriodType.TODAY
     private var fromDate: LocalDate = LocalDate.now()
     private var toDate: LocalDate = LocalDate.now()
 
     enum class PeriodType {
-        TODAY, YESTERDAY, THIS_WEEK, LAST_WEEK, THIS_MONTH, LAST_MONTH
+        TODAY, THIS_WEEK, THIS_MONTH
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_stats)
 
-        // Инициализация Views
         findViewById<ImageView>(R.id.btn_back).setOnClickListener { finish() }
 
+        // Связываем элементы
         tvCurrentPeriod = findViewById(R.id.tv_current_period)
-        btnPeriodSelector = findViewById(R.id.btn_period_selector)
+        btnLifetimeStats = findViewById(R.id.btn_lifetime_stats)
+
+        tabDay = findViewById(R.id.tab_day)
+        tabWeek = findViewById(R.id.tab_week)
+        tabMonth = findViewById(R.id.tab_month)
+        tvTabDay = findViewById(R.id.tv_tab_day)
+        tvTabWeek = findViewById(R.id.tv_tab_week)
+        tvTabMonth = findViewById(R.id.tv_tab_month)
 
         tvTotalIncome = findViewById(R.id.tv_total_income)
         tvIncomeCard = findViewById(R.id.tv_income_card)
@@ -63,12 +78,39 @@ class StatsActivity : AppCompatActivity() {
         tvAvgPrice = findViewById(R.id.tv_avg_price)
         tvTotalHours = findViewById(R.id.tv_total_hours)
 
-        btnPeriodSelector.setOnClickListener {
-            showPeriodDialog()
+        // Обработка кликов по табам
+        tabDay.setOnClickListener {
+            selectedPeriodType = PeriodType.TODAY
+            updateTabsVisuals()
+            calculateDatesAndLoad()
+        }
+        tabWeek.setOnClickListener {
+            selectedPeriodType = PeriodType.THIS_WEEK
+            updateTabsVisuals()
+            calculateDatesAndLoad()
+        }
+        tabMonth.setOnClickListener {
+            selectedPeriodType = PeriodType.THIS_MONTH
+            updateTabsVisuals()
+            calculateDatesAndLoad()
         }
 
-        // Загружаем данные за сегодня по умолчанию
+        // Кнопка вызова кастомного диалога поездок за все время
+        btnLifetimeStats.setOnClickListener {
+            showLifetimeStatsDialog()
+        }
+
+        updateTabsVisuals()
         calculateDatesAndLoad()
+    }
+
+    private fun updateTabsVisuals() {
+        val activeColor = ContextCompat.getColor(this, R.color.driver_neon_teal)
+        val inactiveColor = ContextCompat.getColor(this, R.color.driver_text_secondary)
+
+        tvTabDay.setTextColor(if (selectedPeriodType == PeriodType.TODAY) activeColor else inactiveColor)
+        tvTabWeek.setTextColor(if (selectedPeriodType == PeriodType.THIS_WEEK) activeColor else inactiveColor)
+        tvTabMonth.setTextColor(if (selectedPeriodType == PeriodType.THIS_MONTH) activeColor else inactiveColor)
     }
 
     private fun calculateDatesAndLoad() {
@@ -80,103 +122,55 @@ class StatsActivity : AppCompatActivity() {
                 toDate = today
                 tvCurrentPeriod.text = "Сьогодні"
             }
-            PeriodType.YESTERDAY -> {
-                fromDate = today.minusDays(1)
-                toDate = today.minusDays(1)
-                tvCurrentPeriod.text = "Вчора"
-            }
             PeriodType.THIS_WEEK -> {
-                // Понедельник текущей недели
                 fromDate = today.with(DayOfWeek.MONDAY)
                 toDate = today
                 tvCurrentPeriod.text = "Поточний тиждень"
-            }
-            PeriodType.LAST_WEEK -> {
-                val lastWeek = today.minusWeeks(1)
-                fromDate = lastWeek.with(DayOfWeek.MONDAY)
-                toDate = lastWeek.with(DayOfWeek.SUNDAY)
-                tvCurrentPeriod.text = "Минулий тиждень"
             }
             PeriodType.THIS_MONTH -> {
                 fromDate = today.with(TemporalAdjusters.firstDayOfMonth())
                 toDate = today
                 tvCurrentPeriod.text = "Поточний місяць"
             }
-            PeriodType.LAST_MONTH -> {
-                val lastMonth = today.minusMonths(1)
-                fromDate = lastMonth.with(TemporalAdjusters.firstDayOfMonth())
-                toDate = lastMonth.with(TemporalAdjusters.lastDayOfMonth())
-                tvCurrentPeriod.text = "Минулий місяць"
-            }
         }
 
         loadStats()
     }
 
-    private fun showPeriodDialog() {
+    private fun showLifetimeStatsDialog() {
         val dialog = BottomSheetDialog(this)
-        val view = layoutInflater.inflate(R.layout.layout_period_bottom_sheet, null)
+        val view = layoutInflater.inflate(R.layout.layout_bottom_sheet_lifetime_stats, null)
         dialog.setContentView(view)
 
-        // Настраиваем видимость галочек
-        val checkToday = view.findViewById<ImageView>(R.id.check_today)
-        val checkYesterday = view.findViewById<ImageView>(R.id.check_yesterday)
-        val checkThisWeek = view.findViewById<ImageView>(R.id.check_this_week)
-        val checkLastWeek = view.findViewById<ImageView>(R.id.check_last_week)
-        val checkThisMonth = view.findViewById<ImageView>(R.id.check_this_month)
-        val checkLastMonth = view.findViewById<ImageView>(R.id.check_last_month)
+        val btnCloseIcon = view.findViewById<ImageView>(R.id.btn_close_dialog)
+        val btnCloseAction = view.findViewById<View>(R.id.btn_close_lifetime)
+        val tvOrdersCount = view.findViewById<TextView>(R.id.tv_lifetime_orders_count)
 
-        // Сброс всех
-        listOf(checkToday, checkYesterday, checkThisWeek, checkLastWeek, checkThisMonth, checkLastMonth)
-            .forEach { it.visibility = View.INVISIBLE }
-
-        // Показываем нужную
-        when (selectedPeriodType) {
-            PeriodType.TODAY -> checkToday.visibility = View.VISIBLE
-            PeriodType.YESTERDAY -> checkYesterday.visibility = View.VISIBLE
-            PeriodType.THIS_WEEK -> checkThisWeek.visibility = View.VISIBLE
-            PeriodType.LAST_WEEK -> checkLastWeek.visibility = View.VISIBLE
-            PeriodType.THIS_MONTH -> checkThisMonth.visibility = View.VISIBLE
-            PeriodType.LAST_MONTH -> checkLastMonth.visibility = View.VISIBLE
-        }
-
-        // Клики
-        view.findViewById<View>(R.id.btn_today).setOnClickListener {
-            selectedPeriodType = PeriodType.TODAY
-            calculateDatesAndLoad()
-            dialog.dismiss()
-        }
-        view.findViewById<View>(R.id.btn_yesterday).setOnClickListener {
-            selectedPeriodType = PeriodType.YESTERDAY
-            calculateDatesAndLoad()
-            dialog.dismiss()
-        }
-        view.findViewById<View>(R.id.btn_this_week).setOnClickListener {
-            selectedPeriodType = PeriodType.THIS_WEEK
-            calculateDatesAndLoad()
-            dialog.dismiss()
-        }
-        view.findViewById<View>(R.id.btn_last_week).setOnClickListener {
-            selectedPeriodType = PeriodType.LAST_WEEK
-            calculateDatesAndLoad()
-            dialog.dismiss()
-        }
-        view.findViewById<View>(R.id.btn_this_month).setOnClickListener {
-            selectedPeriodType = PeriodType.THIS_MONTH
-            calculateDatesAndLoad()
-            dialog.dismiss()
-        }
-        view.findViewById<View>(R.id.btn_last_month).setOnClickListener {
-            selectedPeriodType = PeriodType.LAST_MONTH
-            calculateDatesAndLoad()
-            dialog.dismiss()
-        }
+        btnCloseIcon?.setOnClickListener { dialog.dismiss() }
+        btnCloseAction?.setOnClickListener { dialog.dismiss() }
 
         dialog.show()
+
+        lifecycleScope.launch {
+            try {
+                val response = ApiClient.getInstance().getApiService(this@StatsActivity)
+                    .getStats("2000-01-01", LocalDate.now().format(DateTimeFormatter.ISO_DATE))
+
+                if (response.isSuccessful && response.body() != null) {
+                    tvOrdersCount?.text = response.body()!!.ordersCount.toString()
+                } else {
+                    tvOrdersCount?.text = "0"
+                    Toast.makeText(this@StatsActivity, "Не вдалося отримати дані", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                tvOrdersCount?.text = "0"
+                Toast.makeText(this@StatsActivity, "Помилка мережі", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     private fun loadStats() {
-        val apiFormatter = DateTimeFormatter.ISO_DATE // YYYY-MM-DD
+        val apiFormatter = DateTimeFormatter.ISO_DATE
         val fromString = fromDate.format(apiFormatter)
         val toString = toDate.format(apiFormatter)
 

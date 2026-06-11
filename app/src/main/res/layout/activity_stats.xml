@@ -1,18 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="@color/driver_black_bg"
-    android:paddingTop="48dp"
-    android:paddingBottom="24dp">
+    android:background="@color/driver_black_bg">
 
     <RelativeLayout
+        android:id="@+id/header"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingHorizontal="24dp"
-        android:layout_marginBottom="24dp">
+        android:layout_marginTop="32dp"
+        android:layout_marginBottom="16dp"
+        android:layout_marginHorizontal="24dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
         <ImageView
             android:id="@+id/btn_back"
@@ -30,375 +33,474 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/stats_title"
-            android:textSize="20sp"
+            android:textSize="22sp"
             android:textStyle="bold"
             android:textColor="@color/driver_text_primary"
-            android:layout_centerInParent="true" />
+            android:layout_centerVertical="true"
+            android:layout_toEndOf="@id/btn_back"
+            android:layout_marginStart="16dp"/>
+
+        <ImageView
+            android:id="@+id/btn_lifetime_stats"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:src="@drawable/ic_list_bullet"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:focusable="true"
+            app:tint="@color/driver_neon_teal"
+            android:layout_centerVertical="true"
+            android:layout_alignParentEnd="true"/>
     </RelativeLayout>
+
+    <LinearLayout
+        android:id="@+id/period_tabs_container"
+        android:layout_width="match_parent"
+        android:layout_height="46dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginHorizontal="24dp"
+        android:layout_marginBottom="8dp"
+        android:background="@drawable/bg_driver_input"
+        android:backgroundTint="@color/driver_card_bg"
+        android:padding="4dp"
+        app:layout_constraintTop_toBottomOf="@id/header">
+
+        <LinearLayout
+            android:id="@+id/tab_day"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true">
+            <TextView
+                android:id="@+id/tv_tab_day"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="День"
+                android:textStyle="bold"
+                android:textSize="14sp"
+                android:textColor="@color/driver_neon_teal"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/tab_week"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true">
+            <TextView
+                android:id="@+id/tv_tab_week"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Тиждень"
+                android:textStyle="bold"
+                android:textSize="14sp"
+                android:textColor="@color/driver_text_secondary"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/tab_month"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true">
+            <TextView
+                android:id="@+id/tv_tab_month"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Місяць"
+                android:textStyle="bold"
+                android:textSize="14sp"
+                android:textColor="@color/driver_text_secondary"/>
+        </LinearLayout>
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tv_current_period"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"/>
 
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:scrollbars="none">
+        android:layout_height="0dp"
+        android:scrollbars="none"
+        android:layout_marginTop="8dp"
+        app:layout_constraintTop_toBottomOf="@id/period_tabs_container"
+        app:layout_constraintBottom_toBottomOf="parent">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingHorizontal="24dp">
+            android:paddingBottom="32dp">
 
-            <LinearLayout
-                android:id="@+id/btn_period_selector"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center"
+            <FrameLayout
+                android:id="@+id/diagram_container"
+                android:layout_width="220dp"
+                android:layout_height="220dp"
                 android:layout_gravity="center_horizontal"
-                android:background="?attr/selectableItemBackground"
-                android:padding="8dp">
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="24dp">
 
-                <TextView
-                    android:id="@+id/tv_current_period"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/stats_period_today"
-                    android:textSize="16sp"
-                    android:textColor="@color/driver_neon_teal"
-                    android:textStyle="bold" />
+                <ProgressBar
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:indeterminate="false"
+                    android:max="100"
+                    android:progress="100"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:progressDrawable="@drawable/circular_progress_bg" />
 
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:src="@drawable/ic_chevron"
-                    app:tint="@color/driver_neon_teal"
-                    android:layout_marginStart="4dp" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:paddingTop="16dp"
-                android:paddingBottom="32dp">
-
-                <TextView
-                    android:id="@+id/tv_total_income"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/stats_money_placeholder"
-                    android:textSize="42sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/driver_text_primary" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/stats_commission_note"
-                    android:textSize="14sp"
-                    android:textColor="@color/driver_text_secondary"
-                    android:layout_marginTop="4dp" />
-            </LinearLayout>
-
-            <View android:layout_width="match_parent" android:layout_height="1dp"
-                android:background="@color/driver_card_bg" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginTop="16dp">
+                <ProgressBar
+                    android:id="@+id/circular_progress_bar"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:indeterminate="false"
+                    android:max="100"
+                    android:progress="100"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:progressDrawable="@drawable/circular_progress_fg" />
 
                 <LinearLayout
-                    android:layout_width="match_parent"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:paddingVertical="12dp">
-
-                    <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:src="@drawable/ic_payment_card"
-                        app:tint="@color/driver_text_secondary" />
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:layout_gravity="center">
 
                     <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/stats_method_card"
-                        android:textColor="@color/driver_text_primary"
-                        android:textSize="16sp"
-                        android:layout_marginStart="16dp" />
-
-                    <TextView
-                        android:id="@+id/tv_income_card"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/stats_value_zero"
-                        android:textColor="@color/driver_text_primary"
-                        android:textStyle="bold"
-                        android:textSize="16sp" />
-                </LinearLayout>
-
-                <View android:layout_width="match_parent" android:layout_height="1dp"
-                    android:background="@color/driver_card_bg" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:paddingVertical="12dp">
-
-                    <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:src="@drawable/ic_payment_cash"
-                        app:tint="@color/driver_text_secondary" />
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/stats_method_cash"
-                        android:textColor="@color/driver_text_primary"
-                        android:textSize="16sp"
-                        android:layout_marginStart="16dp" />
-
-                    <TextView
-                        android:id="@+id/tv_income_cash"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/stats_value_zero"
-                        android:textColor="@color/driver_text_primary"
-                        android:textStyle="bold"
-                        android:textSize="16sp" />
-                </LinearLayout>
-
-                <View android:layout_width="match_parent" android:layout_height="1dp"
-                    android:background="@color/driver_card_bg" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:paddingVertical="12dp">
-
-                    <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:src="@drawable/ic_wallet"
-                        app:tint="@color/driver_text_secondary" />
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/stats_method_balance"
-                        android:textColor="@color/driver_text_primary"
-                        android:textSize="16sp"
-                        android:layout_marginStart="16dp" />
-
-                    <TextView
-                        android:id="@+id/tv_income_balance"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/stats_value_zero"
-                        android:textColor="@color/driver_text_primary"
-                        android:textStyle="bold"
-                        android:textSize="16sp" />
-                </LinearLayout>
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginTop="24dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/stats_expenses_title"
-                    android:textColor="@color/driver_text_secondary"
-                    android:textSize="14sp"
-                    android:layout_marginBottom="8dp" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:paddingVertical="12dp">
-
-                    <TextView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:text="@string/stats_symbol_percent"
-                        android:textSize="18sp"
+                        android:text="Зароблено"
                         android:textColor="@color/driver_text_secondary"
-                        android:gravity="center"
-                        android:textStyle="bold" />
+                        android:textSize="14sp"/>
 
                     <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/stats_commission_label"
-                        android:textColor="@color/driver_text_primary"
-                        android:textSize="16sp"
-                        android:layout_marginStart="16dp" />
-
-                    <TextView
-                        android:id="@+id/tv_expense_commission"
+                        android:id="@+id/tv_total_income"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/stats_expense_placeholder"
-                        android:textColor="@color/driver_error"
+                        android:text="@string/stats_money_placeholder"
+                        android:textSize="30sp"
                         android:textStyle="bold"
-                        android:textSize="16sp" />
+                        android:textColor="@color/driver_text_primary"
+                        android:layout_marginVertical="2dp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="за період"
+                        android:textColor="@color/driver_text_secondary"
+                        android:textSize="13sp"/>
                 </LinearLayout>
-            </LinearLayout>
+            </FrameLayout>
 
-            <View android:layout_width="match_parent" android:layout_height="1dp"
-                android:background="@color/driver_card_bg" android:layout_marginTop="8dp" />
-
-            <TextView
-                android:layout_width="wrap_content"
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/stats_details_title"
-                android:textColor="@color/driver_text_primary"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:layout_marginTop="32dp"
-                android:layout_marginBottom="16dp" />
+                android:layout_marginHorizontal="24dp"
+                android:layout_marginBottom="24dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp"
+                app:cardBackgroundColor="@color/driver_card_bg">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <RelativeLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:paddingVertical="14dp"
+                        android:paddingHorizontal="16dp">
+                        <ImageView
+                            android:id="@+id/icon_card"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_payment_card"
+                            app:tint="@color/driver_text_secondary"
+                            android:layout_centerVertical="true"/>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/stats_method_card"
+                            android:textColor="@color/driver_text_primary"
+                            android:textSize="16sp"
+                            android:layout_centerVertical="true"
+                            android:layout_toEndOf="@id/icon_card"
+                            android:layout_marginStart="12dp"/>
+                        <TextView
+                            android:id="@+id/tv_income_card"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/stats_value_zero"
+                            android:textColor="@color/driver_text_primary"
+                            android:textStyle="bold"
+                            android:textSize="16sp"
+                            android:layout_centerVertical="true"
+                            android:layout_alignParentEnd="true"/>
+                    </RelativeLayout>
+
+                    <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#1AFFFFFF"/>
+
+                    <RelativeLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:paddingVertical="14dp"
+                        android:paddingHorizontal="16dp">
+                        <ImageView
+                            android:id="@+id/icon_cash"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_payment_cash"
+                            app:tint="@color/driver_text_secondary"
+                            android:layout_centerVertical="true"/>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/stats_method_cash"
+                            android:textColor="@color/driver_text_primary"
+                            android:textSize="16sp"
+                            android:layout_centerVertical="true"
+                            android:layout_toEndOf="@id/icon_cash"
+                            android:layout_marginStart="12dp"/>
+                        <TextView
+                            android:id="@+id/tv_income_cash"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/stats_value_zero"
+                            android:textColor="@color/driver_text_primary"
+                            android:textStyle="bold"
+                            android:textSize="16sp"
+                            android:layout_centerVertical="true"
+                            android:layout_alignParentEnd="true"/>
+                    </RelativeLayout>
+
+                    <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#1AFFFFFF"/>
+
+                    <RelativeLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:paddingVertical="14dp"
+                        android:paddingHorizontal="16dp">
+                        <ImageView
+                            android:id="@+id/icon_wallet"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_wallet"
+                            app:tint="@color/driver_text_secondary"
+                            android:layout_centerVertical="true"/>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/stats_method_balance"
+                            android:textColor="@color/driver_text_primary"
+                            android:textSize="16sp"
+                            android:layout_centerVertical="true"
+                            android:layout_toEndOf="@id/icon_wallet"
+                            android:layout_marginStart="12dp"/>
+                        <TextView
+                            android:id="@+id/tv_income_balance"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/stats_value_zero"
+                            android:textColor="@color/driver_text_primary"
+                            android:textStyle="bold"
+                            android:textSize="16sp"
+                            android:layout_centerVertical="true"
+                            android:layout_alignParentEnd="true"/>
+                    </RelativeLayout>
+
+                    <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#1AFFFFFF"/>
+
+                    <RelativeLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:paddingVertical="14dp"
+                        android:paddingHorizontal="16dp">
+                        <TextView
+                            android:id="@+id/icon_percent"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:text="@string/stats_symbol_percent"
+                            android:textSize="18sp"
+                            android:textColor="@color/driver_text_secondary"
+                            android:gravity="center"
+                            android:textStyle="bold"
+                            android:layout_centerVertical="true"/>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/stats_commission_label"
+                            android:textColor="@color/driver_text_primary"
+                            android:textSize="16sp"
+                            android:layout_centerVertical="true"
+                            android:layout_toEndOf="@id/icon_percent"
+                            android:layout_marginStart="12dp"/>
+                        <TextView
+                            android:id="@+id/tv_expense_commission"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/stats_expense_placeholder"
+                            android:textColor="@color/driver_error"
+                            android:textStyle="bold"
+                            android:textSize="16sp"
+                            android:layout_centerVertical="true"
+                            android:layout_alignParentEnd="true"/>
+                    </RelativeLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <GridLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:columnCount="2"
                 android:rowCount="2"
-                android:useDefaultMargins="false">
+                android:useDefaultMargins="false"
+                android:paddingHorizontal="16dp">
 
-                <LinearLayout
+                <com.google.android.material.card.MaterialCardView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_columnWeight="1"
-                    android:orientation="vertical"
-                    android:background="@drawable/bg_driver_input"
-                    android:backgroundTint="@color/driver_card_bg"
-                    android:padding="16dp"
-                    android:layout_marginEnd="8dp"
-                    android:layout_marginBottom="8dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
+                    android:layout_margin="6dp"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="0dp"
+                    app:strokeWidth="0dp"
+                    app:cardBackgroundColor="@color/driver_card_bg">
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/stats_label_orders"
-                        android:textColor="@color/driver_text_secondary"
-                        android:textSize="12sp" />
-                    <TextView
-                        android:id="@+id/tv_orders_count"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/stats_count_zero"
-                        android:textColor="@color/driver_text_primary"
-                        android:textSize="20sp"
-                        android:textStyle="bold"
-                        android:layout_marginTop="4dp" />
-                </LinearLayout>
+                        android:orientation="vertical"
+                        android:padding="16dp">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/stats_label_orders"
+                            android:textColor="@color/driver_text_secondary"
+                            android:textSize="12sp" />
+                        <TextView
+                            android:id="@+id/tv_orders_count"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/stats_count_zero"
+                            android:textColor="@color/driver_text_primary"
+                            android:textSize="22sp"
+                            android:textStyle="bold"
+                            android:layout_marginTop="6dp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
 
-                <LinearLayout
+                <com.google.android.material.card.MaterialCardView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_columnWeight="1"
-                    android:orientation="vertical"
-                    android:background="@drawable/bg_driver_input"
-                    android:backgroundTint="@color/driver_card_bg"
-                    android:padding="16dp"
-                    android:layout_marginStart="8dp"
-                    android:layout_marginBottom="8dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
+                    android:layout_margin="6dp"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="0dp"
+                    app:strokeWidth="0dp"
+                    app:cardBackgroundColor="@color/driver_card_bg">
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/stats_label_mileage"
-                        android:textColor="@color/driver_text_secondary"
-                        android:textSize="12sp" />
+                        android:orientation="vertical"
+                        android:padding="16dp">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/stats_label_mileage"
+                            android:textColor="@color/driver_text_secondary"
+                            android:textSize="12sp" />
+                        <TextView
+                            android:id="@+id/tv_total_km"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/stats_mileage_placeholder"
+                            android:textColor="@color/driver_text_primary"
+                            android:textSize="22sp"
+                            android:textStyle="bold"
+                            android:layout_marginTop="6dp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
 
-                    <TextView
-                        android:id="@+id/tv_total_km"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/stats_mileage_placeholder"
-                        android:textColor="@color/driver_text_primary"
-                        android:textSize="20sp"
-                        android:textStyle="bold"
-                        android:layout_marginTop="4dp" />
-                </LinearLayout>
-
-                <LinearLayout
+                <com.google.android.material.card.MaterialCardView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_columnWeight="1"
-                    android:orientation="vertical"
-                    android:background="@drawable/bg_driver_input"
-                    android:backgroundTint="@color/driver_card_bg"
-                    android:padding="16dp"
-                    android:layout_marginEnd="8dp"
-                    android:layout_marginTop="8dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
+                    android:layout_margin="6dp"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="0dp"
+                    app:strokeWidth="0dp"
+                    app:cardBackgroundColor="@color/driver_card_bg">
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/stats_label_avg_price"
-                        android:textColor="@color/driver_text_secondary"
-                        android:textSize="12sp" />
-                    <TextView
-                        android:id="@+id/tv_avg_price"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/stats_money_placeholder"
-                        android:textColor="@color/driver_text_primary"
-                        android:textSize="20sp"
-                        android:textStyle="bold"
-                        android:layout_marginTop="4dp" />
-                </LinearLayout>
+                        android:orientation="vertical"
+                        android:padding="16dp">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/stats_label_avg_price"
+                            android:textColor="@color/driver_text_secondary"
+                            android:textSize="12sp" />
+                        <TextView
+                            android:id="@+id/tv_avg_price"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/stats_money_placeholder"
+                            android:textColor="@color/driver_text_primary"
+                            android:textSize="22sp"
+                            android:textStyle="bold"
+                            android:layout_marginTop="6dp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
 
-                <LinearLayout
+                <com.google.android.material.card.MaterialCardView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_columnWeight="1"
-                    android:orientation="vertical"
-                    android:background="@drawable/bg_driver_input"
-                    android:backgroundTint="@color/driver_card_bg"
-                    android:padding="16dp"
-                    android:layout_marginStart="8dp"
-                    android:layout_marginTop="8dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
+                    android:layout_margin="6dp"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="0dp"
+                    app:strokeWidth="0dp"
+                    app:cardBackgroundColor="@color/driver_card_bg">
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/stats_label_time"
-                        android:textColor="@color/driver_text_secondary"
-                        android:textSize="12sp" />
-
-                    <TextView
-                        android:id="@+id/tv_total_hours"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/stats_time_placeholder"
-                        android:textColor="@color/driver_text_primary"
-                        android:textSize="20sp"
-                        android:textStyle="bold"
-                        android:layout_marginTop="4dp" />
-                </LinearLayout>
+                        android:orientation="vertical"
+                        android:padding="16dp">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/stats_label_time"
+                            android:textColor="@color/driver_text_secondary"
+                            android:textSize="12sp" />
+                        <TextView
+                            android:id="@+id/tv_total_hours"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/stats_time_placeholder"
+                            android:textColor="@color/driver_text_primary"
+                            android:textSize="22sp"
+                            android:textStyle="bold"
+                            android:layout_marginTop="6dp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
             </GridLayout>
-
-            <Space android:layout_width="match_parent" android:layout_height="32dp" />
 
         </LinearLayout>
     </ScrollView>
-</LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>
