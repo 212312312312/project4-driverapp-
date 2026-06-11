@@ -7,9 +7,14 @@ import retrofit2.Call
 
 // --- DTO КЛАССЫ ---
 
-// <-- НОВЫЙ DTO ДЛЯ РЕФРЕША -->
+// <-- НОВЫЙ DTO ДЛЯ ТОЧЕК ГРАФИКА (СИНХРОНИЗАЦИЯ С СЕРВЕРОМ) -->
+data class ChartPointDto(
+    @SerializedName("date") val date: String,
+    @SerializedName("income") val income: Double
+)
+// <---------------------------------------------------------->
+
 data class TokenRefreshRequestDto(val refreshToken: String)
-// <--------------------------->
 
 data class ChatMessageDto(
     val id: Long?,
@@ -58,6 +63,7 @@ data class DriverNotificationDto(
     val isRead: Boolean
 )
 
+// ОБНОВЛЕНО: Модель теперь полностью соответствует новому ответу Спринга
 data class DriverStatsDto(
     val totalIncome: Double,
     val commission: Double,
@@ -67,7 +73,8 @@ data class DriverStatsDto(
     val ordersCount: Int,
     val totalDistanceKm: Double,
     val avgPricePerKm: Double,
-    val totalHours: Double
+    val totalHours: Double,
+    @SerializedName("chartPoints") val chartPoints: List<ChartPointDto>? = null // Реальные точки
 )
 
 data class SmsRequestDto(
@@ -105,7 +112,6 @@ data class UpdateDriverRequest(
     val rnokpp: String? = null
 )
 
-// НОВЫЙ DTO для обновления инвалидности
 data class UpdateDisabilityRequest(
     val hasMovementIssue: Boolean,
     val hasHearingIssue: Boolean,
@@ -120,8 +126,6 @@ data class MessageResponse(
 interface DriverApiService {
 
     // --- ВХОД И РЕФРЕШ ---
-
-    // <-- ЭНДПОИНТ ДЛЯ РЕФРЕША (Синхронный) -->
     @POST("api/v1/auth/refresh")
     fun refreshTokenSync(@Body request: TokenRefreshRequestDto): Call<LoginResponse>
 
@@ -143,7 +147,6 @@ interface DriverApiService {
 
     @GET("api/v1/driver/me")
     suspend fun getDriverProfile(): Response<DriverProfileDto>
-
 
     // --- CHAT ---
     @GET("api/v1/chat/{orderId}")
@@ -292,11 +295,9 @@ interface DriverApiService {
     @GET("api/v1/driver/transactions")
     suspend fun getWalletTransactions(): Response<List<WalletTransactionDto>>
 
-    // ДОБАВЛЕНО: Получение незавершенных транзакций (Экран "Ваші кошти")
     @GET("api/v1/driver/transactions/pending")
     suspend fun getPendingWalletTransactions(): Response<List<WalletTransactionDto>>
 
-    // ДОБАВЛЕНО: Эндпоинты для управления картами выплат водителю
     @POST("api/v1/driver/cards/init")
     suspend fun initBindCard(): Response<Map<String, String>>
 
