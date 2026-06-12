@@ -4,13 +4,13 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/driver_black_bg"
-    android:paddingTop="48dp">
+    android:background="@color/driver_black_bg">
 
     <RelativeLayout
         android:id="@+id/layoutHeader"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
         android:layout_marginBottom="16dp"
         android:layout_marginHorizontal="24dp">
 
@@ -31,6 +31,7 @@
             android:layout_height="wrap_content"
             android:text="@string/points_title_calculation"
             android:textSize="22sp"
+            android:fontFamily="@font/app_font_family"
             android:textStyle="bold"
             android:textColor="@color/driver_text_primary"
             android:layout_centerVertical="true"
@@ -38,24 +39,26 @@
             android:layout_marginStart="16dp" />
     </RelativeLayout>
 
-    <ScrollView
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:overScrollMode="never"
         android:scrollbars="none">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingHorizontal="16dp"
+            android:paddingHorizontal="24dp"
             android:paddingBottom="24dp">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/points_label_basic"
-                android:textColor="#4CAF50"
+                android:textColor="@color/activity_green"
                 android:textSize="18sp"
+                android:fontFamily="@font/app_font_family"
                 android:textStyle="bold"
                 android:layout_marginBottom="8dp"
                 android:layout_marginStart="4dp" />
@@ -66,7 +69,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:background="@drawable/bg_bottom_nav_floating"
-                android:backgroundTint="#1E1E1E"
+                android:backgroundTint="@color/driver_card_bg"
                 android:padding="16dp"
                 android:layout_marginBottom="24dp" />
 
@@ -74,8 +77,9 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/points_label_bonus"
-                android:textColor="#FFC107"
+                android:textColor="@color/activity_yellow"
                 android:textSize="18sp"
+                android:fontFamily="@font/app_font_family"
                 android:textStyle="bold"
                 android:layout_marginBottom="8dp"
                 android:layout_marginStart="4dp" />
@@ -86,7 +90,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:background="@drawable/bg_bottom_nav_floating"
-                android:backgroundTint="#1E1E1E"
+                android:backgroundTint="@color/driver_card_bg"
                 android:padding="16dp"
                 android:layout_marginBottom="24dp" />
 
@@ -94,8 +98,9 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/points_label_penalty"
-                android:textColor="#F44336"
+                android:textColor="@color/activity_red"
                 android:textSize="18sp"
+                android:fontFamily="@font/app_font_family"
                 android:textStyle="bold"
                 android:layout_marginBottom="8dp"
                 android:layout_marginStart="4dp" />
@@ -106,9 +111,9 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:background="@drawable/bg_bottom_nav_floating"
-                android:backgroundTint="#1E1E1E"
+                android:backgroundTint="@color/driver_card_bg"
                 android:padding="16dp" />
 
         </LinearLayout>
-    </ScrollView>
+    </androidx.core.widget.NestedScrollView>
 </LinearLayout>

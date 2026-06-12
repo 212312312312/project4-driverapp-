@@ -4,13 +4,13 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/driver_black_bg"
-    android:paddingTop="48dp">
+    android:background="@color/driver_black_bg">
 
     <RelativeLayout
         android:id="@+id/layoutHeader"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
         android:layout_marginBottom="16dp"
         android:layout_marginHorizontal="24dp">
 
@@ -31,6 +31,7 @@
             android:layout_height="wrap_content"
             android:text="@string/distrib_title"
             android:textSize="22sp"
+            android:fontFamily="@font/app_font_family"
             android:textStyle="bold"
             android:textColor="@color/driver_text_primary"
             android:layout_centerVertical="true"
@@ -38,16 +39,17 @@
             android:layout_marginStart="16dp" />
     </RelativeLayout>
 
-    <ScrollView
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:overScrollMode="never"
         android:scrollbars="none">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingHorizontal="16dp"
+            android:paddingHorizontal="24dp"
             android:paddingBottom="24dp">
 
             <TextView
@@ -57,6 +59,7 @@
                 android:layout_marginBottom="8dp"
                 android:text="@string/distrib_sec_principle"
                 android:textColor="@color/driver_text_primary"
+                android:fontFamily="@font/app_font_family"
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
@@ -65,7 +68,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="24dp"
                 android:background="@drawable/bg_bottom_nav_floating"
-                android:backgroundTint="#1E1E1E"
+                android:backgroundTint="@color/driver_card_bg"
                 android:orientation="vertical"
                 android:padding="16dp">
 
@@ -75,15 +78,18 @@
                     android:layout_marginBottom="12dp"
                     android:text="@string/distrib_text_principle_1"
                     android:textColor="@color/driver_text_primary"
-                    android:textSize="16sp" />
+                    android:fontFamily="@font/app_font_family"
+                    android:textSize="16sp"
+                    android:lineSpacingExtra="3dp" />
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="4dp"
+                    android:layout_marginBottom="6dp"
                     android:drawablePadding="8dp"
                     android:text="@string/distrib_text_principle_2"
                     android:textColor="@color/driver_text_secondary"
+                    android:fontFamily="@font/app_font_family"
                     android:textSize="14sp"
                     app:drawableStartCompat="@drawable/ic_list_dot"
                     app:drawableTint="@color/driver_text_secondary" />
@@ -94,6 +100,7 @@
                     android:drawablePadding="8dp"
                     android:text="@string/distrib_text_principle_3"
                     android:textColor="@color/driver_text_secondary"
+                    android:fontFamily="@font/app_font_family"
                     android:textSize="14sp"
                     app:drawableStartCompat="@drawable/ic_list_dot"
                     app:drawableTint="@color/driver_text_secondary" />
@@ -106,6 +113,7 @@
                 android:layout_marginBottom="8dp"
                 android:text="@string/distrib_sec_factors"
                 android:textColor="@color/driver_text_primary"
+                android:fontFamily="@font/app_font_family"
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
@@ -114,7 +122,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="24dp"
                 android:background="@drawable/bg_bottom_nav_floating"
-                android:backgroundTint="#1E1E1E"
+                android:backgroundTint="@color/driver_card_bg"
                 android:orientation="vertical"
                 android:padding="16dp">
 
@@ -124,22 +132,27 @@
                     android:layout_marginBottom="12dp"
                     android:text="@string/distrib_text_factors_intro"
                     android:textColor="@color/driver_text_primary"
+                    android:fontFamily="@font/app_font_family"
                     android:textSize="16sp" />
 
                 <TextView
                     style="@style/ListTextStyle"
+                    android:fontFamily="@font/app_font_family"
                     android:text="@string/distrib_factor_chain" />
 
                 <TextView
                     style="@style/ListTextStyle"
+                    android:fontFamily="@font/app_font_family"
                     android:text="@string/distrib_factor_time" />
 
                 <TextView
                     style="@style/ListTextStyle"
+                    android:fontFamily="@font/app_font_family"
                     android:text="@string/distrib_factor_activity" />
 
                 <TextView
                     style="@style/ListTextStyle"
+                    android:fontFamily="@font/app_font_family"
                     android:text="@string/distrib_factor_branding" />
             </LinearLayout>
 
@@ -150,6 +163,7 @@
                 android:layout_marginBottom="8dp"
                 android:text="@string/distrib_sec_stages"
                 android:textColor="@color/driver_text_primary"
+                android:fontFamily="@font/app_font_family"
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
@@ -157,7 +171,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="@drawable/bg_bottom_nav_floating"
-                android:backgroundTint="#1E1E1E"
+                android:backgroundTint="@color/driver_card_bg"
                 android:orientation="vertical"
                 android:padding="16dp">
 
@@ -167,25 +181,30 @@
                     android:layout_marginBottom="12dp"
                     android:text="@string/distrib_text_stages_intro"
                     android:textColor="@color/driver_text_primary"
+                    android:fontFamily="@font/app_font_family"
                     android:textSize="16sp" />
 
                 <TextView
                     style="@style/ListTextStyle"
+                    android:fontFamily="@font/app_font_family"
                     android:text="@string/distrib_stage_search" />
 
                 <TextView
                     style="@style/ListTextStyle"
+                    android:fontFamily="@font/app_font_family"
                     android:text="@string/distrib_stage_queue" />
 
                 <TextView
                     style="@style/ListTextStyle"
+                    android:fontFamily="@font/app_font_family"
                     android:text="@string/distrib_stage_sending" />
 
                 <TextView
                     style="@style/ListTextStyle"
+                    android:fontFamily="@font/app_font_family"
                     android:text="@string/distrib_stage_ether" />
             </LinearLayout>
 
         </LinearLayout>
-    </ScrollView>
+    </androidx.core.widget.NestedScrollView>
 </LinearLayout>

@@ -4,13 +4,13 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/driver_black_bg"
-    android:paddingTop="48dp">
+    android:background="@color/driver_black_bg">
 
     <RelativeLayout
         android:id="@+id/layoutHeader"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
         android:layout_marginBottom="16dp"
         android:layout_marginHorizontal="24dp">
 
@@ -31,6 +31,7 @@
             android:layout_height="wrap_content"
             android:text="@string/levels_title"
             android:textSize="22sp"
+            android:fontFamily="@font/app_font_family"
             android:textStyle="bold"
             android:textColor="@color/driver_text_primary"
             android:layout_centerVertical="true"
@@ -38,18 +39,19 @@
             android:layout_marginStart="16dp" />
     </RelativeLayout>
 
-    <ScrollView
+    <androidx.core.widget.NestedScrollView
         android:id="@+id/scrollView2"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:overScrollMode="never"
         android:scrollbars="none">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingHorizontal="16dp"
-            android:paddingBottom="24dp">
+            android:paddingHorizontal="24dp"
+            android:paddingBottom="32dp">
 
             <TextView
                 android:layout_width="match_parent"
@@ -58,18 +60,21 @@
                 android:gravity="center"
                 android:text="@string/levels_subtitle"
                 android:textColor="@color/driver_text_primary"
+                android:fontFamily="@font/app_font_family"
                 android:textSize="22sp"
                 android:textStyle="bold" />
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="24dp"
+                android:layout_marginTop="12dp"
+                android:layout_marginBottom="32dp"
                 android:gravity="center"
                 android:text="@string/levels_description"
                 android:textColor="@color/driver_text_secondary"
-                android:textSize="14sp" />
+                android:fontFamily="@font/app_font_family"
+                android:textSize="14sp"
+                android:lineSpacingExtra="4dp" />
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
@@ -85,6 +90,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/levels_range_green"
                     android:textColor="@color/activity_text_light"
+                    android:fontFamily="@font/app_font_family"
                     android:textSize="20sp"
                     android:textStyle="bold"
                     app:layout_constraintStart_toStartOf="parent"
@@ -95,11 +101,12 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:background="@drawable/bg_bottom_nav_floating"
-                    android:backgroundTint="@color/bg_badge"
-                    android:paddingHorizontal="8dp"
+                    android:backgroundTint="@color/white"
+                    android:paddingHorizontal="10dp"
                     android:paddingVertical="4dp"
                     android:text="@string/levels_badge_current"
                     android:textColor="@color/activity_green"
+                    android:fontFamily="@font/app_font_family"
                     android:textSize="12sp"
                     android:textStyle="bold"
                     android:visibility="gone"
@@ -112,7 +119,9 @@
                     android:layout_marginTop="12dp"
                     android:text="@string/levels_desc_green"
                     android:textColor="@color/activity_text_light"
-                    android:textSize="16sp"
+                    android:fontFamily="@font/app_font_family"
+                    android:textSize="15sp"
+                    android:lineSpacingExtra="3dp"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/tvPointsGreen" />
@@ -132,6 +141,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/levels_range_yellow"
                     android:textColor="@color/activity_text_dark"
+                    android:fontFamily="@font/app_font_family"
                     android:textSize="20sp"
                     android:textStyle="bold"
                     app:layout_constraintStart_toStartOf="parent"
@@ -142,11 +152,12 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:background="@drawable/bg_bottom_nav_floating"
-                    android:backgroundTint="@color/bg_badge"
-                    android:paddingHorizontal="8dp"
+                    android:backgroundTint="@color/activity_text_dark"
+                    android:paddingHorizontal="10dp"
                     android:paddingVertical="4dp"
                     android:text="@string/levels_badge_current"
                     android:textColor="@color/activity_yellow"
+                    android:fontFamily="@font/app_font_family"
                     android:textSize="12sp"
                     android:textStyle="bold"
                     android:visibility="gone"
@@ -159,7 +170,9 @@
                     android:layout_marginTop="12dp"
                     android:text="@string/levels_desc_yellow"
                     android:textColor="@color/activity_text_dark"
-                    android:textSize="16sp"
+                    android:fontFamily="@font/app_font_family"
+                    android:textSize="15sp"
+                    android:lineSpacingExtra="3dp"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/tvPointsYellow" />
@@ -168,7 +181,7 @@
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="24dp"
+                android:layout_marginBottom="28dp"
                 android:background="@drawable/bg_bottom_nav_floating"
                 android:backgroundTint="@color/activity_red"
                 android:padding="20dp">
@@ -179,6 +192,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/levels_range_red"
                     android:textColor="@color/activity_text_light"
+                    android:fontFamily="@font/app_font_family"
                     android:textSize="20sp"
                     android:textStyle="bold"
                     app:layout_constraintStart_toStartOf="parent"
@@ -189,11 +203,12 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:background="@drawable/bg_bottom_nav_floating"
-                    android:backgroundTint="@color/bg_badge"
-                    android:paddingHorizontal="8dp"
+                    android:backgroundTint="@color/white"
+                    android:paddingHorizontal="10dp"
                     android:paddingVertical="4dp"
                     android:text="@string/levels_badge_current"
                     android:textColor="@color/activity_red"
+                    android:fontFamily="@font/app_font_family"
                     android:textSize="12sp"
                     android:textStyle="bold"
                     android:visibility="gone"
@@ -206,7 +221,9 @@
                     android:layout_marginTop="12dp"
                     android:text="@string/levels_desc_red"
                     android:textColor="@color/activity_text_light"
-                    android:textSize="16sp"
+                    android:fontFamily="@font/app_font_family"
+                    android:textSize="15sp"
+                    android:lineSpacingExtra="3dp"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/tvPointsRed" />
@@ -217,10 +234,12 @@
                 android:layout_height="wrap_content"
                 android:gravity="center"
                 android:text="@string/levels_warning_zero"
-                android:textColor="#D32F2F"
+                android:textColor="@color/activity_red"
+                android:fontFamily="@font/app_font_family"
                 android:textSize="14sp"
-                android:textStyle="bold" />
+                android:textStyle="bold"
+                android:lineSpacingExtra="4dp" />
 
         </LinearLayout>
-    </ScrollView>
+    </androidx.core.widget.NestedScrollView>
 </LinearLayout>

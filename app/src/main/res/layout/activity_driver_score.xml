@@ -4,13 +4,13 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/driver_black_bg"
-    android:paddingTop="48dp">
+    android:background="@color/driver_black_bg">
 
     <RelativeLayout
         android:id="@+id/layoutHeader"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
         android:layout_marginBottom="16dp"
         android:layout_marginHorizontal="24dp">
 
@@ -31,6 +31,7 @@
             android:layout_height="wrap_content"
             android:text="@string/score_title"
             android:textSize="22sp"
+            android:fontFamily="@font/app_font_family"
             android:textStyle="bold"
             android:textColor="@color/driver_text_primary"
             android:layout_centerVertical="true"
@@ -38,10 +39,13 @@
             android:layout_marginStart="16dp" />
     </RelativeLayout>
 
-    <ScrollView
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/nestedScrollView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
+        android:fillViewport="true"
+        android:overScrollMode="never"
         android:scrollbars="none">
 
         <LinearLayout
@@ -52,57 +56,139 @@
             android:paddingBottom="24dp"
             android:gravity="center_horizontal">
 
-            <FrameLayout
-                android:layout_width="220dp"
-                android:layout_height="220dp"
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/scoreTrackContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:layout_marginBottom="32dp">
+                android:layout_marginBottom="40dp">
 
-                <ProgressBar
-                    android:id="@+id/progressBarBackground"
-                    style="?android:attr/progressBarStyleHorizontal"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:indeterminate="false"
-                    android:max="1000"
-                    android:progress="1000"
-                    android:progressDrawable="@drawable/circular_progress_bg"
-                    android:alpha="0.2" />
+                <View
+                    android:id="@+id/viewScoreGlow"
+                    android:layout_width="200dp"
+                    android:layout_height="200dp"
+                    app:layout_constraintTop_toTopOf="@id/tvScoreValue"
+                    app:layout_constraintBottom_toBottomOf="@id/tvScoreLabel"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent" />
 
-                <ProgressBar
-                    android:id="@+id/progressBarScore"
-                    style="?android:attr/progressBarStyleHorizontal"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:indeterminate="false"
-                    android:max="1000"
-                    android:progress="750"
-                    android:progressDrawable="@drawable/circular_progress_fg" />
-
-                <LinearLayout
+                <TextView
+                    android:id="@+id/tvScoreValue"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    android:orientation="vertical"
-                    android:gravity="center">
+                    android:text="0"
+                    android:textSize="44sp"
+                    android:fontFamily="@font/app_font_family"
+                    android:textStyle="bold"
+                    android:textColor="@color/driver_text_primary"
+                    android:layout_marginTop="70dp" 
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent" />
 
-                    <TextView
-                        android:id="@+id/tvScoreValue"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="1000"
-                        android:textSize="56sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/driver_text_primary" />
+                <TextView
+                    android:id="@+id/tvScoreLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Ваша активність"
+                    android:textSize="16sp"
+                    android:fontFamily="@font/app_font_family"
+                    android:textColor="@color/driver_text_secondary"
+                    android:layout_marginTop="4dp"
+                    app:layout_constraintTop_toBottomOf="@id/tvScoreValue"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent" />
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/score_max_label"
-                        android:textSize="16sp"
-                        android:textColor="@color/driver_text_secondary" />
+                <ImageView
+                    android:id="@+id/ivCarMarker"
+                    android:layout_width="45dp"
+                    android:layout_height="45dp"
+                    android:src="@drawable/ic_car_score"
+                    android:layout_marginBottom="6dp"
+                    app:layout_constraintBottom_toTopOf="@id/layoutTrack"
+                    app:layout_constraintStart_toStartOf="@id/layoutTrack"
+                    app:layout_constraintEnd_toEndOf="@id/layoutTrack"
+                    app:layout_constraintHorizontal_bias="0.0" />
+
+                <LinearLayout
+                    android:id="@+id/layoutTrack"
+                    android:layout_width="match_parent"
+                    android:layout_height="12dp"
+                    android:orientation="horizontal"
+                    android:weightSum="1000"
+                    android:layout_marginTop="50dp"
+                    app:layout_constraintTop_toBottomOf="@id/tvScoreLabel"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent">
+
+                    <View
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="400"
+                        android:background="@drawable/bg_track_red_rounded" />
+
+                    <View
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="300"
+                        android:background="@color/activity_yellow" />
+
+                    <View
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="300"
+                        android:background="@drawable/bg_track_teal_rounded" />
                 </LinearLayout>
-            </FrameLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0"
+                    android:textSize="12sp"
+                    android:textColor="@color/driver_text_secondary"
+                    android:fontFamily="@font/app_font_family"
+                    android:layout_marginTop="6dp"
+                    app:layout_constraintTop_toBottomOf="@id/layoutTrack"
+                    app:layout_constraintStart_toStartOf="@id/layoutTrack" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="400"
+                    android:textSize="12sp"
+                    android:textColor="@color/driver_text_secondary"
+                    android:fontFamily="@font/app_font_family"
+                    android:layout_marginTop="6dp"
+                    app:layout_constraintTop_toBottomOf="@id/layoutTrack"
+                    app:layout_constraintStart_toStartOf="@id/layoutTrack"
+                    app:layout_constraintEnd_toEndOf="@id/layoutTrack"
+                    app:layout_constraintHorizontal_bias="0.4" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="700"
+                    android:textSize="12sp"
+                    android:textColor="@color/driver_text_secondary"
+                    android:fontFamily="@font/app_font_family"
+                    android:layout_marginTop="6dp"
+                    app:layout_constraintTop_toBottomOf="@id/layoutTrack"
+                    app:layout_constraintStart_toStartOf="@id/layoutTrack"
+                    app:layout_constraintEnd_toEndOf="@id/layoutTrack"
+                    app:layout_constraintHorizontal_bias="0.7" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="1000"
+                    android:textSize="12sp"
+                    android:textColor="@color/driver_text_secondary"
+                    android:fontFamily="@font/app_font_family"
+                    android:layout_marginTop="6dp"
+                    app:layout_constraintTop_toBottomOf="@id/layoutTrack"
+                    app:layout_constraintEnd_toEndOf="@id/layoutTrack" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
 
             <TextView
                 android:id="@+id/tvLevelTitle"
@@ -110,6 +196,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/score_level_high"
                 android:textSize="24sp"
+                android:fontFamily="@font/app_font_family"
                 android:textStyle="bold"
                 android:textColor="#4CAF50"
                 android:layout_marginBottom="12dp" />
@@ -120,6 +207,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/score_level_desc"
                 android:textSize="16sp"
+                android:fontFamily="@font/app_font_family"
                 android:textAlignment="center"
                 android:textColor="@color/driver_text_secondary"
                 android:lineSpacingExtra="4dp"
@@ -129,6 +217,7 @@
                 android:id="@+id/btnInfoLevels"
                 style="@style/InfoButtonStyle">
                 <TextView style="@style/InfoButtonTextStyle"
+                    android:fontFamily="@font/app_font_family"
                     android:text="@string/score_btn_levels_info" />
                 <ImageView style="@style/InfoButtonIconStyle" />
             </LinearLayout>
@@ -137,6 +226,7 @@
                 android:id="@+id/btnInfoCalculation"
                 style="@style/InfoButtonStyle">
                 <TextView style="@style/InfoButtonTextStyle"
+                    android:fontFamily="@font/app_font_family"
                     android:text="@string/score_btn_calc_info" />
                 <ImageView style="@style/InfoButtonIconStyle" />
             </LinearLayout>
@@ -145,33 +235,48 @@
                 android:id="@+id/btnInfoDistribution"
                 style="@style/InfoButtonStyle">
                 <TextView style="@style/InfoButtonTextStyle"
+                    android:fontFamily="@font/app_font_family"
                     android:text="@string/score_btn_distrib_info" />
                 <ImageView style="@style/InfoButtonIconStyle" />
             </LinearLayout>
 
         </LinearLayout>
-    </ScrollView>
+    </androidx.core.widget.NestedScrollView>
 
     <LinearLayout
         android:id="@+id/layoutFooter"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="24dp"
+        android:orientation="vertical"
         android:background="@color/driver_black_bg">
 
-        <TextView
-            android:id="@+id/btnOpenHistory"
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/btn_container_layout"
             android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:background="@drawable/bg_driver_btn"
-            android:text="@string/score_btn_history"
-            android:textColor="@android:color/white"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:gravity="center"
-            android:clickable="true"
-            android:focusable="true"
-            android:foreground="?attr/selectableItemBackground" />
+            android:layout_height="60dp"
+            android:layout_marginHorizontal="9dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="16dp"
+            android:background="@drawable/bg_driver_btn">
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnOpenHistory"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:text="@string/score_btn_history"
+                android:textAllCaps="false"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="@color/black" 
+                android:fontFamily="@font/app_font_family"
+                android:background="@android:color/transparent"
+                android:elevation="0dp" 
+                android:stateListAnimator="@null"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
     </LinearLayout>
 
 </LinearLayout>

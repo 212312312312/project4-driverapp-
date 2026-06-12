@@ -1,10 +1,10 @@
 package com.taxiapp.driver
 
-import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.taxiapp.driver.network.ActivityHistoryItemDto
 import java.time.LocalDateTime
@@ -27,9 +27,11 @@ class HistoryActivityAdapter(private var items: List<ActivityHistoryItemDto>) :
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = items[position]
+        val context = holder.itemView.context
+
         holder.tvReason.text = item.reason
 
-        // Форматування дати (якщо сервер надсилає ISO)
+        // Форматирование даты
         try {
             val parsed = LocalDateTime.parse(item.date)
             holder.tvDate.text = parsed.format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"))
@@ -37,12 +39,13 @@ class HistoryActivityAdapter(private var items: List<ActivityHistoryItemDto>) :
             holder.tvDate.text = item.date
         }
 
+        // Подгрузка системных цветов в зависимости от знака баллов
         if (item.change > 0) {
             holder.tvPoints.text = "+${item.change}"
-            holder.tvPoints.setTextColor(Color.parseColor("#4CAF50")) // Green
+            holder.tvPoints.setTextColor(ContextCompat.getColor(context, R.color.activity_green))
         } else {
             holder.tvPoints.text = "${item.change}"
-            holder.tvPoints.setTextColor(Color.parseColor("#F44336")) // Red
+            holder.tvPoints.setTextColor(ContextCompat.getColor(context, R.color.activity_red))
         }
     }
 

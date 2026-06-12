@@ -1,6 +1,5 @@
 package com.taxiapp.driver
 
-import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -13,7 +12,6 @@ import androidx.recyclerview.widget.RecyclerView
 import com.taxiapp.driver.network.WalletTransactionDto
 import java.text.SimpleDateFormat
 import java.util.Locale
-import java.util.TimeZone
 
 class WalletAdapter : ListAdapter<WalletTransactionDto, WalletAdapter.WalletViewHolder>(DiffCallback()) {
 
@@ -22,7 +20,7 @@ class WalletAdapter : ListAdapter<WalletTransactionDto, WalletAdapter.WalletView
         val tvDesc: TextView = itemView.findViewById(R.id.tv_tx_desc)
         val tvAmount: TextView = itemView.findViewById(R.id.tv_tx_amount)
         val tvDate: TextView = itemView.findViewById(R.id.tv_tx_date)
-        val tvBalanceAfter: TextView = itemView.findViewById(R.id.tv_tx_balance_after) // ДОБАВЛЕНО
+        val tvBalanceAfter: TextView = itemView.findViewById(R.id.tv_tx_balance_after)
         val imgIcon: ImageView = itemView.findViewById(R.id.img_tx_icon)
     }
 
@@ -35,16 +33,14 @@ class WalletAdapter : ListAdapter<WalletTransactionDto, WalletAdapter.WalletView
         val item = getItem(position)
         val context = holder.itemView.context
 
-        // 1. Описание
+        // 1. Описание транзакции
         holder.tvDesc.text = item.description ?: "Без опису"
 
-        // ДОБАВЛЕНО: Настройка остатка (залишка) и клика для перехода в детали заказа
-        val tvBalanceAfter = holder.itemView.findViewById<TextView>(R.id.tv_tx_balance_after)
-        if (tvBalanceAfter != null) {
-            tvBalanceAfter.text = "Залишок: %.2f ₴".format(item.balanceAfter)
-            tvBalanceAfter.visibility = View.VISIBLE
-        }
+        // Выводим остаток (залишок) после транзакции
+        holder.tvBalanceAfter.text = "Залишок: %.2f ₴".format(item.balanceAfter)
+        holder.tvBalanceAfter.visibility = View.VISIBLE
 
+        // Обработка клика: открываем детали, если транзакция привязана к заказу
         holder.itemView.setOnClickListener {
             if (item.orderId != null && item.orderId > 0) {
                 val intent = android.content.Intent(context, HistoryDetailsActivity::class.java).apply {
@@ -56,59 +52,43 @@ class WalletAdapter : ListAdapter<WalletTransactionDto, WalletAdapter.WalletView
 
         // 2. Дата (парсинг ISO 8601)
         try {
-            // Сервер отдает время, скорее всего, без часового пояса или в UTC.
-            // Подстраиваем формат под то, что шлет Java LocalDateTime.toString()
             val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
             val outputFormat = SimpleDateFormat("dd.MM HH:mm", Locale.getDefault())
 
             val date = inputFormat.parse(item.createdAt)
             holder.tvDate.text = if (date != null) outputFormat.format(date) else item.createdAt
         } catch (e: Exception) {
-            holder.tvDate.text = item.createdAt // Если ошибка, показываем как есть
+            holder.tvDate.text = item.createdAt
         }
 
-        // 3. Цвета и Иконки
-        // DEPOSIT (Пополнение) -> Зеленый
+        // 3. Динамические цвета из colors.xml и Иконки
+        // DEPOSIT (Пополнение) или BONUS -> Зеленый
         if (item.operationType == "DEPOSIT" || item.operationType == "BONUS") {
-            holder.tvAmount.text = "+%.2f ₴".format(item.amount)
-            holder.tvAmount.setTextColor(Color.parseColor("#4CAF50")) // Green
+            val greenColor = ContextCompat.getColor(context, R.color.activity_green)
 
-            holder.imgIcon.setImageResource(R.drawable.ic_wallet) // Или иконка "стрелка вниз"
-            holder.imgIcon.setColorFilter(Color.parseColor("#4CAF50"))
+            holder.tvAmount.text = "+%.2f ₴".format(item.amount)
+            holder.tvAmount.setTextColor(greenColor)
+
+            holder.imgIcon.setImageResource(R.drawable.ic_wallet)
+            holder.imgIcon.setColorFilter(greenColor)
 
             holder.tvType.text = if (item.operationType == "DEPOSIT") "Поповнення" else "Бонус"
         }
         // COMMISSION / PENALTY / WITHDRAWAL -> Красный
         else {
-            // amount может приходить отрицательным с сервера (например, -15.0), а может положительным
-            // Если оно уже отрицательное, знак минус будет автоматически.
-            // Если положительное, но это списание - добавим минус.
+            val redColor = ContextCompat.getColor(context, R.color.activity_red)
 
-            // В нашем коде сервера мы сохраняли: amount = -commissionAmount. Значит число уже с минусом.
             holder.tvAmount.text = "%.2f ₴".format(item.amount)
-            holder.tvAmount.setTextColor(Color.parseColor("#F44336")) // Red
+            holder.tvAmount.setTextColor(redColor)
 
-            holder.imgIcon.setImageResource(R.drawable.ic_payment_card) // Или иконка "стрелка вверх"
-            holder.imgIcon.setColorFilter(Color.parseColor("#F44336"))
+            holder.imgIcon.setImageResource(R.drawable.ic_payment_card)
+            holder.imgIcon.setColorFilter(redColor)
 
             holder.tvType.text = when (item.operationType) {
                 "COMMISSION" -> "Комісія"
                 "PENALTY" -> "Штраф"
                 "WITHDRAWAL" -> "Виведення"
                 else -> item.operationType
-            }
-        }
-
-        // Выводим остаток (залишок) после транзакции
-        holder.tvBalanceAfter.text = "Залишок: %.2f ₴".format(item.balanceAfter)
-
-        // Обработка клика: открываем activity_history_details.xml, если транзакция привязана к заказу
-        holder.itemView.setOnClickListener {
-            if (item.orderId != null && item.orderId > 0) {
-                val intent = android.content.Intent(context, HistoryDetailsActivity::class.java).apply {
-                    putExtra("ORDER_ID", item.orderId) // Прокидываем ID заказа
-                }
-                context.startActivity(intent)
             }
         }
     }

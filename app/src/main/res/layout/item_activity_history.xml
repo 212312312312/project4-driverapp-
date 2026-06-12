@@ -4,11 +4,12 @@
     android:layout_height="wrap_content"
     android:orientation="horizontal"
     android:padding="16dp"
-    android:background="@drawable/bg_driver_input" 
-    android:backgroundTint="#1AFFFFFF" 
+    android:background="@drawable/bg_driver_input"
+    android:backgroundTint="@color/driver_card_bg"
     android:layout_marginBottom="8dp"
     android:gravity="center_vertical"
     android:elevation="0dp">
+
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
@@ -21,6 +22,7 @@
             android:layout_height="wrap_content"
             android:text="Замовлення #123"
             android:textSize="16sp"
+            android:fontFamily="@font/app_font_family"
             android:textColor="@color/driver_text_primary"
             android:textStyle="bold" />
 
@@ -30,6 +32,7 @@
             android:layout_height="wrap_content"
             android:text="12.05.2024 14:30"
             android:textSize="13sp"
+            android:fontFamily="@font/app_font_family"
             android:textColor="@color/driver_text_secondary"
             android:layout_marginTop="4dp"/>
     </LinearLayout>
@@ -40,7 +43,8 @@
         android:layout_height="wrap_content"
         android:text="+5"
         android:textSize="18sp"
+        android:fontFamily="@font/app_font_family"
         android:textStyle="bold"
-        android:textColor="#4CAF50"/>
+        android:textColor="@color/activity_green"/>
 
 </LinearLayout>

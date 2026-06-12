@@ -4,13 +4,14 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/driver_black_bg"
-    android:paddingTop="48dp">
+    android:background="@color/driver_black_bg">
 
     <RelativeLayout
+        android:id="@+id/layoutHeader"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="24dp"
+        android:layout_marginTop="32dp"
+        android:layout_marginBottom="16dp"
         android:layout_marginHorizontal="24dp">
 
         <ImageView
@@ -30,6 +31,7 @@
             android:layout_height="wrap_content"
             android:text="@string/history_title"
             android:textSize="22sp"
+            android:fontFamily="@font/app_font_family"
             android:textStyle="bold"
             android:textColor="@color/driver_text_primary"
             android:layout_centerVertical="true"
@@ -40,9 +42,11 @@
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerHistory"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:paddingHorizontal="24dp"
         android:clipToPadding="false"
+        android:overScrollMode="never"
         android:paddingBottom="24dp" />
 
 </LinearLayout>
