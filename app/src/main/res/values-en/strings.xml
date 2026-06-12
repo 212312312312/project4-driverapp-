@@ -20,6 +20,12 @@
     <string name="settings_notifications_desc">Status change reminders</string>
 
 
+    <string name="permission_dialog_title">Permission Required</string>
+    <string name="permission_dialog_desc">To run the widget in the background:\n\n1. Tap \"Allow permission\" below.\n2. In the opened menu, enable:\n\"Display pop-up windows\"</string>
+    <string name="permission_dialog_cancel">Cancel</string>
+    <string name="permission_dialog_allow">Allow permission</string>
+
+
 
     <string name="payment_failed_title">Card Payment Failed!</string>
     <string name="payment_failed_message">The client\'s card has insufficient funds or is blocked.\n\nThe payment method has been automatically changed to CASH.\nPlease collect cash from the passenger and press "Complete" again.</string>

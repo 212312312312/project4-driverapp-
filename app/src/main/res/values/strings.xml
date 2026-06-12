@@ -13,6 +13,11 @@
     <string name="theme_dark">Темна</string>
     <string name="theme_light">Світла</string>
 
+    <string name="permission_dialog_title">Потрібен дозвіл</string>
+    <string name="permission_dialog_desc">Для роботи віджета у фоновому режимі:\n\n1. Натисніть «Надати дозвіл» нижче.\n2. У відкритому меню увімкніть пункт:\n«Відображення спливаючих вікон»</string>
+    <string name="permission_dialog_cancel">Скасувати</string>
+    <string name="permission_dialog_allow">Надати дозвіл</string>
+
 
     <string name="payment_failed_title">Помилка оплати карткою!</string>
     <string name="payment_failed_message">На картці клієнта недостатньо коштів або її заблоковано.\n\nСпосіб оплати автоматично змінено на ГОТІВКУ.\nБудь ласка, візьміть гроші з пасажира та натисніть "Завершити" ще раз.</string>

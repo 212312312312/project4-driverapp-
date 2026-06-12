@@ -1,36 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal"
-    android:gravity="center_vertical"
-    android:background="@drawable/bg_driver_input"
-    android:padding="16dp"
+    app:cardCornerRadius="14dp"
+    app:cardElevation="0dp"
+    app:cardMaxElevation="0dp"
+    app:cardBackgroundColor="@color/driver_card_bg"
+    android:foreground="?attr/selectableItemBackground"
     android:clickable="true"
     android:focusable="true">
 
-    <ImageView
-        android:id="@+id/item_icon"
-        android:layout_width="24dp"
-        android:layout_height="24dp"
-        android:src="@drawable/ic_list_bullet"
-        app:tint="@color/driver_neon_teal" />
-
-    <TextView
-        android:id="@+id/item_title"
-        android:layout_width="0dp"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:text="Налаштування"
-        android:textSize="16sp"
-        android:textColor="@color/white"
-        android:textStyle="bold"
-        android:layout_marginStart="16dp" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="16dp">
 
-    <ImageView
-        android:layout_width="24dp"
-        android:layout_height="24dp"
-        android:src="@drawable/ic_chevron"
-        app:tint="#666666" />
-</LinearLayout>
+        <TextView
+            android:id="@+id/item_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Налаштування"
+            android:textSize="16sp"
+            android:fontFamily="@font/app_font_family"
+            android:textStyle="bold"
+            android:textColor="@color/driver_text_primary" />
+
+        <ImageView
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:src="@drawable/ic_chevron"
+            app:tint="@color/driver_text_secondary" />
+    </LinearLayout>
+</androidx.cardview.widget.CardView>

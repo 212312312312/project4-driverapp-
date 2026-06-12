@@ -10,7 +10,7 @@ class SessionManager(context: Context) {
 
     companion object {
         const val USER_TOKEN = "user_token"
-        const val REFRESH_TOKEN = "refresh_token" // <-- ДОБАВЛЕНО
+        const val REFRESH_TOKEN = "refresh_token"
         const val KEY_DRIVER_ID = "driver_id"
         const val KEY_PENDING_DELETION = "pending_deletion"
         const val KEY_DRIVER_NAME = "driver_name"
@@ -34,7 +34,6 @@ class SessionManager(context: Context) {
         const val KEY_QUICK_ACCESS_ENABLED = "quick_access_enabled"
     }
 
-    // --- НОВЫЕ МЕТОДЫ ДЛЯ REFRESH TOKEN ---
     fun saveRefreshToken(token: String) {
         prefs.edit().putString(REFRESH_TOKEN, token).apply()
     }
@@ -42,7 +41,6 @@ class SessionManager(context: Context) {
     fun fetchRefreshToken(): String? {
         return prefs.getString(REFRESH_TOKEN, null)
     }
-    // --------------------------------------
 
     fun setQuickAccessEnabled(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_QUICK_ACCESS_ENABLED, enabled).apply()

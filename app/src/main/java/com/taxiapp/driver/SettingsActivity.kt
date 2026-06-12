@@ -4,6 +4,7 @@ import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.net.Uri
 import android.os.Build
@@ -37,8 +38,6 @@ class SettingsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         sessionManager = SessionManager(this)
 
-        AppCompatDelegate.setDefaultNightMode(sessionManager.getThemeMode())
-
         setContentView(R.layout.activity_settings)
 
         findViewById<View>(R.id.btn_back).setOnClickListener { finish() }
@@ -65,9 +64,34 @@ class SettingsActivity : AppCompatActivity() {
             showNavigatorBottomSheet()
         }
 
+        // --- ДИНАМИЧЕСКАЯ НАСТРОЙКА ЦВЕТОВ СВИТЧЕЙ ИЗ КОДА ---
+        val thumbStates = ColorStateList(
+            arrayOf(
+                intArrayOf(android.R.attr.state_checked),
+                intArrayOf(-android.R.attr.state_checked)
+            ),
+            intArrayOf(
+                ContextCompat.getColor(this, R.color.driver_neon_teal),
+                ContextCompat.getColor(this, R.color.driver_black_bg)
+            )
+        )
+
+        val trackStates = ColorStateList(
+            arrayOf(
+                intArrayOf(android.R.attr.state_checked),
+                intArrayOf(-android.R.attr.state_checked)
+            ),
+            intArrayOf(
+                Color.parseColor("#5500BFA5"),
+                Color.parseColor("#22FFFFFF")
+            )
+        )
+
         // --- ШВИДКИЙ ДОСТУП ---
         switchQuickAccess = findViewById(R.id.switch_quick_access)
         switchQuickAccess.isChecked = sessionManager.isQuickAccessEnabled()
+        switchQuickAccess.thumbTintList = thumbStates
+        switchQuickAccess.trackTintList = trackStates
 
         switchQuickAccess.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
@@ -87,17 +111,17 @@ class SettingsActivity : AppCompatActivity() {
         // --- НАГАДУВАННЯ СТАТУСУ ---
         val switchStatusReminder = findViewById<SwitchMaterial>(R.id.switch_status_reminder)
         switchStatusReminder.isChecked = sessionManager.isStatusReminderEnabled()
+        switchStatusReminder.thumbTintList = thumbStates
+        switchStatusReminder.trackTintList = trackStates
 
         switchStatusReminder.setOnCheckedChangeListener { _, isChecked ->
             sessionManager.setStatusReminderEnabled(isChecked)
         }
 
-        // Заглушка для звуков
         val clickListener = View.OnClickListener {
             Toast.makeText(this, R.string.feature_coming_soon, Toast.LENGTH_SHORT).show()
         }
         findViewById<View>(R.id.btn_sounds).setOnClickListener(clickListener)
-        // Кнопка btn_notifications видалена
     }
 
     private fun checkOverlayPermission(): Boolean {
@@ -108,21 +132,79 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
+    // --- ОБНОВЛЕННЫЙ КАСТОМНЫЙ ДИАЛОГ С УМНЫМ ПЕРЕХОДОМ ---
     private fun showPermissionDialog() {
-        AlertDialog.Builder(this)
-            .setTitle(R.string.permission_overlay_title)
-            .setMessage(R.string.permission_overlay_desc)
-            .setPositiveButton(R.string.permission_overlay_allow) { _, _ ->
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    val intent = Intent(
-                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                        Uri.parse("package:$packageName")
-                    )
-                    startActivityForResult(intent, OVERLAY_PERMISSION_REQ_CODE)
+        val builder = AlertDialog.Builder(this)
+        val dialogView = layoutInflater.inflate(R.layout.dialog_permission_overlay, null)
+        builder.setView(dialogView)
+
+        val alertDialog = builder.create()
+
+        dialogView.findViewById<View>(R.id.btnCancelPermission).setOnClickListener {
+            alertDialog.dismiss()
+        }
+
+        dialogView.findViewById<View>(R.id.btnAllowPermission).setOnClickListener {
+            alertDialog.dismiss()
+            openOverlayPermissionSettings() // Вызов умного метода перехода
+        }
+
+        alertDialog.show()
+        alertDialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+    }
+
+    // --- МЕТОД ДЛЯ МГНОВЕННОГО ПЕРЕХОДА К НАСТРОЙКЕ НА РАЗНЫХ УСТРОЙСТВАХ ---
+    private fun openOverlayPermissionSettings() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+
+            // 1. Проверяем, не Xiaomi ли это (они чаще всего ломают переход)
+            if (isXiaomiDevice()) {
+                try {
+                    // Специальный прямой интент для открытия окна разрешений конкретного приложения в MIUI/HyperOS
+                    val miuiIntent = Intent("miui.intent.action.APP_PERM_EDITOR").apply {
+                        setClassName("com.miui.securitycenter", "com.miui.permcenter.permissions.PermissionsEditorActivity")
+                        putExtra("extra_pkgname", packageName)
+                    }
+                    startActivityForResult(miuiIntent, OVERLAY_PERMISSION_REQ_CODE)
+                    return // Если успешно запустилось — выходим
+                } catch (e: Exception) {
+                    // Если прошивка старая/новая и интент упал — идем дальше к стандартным методам
                 }
             }
-            .setNegativeButton("Скасувати", null)
-            .show()
+
+            // 2. Стандартный и самый точный способ для чистого Android, Samsung, Pixel
+            try {
+                val intent = Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:$packageName")
+                )
+                startActivityForResult(intent, OVERLAY_PERMISSION_REQ_CODE)
+            } catch (e: Exception) {
+                // 3. Тотальный фолбек (если устройство заблокировало прямой переход по пакету, открываем общий список)
+                try {
+                    val fallbackIntent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+                    startActivityForResult(fallbackIntent, OVERLAY_PERMISSION_REQ_CODE)
+                } catch (anfe: Exception) {
+                    Toast.makeText(this, "Не удалось открыть настройки системы", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    // Вспомогательная функция определения китайских прошивок Xiaomi / Poco / RedMi
+    private fun isXiaomiDevice(): Boolean {
+        val manufacturer = Build.MANUFACTURER.lowercase()
+        if (manufacturer.contains("xiaomi") || manufacturer.contains("poco") || manufacturer.contains("redmi")) {
+            return true
+        }
+        return try {
+            val buildClass = Class.forName("android.os.SystemProperties")
+            val getMethod = buildClass.getMethod("get", String::class.java)
+            val property = getMethod.invoke(buildClass, "ro.miui.ui.version.name") as String
+            property.isNotEmpty()
+        } catch (e: Exception) {
+            false
+        }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -228,6 +310,13 @@ class SettingsActivity : AppCompatActivity() {
         val view = layoutInflater.inflate(R.layout.bottom_sheet_language, null)
         bottomSheetDialog.setContentView(view)
 
+        val currentLang = sessionManager.getLanguage()
+        if (currentLang == "uk") {
+            view.findViewById<View>(R.id.iv_check_ua)?.visibility = View.VISIBLE
+        } else if (currentLang == "en") {
+            view.findViewById<View>(R.id.iv_check_en)?.visibility = View.VISIBLE
+        }
+
         view.findViewById<View>(R.id.btn_lang_ua)?.setOnClickListener {
             bottomSheetDialog.dismiss()
             updateAppLocale("uk")
@@ -245,6 +334,13 @@ class SettingsActivity : AppCompatActivity() {
         val bottomSheetDialog = BottomSheetDialog(this)
         val view = layoutInflater.inflate(R.layout.bottom_sheet_theme, null)
         bottomSheetDialog.setContentView(view)
+
+        val currentTheme = sessionManager.getTheme()
+        when (currentTheme) {
+            "DARK" -> view.findViewById<View>(R.id.iv_check_dark)?.visibility = View.VISIBLE
+            "LIGHT" -> view.findViewById<View>(R.id.iv_check_light)?.visibility = View.VISIBLE
+            else -> view.findViewById<View>(R.id.iv_check_system)?.visibility = View.VISIBLE
+        }
 
         view.findViewById<View>(R.id.btn_theme_system)?.setOnClickListener {
             bottomSheetDialog.dismiss()

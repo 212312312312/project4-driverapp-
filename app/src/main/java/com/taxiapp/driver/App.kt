@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Intent
 import android.os.Build
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
@@ -17,9 +18,13 @@ class App : Application(), DefaultLifecycleObserver {
     private lateinit var sessionManager: SessionManager
 
     override fun onCreate() {
+        // Явно указываем супертип Application для вызова onCreate()
         super<Application>.onCreate()
 
         sessionManager = SessionManager(this)
+
+        // --- ИНИЦИАЛИЗАЦИЯ СОХРАНЕННОЙ ТЕМЫ ПРИ СТАРТЕ ПРИЛОЖЕНИЯ ---
+        AppCompatDelegate.setDefaultNightMode(sessionManager.getThemeMode())
 
         // --- ПРИВЯЗЫВАЕМ SESSION MANAGER К API CLIENT ---
         ApiClient.sessionManager = sessionManager

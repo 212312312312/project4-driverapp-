@@ -3,14 +3,19 @@ package com.taxiapp.driver
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.util.SparseArray
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.tabs.TabLayout
+import com.google.android.material.tabs.TabLayoutMediator
 import com.google.gson.Gson
 import com.taxiapp.driver.network.ApiClient
 import com.taxiapp.driver.network.Order
@@ -19,7 +24,7 @@ import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.schedulers.Schedulers
 import kotlinx.coroutines.launch
-import org.json.JSONObject // <--- ДОДАНО ІМПОРТ
+import org.json.JSONObject
 import ua.naiksoftware.stomp.Stomp
 import ua.naiksoftware.stomp.StompClient
 
@@ -29,10 +34,13 @@ class EtherActivity : AppCompatActivity() {
     private val compositeDisposable = CompositeDisposable()
     private lateinit var sessionManager: SessionManager
 
-    private lateinit var adapter: OrderAdapter
-    private lateinit var rvOrders: RecyclerView
+    // Два отдельных адаптера для параллельного независимого отображения списков
+    private lateinit var activeAdapter: OrderAdapter
+    private lateinit var scheduledAdapter: OrderAdapter
+
+    private lateinit var viewPager: ViewPager2
+    private lateinit var pagerAdapter: EtherPagerAdapter
     private lateinit var pbLoading: ProgressBar
-    private lateinit var emptyState: View
     private lateinit var tabLayout: TabLayout
 
     private val allOrdersList = mutableListOf<Order>()
@@ -44,41 +52,44 @@ class EtherActivity : AppCompatActivity() {
 
         sessionManager = SessionManager(this)
 
-        rvOrders = findViewById(R.id.rv_orders_list)
+        viewPager = findViewById(R.id.ether_view_pager)
         pbLoading = findViewById(R.id.pb_loading)
-        emptyState = findViewById(R.id.ll_empty_state)
         tabLayout = findViewById(R.id.ether_tabs)
         val btnBack = findViewById<View>(R.id.btn_back)
 
-        tabLayout.addTab(tabLayout.newTab().setText("Зараз"))
-        tabLayout.addTab(tabLayout.newTab().setText("Заплановані"))
-
-        tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
-            override fun onTabSelected(tab: TabLayout.Tab?) {
-                currentTabIndex = tab?.position ?: 0
-                filterAndShowOrders()
-            }
-            override fun onTabUnselected(tab: TabLayout.Tab?) {}
-            override fun onTabReselected(tab: TabLayout.Tab?) {}
-        })
-
-        rvOrders.layoutManager = LinearLayoutManager(this)
-
-        // --- ІНІЦІАЛІЗАЦІЯ АДАПТЕРА ---
-        adapter = OrderAdapter { selectedOrder ->
-            // Клік по картці відкриває деталі
+        // Инициализируем адаптеры через оригинальный конструктор замыкания
+        activeAdapter = OrderAdapter { selectedOrder ->
             val intent = Intent(this, OrderDetailsActivity::class.java)
             intent.putExtra("EXTRA_ORDER", selectedOrder)
             startActivity(intent)
         }
-        rvOrders.adapter = adapter
+
+        scheduledAdapter = OrderAdapter { selectedOrder ->
+            val intent = Intent(this, OrderDetailsActivity::class.java)
+            intent.putExtra("EXTRA_ORDER", selectedOrder)
+            startActivity(intent)
+        }
+
+        // Настройка ViewPager2
+        pagerAdapter = EtherPagerAdapter()
+        viewPager.adapter = pagerAdapter
+
+        // Связываем TabLayout и ViewPager2 свайпы (название вкладок выставляется тут)
+        TabLayoutMediator(tabLayout, viewPager) { tab, position ->
+            tab.text = if (position == 0) "Зараз" else "Заплановані"
+        }.attach()
+
+        // Отслеживаем смену страниц для обновления переменной индекса
+        viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+            override fun onPageSelected(position: Int) {
+                currentTabIndex = position
+            }
+        })
 
         btnBack.setOnClickListener { finish() }
 
         setupWebSocket()
     }
-
-    // --- ЛОГІКА ПРИЙНЯТТЯ ---
 
     private fun acceptScheduledOrder(order: Order) {
         pbLoading.visibility = View.VISIBLE
@@ -88,7 +99,6 @@ class EtherActivity : AppCompatActivity() {
 
                 if (response.isSuccessful) {
                     Toast.makeText(this@EtherActivity, "Ви забронювали замовлення!", Toast.LENGTH_SHORT).show()
-
                     removeOrderFromList(order.id)
 
                     val intent = Intent(this@EtherActivity, OrdersActivity::class.java)
@@ -124,10 +134,13 @@ class EtherActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         stompClient.connect()
-        adapter.updateDisplaySettings(
-            sectorFirst = sessionManager.isEtherSectorFirst(),
-            hidePricePerKm = sessionManager.isEtherPricePerKmHidden()
-        )
+
+        // Синхронно обновляем настройки цен и секторов для ОБОИХ списков
+        val sectorFirst = sessionManager.isEtherSectorFirst()
+        val hidePrice = sessionManager.isEtherPricePerKmHidden()
+        activeAdapter.updateDisplaySettings(sectorFirst, hidePrice)
+        scheduledAdapter.updateDisplaySettings(sectorFirst, hidePrice)
+
         fetchOrders()
     }
 
@@ -183,7 +196,6 @@ class EtherActivity : AppCompatActivity() {
                     } else if (action == "ADD") {
                         val orderJson = msgObj.optJSONObject("order")?.toString()
                         if (orderJson != null) {
-                            // ВИПРАВЛЕНО: Явне приведення типу для усунення неоднозначності Gson
                             val newOrder = Gson().fromJson(orderJson as String, Order::class.java)
                             handleSocketOrderUpdate(newOrder)
                         }
@@ -210,7 +222,6 @@ class EtherActivity : AppCompatActivity() {
     }
 
     private fun handleSocketOrderUpdate(order: Order) {
-        // Якщо замовлення не в статусі пошуку або заплановане - прибираємо
         if (order.status != "REQUESTED" && order.status != "SCHEDULED") {
             removeOrderFromList(order.id)
             return
@@ -228,21 +239,71 @@ class EtherActivity : AppCompatActivity() {
     }
 
     private fun filterAndShowOrders() {
-        val filtered = if (currentTabIndex == 0) {
-            // Вкладка "Зараз"
-            allOrdersList.filter { !it.isScheduled() }
-        } else {
-            // Вкладка "Заплановані"
-            allOrdersList.filter { it.isScheduled() }
+        // Просим внутренний Pager-адаптер обновить контент на обеих страницах
+        pagerAdapter.updatePage(0)
+        pagerAdapter.updatePage(1)
+    }
+
+    // --- ВНУТРЕННИЙ УМНЫЙ АДАПТЕР СТРАНИЦ VIEW_PAGER_2 ---
+    private inner class EtherPagerAdapter : RecyclerView.Adapter<EtherPagerAdapter.PageViewHolder>() {
+
+        private val viewHolders = SparseArray<PageViewHolder>()
+
+        inner class PageViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+            val rvOrdersList: RecyclerView = view.findViewById(R.id.rv_orders_list)
+            val llEmptyState: View = view.findViewById(R.id.ll_empty_state)
         }
 
-        if (filtered.isNotEmpty()) {
-            rvOrders.visibility = View.VISIBLE
-            emptyState.visibility = View.GONE
-            adapter.submitList(filtered)
-        } else {
-            rvOrders.visibility = View.GONE
-            emptyState.visibility = View.VISIBLE
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PageViewHolder {
+            val view = LayoutInflater.from(parent.context).inflate(R.layout.item_ether_page, parent, false)
+            return PageViewHolder(view)
         }
+
+        override fun onBindViewHolder(holder: PageViewHolder, position: Int) {
+            viewHolders.put(position, holder)
+            holder.rvOrdersList.layoutManager = LinearLayoutManager(this@EtherActivity)
+            holder.rvOrdersList.adapter = if (position == 0) activeAdapter else scheduledAdapter
+
+            updatePageVisibility(position, holder)
+        }
+
+        override fun onViewRecycled(holder: PageViewHolder) {
+            val index = viewHolders.indexOfValue(holder)
+            if (index >= 0) {
+                viewHolders.removeAt(index)
+            }
+            super.onViewRecycled(holder)
+        }
+
+        fun updatePage(position: Int) {
+            val holder = viewHolders.get(position)
+            if (holder != null) {
+                updatePageVisibility(position, holder)
+            }
+        }
+
+        private fun updatePageVisibility(position: Int, holder: PageViewHolder) {
+            val filteredList = if (position == 0) {
+                allOrdersList.filter { !it.isScheduled() }
+            } else {
+                allOrdersList.filter { it.isScheduled() }
+            }
+
+            if (position == 0) {
+                activeAdapter.submitList(filteredList)
+            } else {
+                scheduledAdapter.submitList(filteredList)
+            }
+
+            if (filteredList.isNotEmpty()) {
+                holder.rvOrdersList.visibility = View.VISIBLE
+                holder.llEmptyState.visibility = View.GONE
+            } else {
+                holder.rvOrdersList.visibility = View.GONE
+                holder.llEmptyState.visibility = View.VISIBLE
+            }
+        }
+
+        override fun getItemCount(): Int = 2
     }
 }

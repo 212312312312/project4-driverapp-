@@ -11,10 +11,10 @@ import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.taxiapp.driver.network.Order
+import com.taxiapp.driver.utils.SessionManager
 
 class OrderAdapter(
     private val onItemClick: (Order) -> Unit
-    // Прибрали onActionClick
 ) : RecyclerView.Adapter<OrderAdapter.OrderViewHolder>() {
 
     private val orders = mutableListOf<Order>()
@@ -54,10 +54,16 @@ class OrderAdapter(
         private val tvSectorFrom: TextView = itemView.findViewById(R.id.tv_sector_from)
         private val tvSectorTo: TextView = itemView.findViewById(R.id.tv_sector_to)
         private val tvTariff: TextView = itemView.findViewById(R.id.tv_tariff_badge)
-        private val tvDistance: TextView = itemView.findViewById(R.id.tv_distance)
         private val stopsContainer: LinearLayout = itemView.findViewById(R.id.ll_stops_container)
 
+        // Поля расстояния (Выровненные внутри левой оси 56dp)
+        private val tvDistanceToClient: TextView = itemView.findViewById(R.id.id_tv_distance_to_client)
+        private val tvDistance: TextView = itemView.findViewById(R.id.tv_distance)
+
         fun bind(order: Order) {
+            val context = itemView.context
+            val sessionManager = SessionManager(context)
+
             tvPrice.text = order.getFormattedPrice()
 
             if (isPricePerKmHidden) {
@@ -69,11 +75,12 @@ class OrderAdapter(
 
             tvTariff.text = order.tariffName
 
+            // --- ЛОГИКА ОТОБРАЖЕНИЯ АДРЕСОВ И СЕКТОРОВ ---
             if (isSectorFirst) {
                 if (!order.fromSector.isNullOrEmpty()) {
                     tvFrom.text = order.fromSector
                     tvSectorFrom.text = order.fromAddress
-                    tvSectorFrom.visibility = View.VISIBLE
+                    tvSectorFrom.visibility = View.VISIBLE // Исправлено: убран ошибочный вызов .copy()
                 } else {
                     tvFrom.text = order.fromAddress
                     tvSectorFrom.visibility = View.GONE
@@ -103,8 +110,27 @@ class OrderAdapter(
                 }
             }
 
+            // --- РАСЧЕТ И ОТОБРАЖЕНИЕ КИЛОМЕТРАЖА ПО ЛЕВОЙ ОСИ ---
+            val orderLat = order.originLat
+            val orderLng = order.originLng
+            val driverLoc = sessionManager.getManualLocation()
+
+            if (driverLoc != null && orderLat != null && orderLng != null && orderLat != 0.0 && orderLng != 0.0) {
+                val results = FloatArray(1)
+                android.location.Location.distanceBetween(
+                    driverLoc.first, driverLoc.second,
+                    orderLat, orderLng,
+                    results
+                )
+                val distanceInKm = results[0] / 1000.0
+                tvDistanceToClient.text = String.format(java.util.Locale.getDefault(), "%.1f км", distanceInKm)
+                tvDistanceToClient.visibility = View.VISIBLE
+            } else {
+                tvDistanceToClient.visibility = View.GONE
+            }
+
+            // 2. Расстояние поездки или время (Точка Б)
             if (order.isScheduled()) {
-                val timeStr = order.scheduledAt?.replace("T", " ")?.take(16) ?: ""
                 val timeOnly = try {
                     order.scheduledAt?.substring(11, 16) ?: ""
                 } catch (e: Exception) { "" }
@@ -113,9 +139,10 @@ class OrderAdapter(
                 tvDistance.setTextColor(Color.parseColor("#FF9800"))
             } else {
                 tvDistance.text = order.getFormattedDistance()
-                tvDistance.setTextColor(ContextCompat.getColor(itemView.context, R.color.driver_text_secondary))
+                tvDistance.setTextColor(ContextCompat.getColor(context, R.color.driver_text_secondary))
             }
 
+            // --- СТИЛИЗАЦИЯ ТИПА ОПЛАТЫ ---
             val method = order.paymentMethod ?: "CASH"
             if (method == "CASH") {
                 llPriceBg.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#FFD600"))
@@ -129,9 +156,10 @@ class OrderAdapter(
                 ivPaymentIcon.setColorFilter(Color.WHITE)
             }
 
+            // --- ДИНАМИЧЕСКИЕ ПРОМЕЖУТОЧНЫЕ ОСТАНОВКИ ---
             stopsContainer.removeAllViews()
             if (!order.stops.isNullOrEmpty()) {
-                val inflater = LayoutInflater.from(itemView.context)
+                val inflater = LayoutInflater.from(context)
                 val sortedStops = order.stops.sortedBy { it.stopOrder }
                 for (stop in sortedStops) {
                     val stopView = inflater.inflate(R.layout.item_route_point, stopsContainer, false)
@@ -141,7 +169,7 @@ class OrderAdapter(
 
                     tvAddress.text = stop.address
                     ivIcon.setImageResource(R.drawable.ic_circle_green)
-                    ivIcon.setColorFilter(ContextCompat.getColor(itemView.context, R.color.driver_neon_teal))
+                    ivIcon.setColorFilter(ContextCompat.getColor(context, R.color.driver_neon_teal))
                     line.visibility = View.VISIBLE
                     stopsContainer.addView(stopView)
                 }

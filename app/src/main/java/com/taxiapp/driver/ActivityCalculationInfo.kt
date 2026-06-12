@@ -23,7 +23,7 @@ class ActivityCalculationInfo : AppCompatActivity() {
         addPointRow(containerBasic, "Додому", "+6", "#4CAF50")
         addPointRow(containerBasic, "Цикл", "+5", "#4CAF50")
         addPointRow(containerBasic, "Авто (Призначення)", "+4", "#4CAF50")
-        addPointRow(containerBasic, "Ефір (Загальний список)", "+2", "#4CAF50")
+        addPointRow(containerBasic, "Ефір (Загальний список)", "+3", "#4CAF50")
 
         // Заполняем Блок 2: Бонусы
         val containerBonus = findViewById<LinearLayout>(R.id.containerBonusPoints)
