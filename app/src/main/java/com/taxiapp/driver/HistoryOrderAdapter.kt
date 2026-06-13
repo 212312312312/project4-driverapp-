@@ -3,7 +3,9 @@ package com.taxiapp.driver
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView // Добавлен импорт
 import android.widget.TextView
+import androidx.core.content.ContextCompat // Добавлен импорт для работы с цветами
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -31,17 +33,42 @@ class HistoryOrderAdapter(private val onClick: (Order) -> Unit) :
         private val tvDate: TextView = itemView.findViewById(R.id.tv_date)
         private val tvDistance: TextView = itemView.findViewById(R.id.tv_distance)
 
+        // --- НОВЫЕ КОМПОНЕНТЫ ДЛЯ СВЯЗЫВАНИЯ СТРУКТУРЫ ТРЕХСЕКЦИОННОГО ФУТЕРА ---
+        private val ivPaymentIcon: ImageView = itemView.findViewById(R.id.iv_payment_icon)
+        private val tvActivityBonus: TextView = itemView.findViewById(R.id.tv_activity_bonus)
+        private val llPriceBackground: View = itemView.findViewById(R.id.ll_price_background)
+
         fun bind(order: Order) {
+            val context = itemView.context
+
             tvFrom.text = order.fromAddress ?: "Адреса не вказана"
             tvTo.text = order.toAddress ?: "Адреса не вказана"
             tvPrice.text = order.getFormattedPrice()
             tvDistance.text = order.getFormattedDistance()
 
+            // 1. ДИНАМИЧЕСКАЯ АКТИВНОСТЬ: Выводим реальные баллы из пакетного запроса сервера
+            val bonus = order.activityBonus
+            tvActivityBonus.text = if (bonus >= 0) "+$bonus" else "$bonus"
+
+            // 2. СВЯЗЫВАНИЕ ТИПА ОПЛАТЫ И СМЕНЫ ТЕМ ПРИЛОЖЕНИЯ
+            if (order.paymentMethod == "CARD" || order.paymentMethod == "ELECTRONIC") {
+                // Безналичный расчет: Карточка, Яркий бирюзовый фон плашки, Черный текст и иконка
+                ivPaymentIcon.setImageResource(R.drawable.ic_payment_card)
+                llPriceBackground.backgroundTintList = ContextCompat.getColorStateList(context, R.color.driver_neon_teal)
+                ivPaymentIcon.imageTintList = ContextCompat.getColorStateList(context, R.color.black)
+                tvPrice.setTextColor(ContextCompat.getColor(context, R.color.black))
+            } else {
+                // Наличные (CASH): Кошелек/Деньги, Фоновый цвет карточки (driver_card_bg), Адаптивный белый текст
+                ivPaymentIcon.setImageResource(R.drawable.ic_payment_cash)
+                llPriceBackground.backgroundTintList = ContextCompat.getColorStateList(context, R.color.driver_card_bg)
+                ivPaymentIcon.imageTintList = ContextCompat.getColorStateList(context, R.color.driver_text_primary)
+                tvPrice.setTextColor(ContextCompat.getColor(context, R.color.driver_text_primary))
+            }
+
             // Форматирование даты: 12 січ. 14:30
             if (order.arrivedAt != null) {
                 try {
                     val parsedDate = LocalDateTime.parse(order.arrivedAt)
-                    // Используем Locale("uk") для украинских названий месяцев
                     val formatter = DateTimeFormatter.ofPattern("dd MMM HH:mm", Locale("uk"))
                     tvDate.text = parsedDate.format(formatter)
                 } catch (e: Exception) {

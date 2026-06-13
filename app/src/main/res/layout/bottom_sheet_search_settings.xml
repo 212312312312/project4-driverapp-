@@ -4,29 +4,33 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:background="@drawable/bg_bottom_sheet_driver"
-    android:paddingBottom="24dp">
+    android:background="@color/driver_card_bg"
+    android:paddingBottom="0dp">
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/search_settings_title"
+        android:paddingHorizontal="16dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="12dp"
+        android:text="Виберіть метод пошуку замовлень"
         android:textColor="@color/driver_text_secondary"
-        android:textSize="14sp"
-        android:padding="16dp"
-        android:gravity="center" />
+        android:textSize="15sp"
+        android:textStyle="bold" />
 
     <RelativeLayout
         android:id="@+id/btnModeHome"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:padding="16dp"
-        android:background="?attr/selectableItemBackground">
+        android:background="@color/driver_black_bg"
+        android:foreground="?attr/selectableItemBackground">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
+            android:layout_alignParentStart="true"
             android:layout_toStartOf="@id/radioHome"
             android:layout_marginEnd="16dp">
 
@@ -34,13 +38,14 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal">
+
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/search_settings_mode_home"
                     android:textSize="18sp"
                     android:textStyle="bold"
-                    android:textColor="@color/white" />
+                    android:textColor="@color/driver_text_primary" />
 
                 <TextView
                     android:id="@+id/tvHomeCounter"
@@ -75,7 +80,7 @@
                     android:layout_width="24dp"
                     android:layout_height="24dp"
                     android:src="@android:drawable/ic_menu_edit"
-                    app:tint="@color/white"
+                    app:tint="@color/driver_text_primary"
                     android:padding="4dp"
                     android:layout_marginStart="8dp" />
             </LinearLayout>
@@ -92,22 +97,25 @@
     </RelativeLayout>
 
     <View android:layout_width="match_parent" android:layout_height="1dp"
-        android:background="#33FFFFFF" android:layout_marginHorizontal="16dp" />
+        android:background="?android:attr/listDivider" />
 
     <RelativeLayout
         android:id="@+id/btnModeChain"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:padding="16dp"
-        android:background="?attr/selectableItemBackground">
+        android:background="@color/driver_black_bg"
+        android:foreground="?attr/selectableItemBackground">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:layout_toStartOf="@id/radioChain"
             android:text="@string/search_settings_mode_chain"
             android:textSize="18sp"
             android:textStyle="bold"
-            android:textColor="@color/white"
+            android:textColor="@color/driver_text_primary"
             android:layout_centerVertical="true" />
 
         <RadioButton
@@ -121,76 +129,125 @@
     </RelativeLayout>
 
     <View android:layout_width="match_parent" android:layout_height="1dp"
-        android:background="#33FFFFFF" android:layout_marginHorizontal="16dp"
-        android:layout_marginBottom="16dp" />
+        android:background="?android:attr/listDivider" />
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/search_settings_label_radius"
+        android:text="Налаштуйте відстань подачі"
         android:textColor="@color/driver_text_secondary"
-        android:textSize="14sp"
-        android:paddingHorizontal="16dp" />
+        android:textSize="15sp"
+        android:textStyle="bold"
+        android:paddingHorizontal="16dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="12dp" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center"
-        android:paddingHorizontal="16dp"
-        android:layout_marginTop="8dp">
+        android:orientation="vertical"
+        android:background="@color/driver_black_bg"
+        android:paddingTop="16dp"
+        android:paddingBottom="24dp">
 
-        <ImageButton
-            android:id="@+id/btnRadiusMinus"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:background="@drawable/bg_round_button_gray"
-            android:src="@drawable/ic_chevron"
-            android:rotation="180"
-            app:tint="@color/white" />
-
-        <TextView
-            android:id="@+id/tvRadiusValue"
-            android:layout_width="0dp"
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/search_settings_radius_val"
-            android:textColor="@color/white"
-            android:textSize="24sp"
-            android:textStyle="bold"
-            android:gravity="center" />
+            android:layout_marginHorizontal="16dp"
+            android:layout_marginBottom="16dp"
+            app:strokeColor="@color/taxi_yellow"
+            app:strokeWidth="1.5dp"
+            app:cardCornerRadius="8dp"
+            app:cardBackgroundColor="#0DFFD600"
+            app:cardElevation="0dp">
 
-        <ImageButton
-            android:id="@+id/btnRadiusPlus"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:background="@drawable/bg_round_button_gray"
-            android:src="@drawable/ic_chevron"
-            app:tint="@color/white" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="12dp"
+                android:text="Увага! Малий радіус економить час та пальне, але зменшує кількість замовлень."
+                android:textColor="@color/driver_text_primary"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+        </com.google.android.material.card.MaterialCardView>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="16dp"
+            android:layout_marginTop="4dp">
+
+            <ImageButton
+                android:id="@+id/btnRadiusMinus"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="@drawable/bg_round_button_gray"
+                android:src="@drawable/ic_chevron"
+                android:rotation="180"
+                app:tint="@color/driver_text_primary" />
+
+            <TextView
+                android:id="@+id/tvRadiusValue"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/search_settings_radius_val"
+                android:textColor="@color/driver_text_primary"
+                android:textSize="26sp"
+                android:textStyle="bold"
+                android:gravity="center" />
+
+            <ImageButton
+                android:id="@+id/btnRadiusPlus"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="@drawable/bg_round_button_gray"
+                android:src="@drawable/ic_chevron"
+                app:tint="@color/driver_text_primary" />
+        </LinearLayout>
+
+        <SeekBar
+            android:id="@+id/seekBarRadius"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="12dp"
+            android:layout_marginTop="20dp"
+            android:max="59"
+            android:progress="5"
+            android:progressTint="@color/driver_neon_teal"
+            android:thumbTint="@color/driver_neon_teal" />
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/btn_container_layout"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:layout_marginHorizontal="9dp"
+            android:layout_marginTop="32dp"
+            android:background="@drawable/bg_driver_btn"
+            android:backgroundTint="@color/driver_neon_teal"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btn_save_action"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:text="@string/search_settings_btn_save"
+                android:textAllCaps="false"
+                android:textSize="18sp"
+                android:textColor="@color/black"
+                android:textStyle="bold"
+                android:background="@android:color/transparent"
+                android:elevation="0dp"
+                android:stateListAnimator="@null"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
     </LinearLayout>
-
-    <SeekBar
-        android:id="@+id/seekBarRadius"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="8dp"
-        android:layout_marginTop="16dp"
-        android:max="59"
-        android:progress="5"
-        android:progressTint="@color/driver_neon_teal"
-        android:thumbTint="@color/driver_neon_teal" />
-
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnSaveSettings"
-        android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="32dp"
-        android:text="@string/search_settings_btn_save"
-        android:textColor="@color/black"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        app:backgroundTint="@color/driver_neon_teal"
-        app:cornerRadius="28dp" />
 
 </LinearLayout>

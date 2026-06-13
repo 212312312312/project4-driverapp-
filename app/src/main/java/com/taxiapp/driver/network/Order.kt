@@ -5,7 +5,6 @@ import java.io.Serializable
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import java.util.TimeZone
 
 data class Order(
     @SerializedName("id") val id: Long,
@@ -44,9 +43,10 @@ data class Order(
 
     @SerializedName("isRatedByDriver") val isRatedByDriver: Boolean = false,
     @SerializedName("scheduledAt") val scheduledAt: String? = null,
+    @SerializedName("isDriverConfirmed") val isDriverConfirmed: Boolean = false,
 
-    // --- НОВЕ ПОЛЕ ---
-    @SerializedName("isDriverConfirmed") val isDriverConfirmed: Boolean = false
+    // --- СИНХРОНИЗАЦИЯ: ПРИНИМАЕМ РЕАЛЬНЫЕ БАЛЛЫ АКТИВНОСТИ ОТ СЕРВЕРА ---
+    @SerializedName("activityBonus") val activityBonus: Int = 0
 ) : Serializable {
 
     fun getFormattedPrice(): String = "${price.toInt()} ₴"
@@ -57,9 +57,10 @@ data class Order(
         return String.format("%.0f грн/км", price / km)
     }
 
+    // ИСПРАВЛЕНО: Изменено на %.2f для вывода "2,30 км" строго по новой структуре
     fun getFormattedDistance(): String {
         val km = (distanceMeters ?: 0) / 1000.0
-        return String.format("%.1f км", km)
+        return String.format("%.2f км", km)
     }
 
     fun isScheduled(): Boolean {
@@ -70,11 +71,7 @@ data class Order(
     fun getScheduledDate(): Date? {
         if (scheduledAt.isNullOrEmpty()) return null
         return try {
-            // Формат ISO 8601, який зазвичай шле Spring (наприклад "2023-10-25T14:30:00")
             val format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
-            // Важливо: Сервер шле час без Z, якщо це LocalDateTime, тому вважаємо локальним або UTC в залежності від налаштувань.
-            // Для надійності припустимо, що сервер і клієнт в одній зоні або сервер шле UTC.
-            // Якщо сервер шле без таймзони, Android сприйме це як локальний час.
             format.parse(scheduledAt)
         } catch (e: Exception) {
             null

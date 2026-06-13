@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://tools.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <FrameLayout
+        android:id="@+id/container_active"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:padding="16dp"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <androidx.cardview.widget.CardView
+            android:id="@+id/card_active_order"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="12dp"
+            app:cardBackgroundColor="@color/driver_black_bg"
+            app:strokeWidth="0dp"
+            app:cardElevation="4dp"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/orders_card_title"
+                    android:textColor="@color/driver_neon_teal"
+                    android:fontFamily="@font/app_font_family"
+                    android:textStyle="bold"
+                    android:textSize="18sp" />
+
+                <TextView
+                    android:id="@+id/tv_active_route"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/orders_route_placeholder"
+                    android:textColor="@color/driver_text_primary"
+                    android:fontFamily="@font/app_font_family"
+                    android:textSize="16sp"
+                    android:layout_marginTop="10dp" />
+
+                <Button
+                    android:id="@+id/btn_open_active"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:text="@string/orders_btn_open"
+                    android:backgroundTint="@color/driver_neon_teal"
+                    android:textColor="@color/driver_black_bg"
+                    android:fontFamily="@font/app_font_family"
+                    android:textStyle="bold"
+                    android:textSize="16sp"
+                    android:textAllCaps="false"
+                    android:layout_marginTop="18dp" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <TextView
+            android:id="@+id/tv_no_active"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/orders_empty_active"
+            android:fontFamily="@font/app_font_family"
+            android:textColor="@color/driver_text_secondary"
+            android:textSize="16sp"
+            android:layout_gravity="center" />
+    </FrameLayout>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_history"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        android:paddingTop="12dp"
+        android:clipToPadding="false"
+        tools:listitem="@layout/item_history_order" />
+
+</FrameLayout>

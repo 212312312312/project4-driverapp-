@@ -50,8 +50,8 @@
             android:layout_height="46dp"
             android:layout_marginTop="16dp"
             app:cardCornerRadius="23dp"
-            app:cardBackgroundColor="#1A1A1A"
-            app:strokeColor="#333333"
+            app:cardBackgroundColor="@color/driver_black_bg"
+            app:strokeColor="@color/driver_black_bg"
             app:strokeWidth="1dp"
             app:cardElevation="6dp"
             android:clickable="true"
@@ -73,7 +73,7 @@
                     android:layout_height="match_parent"
                     android:layout_gravity="start"
                     app:cardCornerRadius="20dp"
-                    app:cardBackgroundColor="#2A2A2A"
+                    app:cardBackgroundColor="@color/driver_card_bg"
                     app:strokeWidth="0dp"
                     app:cardElevation="2dp">
 
@@ -232,7 +232,9 @@
                 <FrameLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:clipChildren="true"> <View
+                    android:clipChildren="true">
+
+                    <View
                         android:id="@+id/search_border_animator"
                         android:layout_width="400dp"
                         android:layout_height="400dp"

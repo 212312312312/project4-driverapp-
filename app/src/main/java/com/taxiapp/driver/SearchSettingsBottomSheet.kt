@@ -6,9 +6,9 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
+import androidx.appcompat.widget.AppCompatButton // <-- Изменили импорт кнопки
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
-import com.google.android.material.button.MaterialButton
 import com.taxiapp.driver.network.ApiClient
 import com.taxiapp.driver.network.DriverSearchMode
 import com.taxiapp.driver.network.DriverSearchSettingsDto
@@ -27,7 +27,7 @@ class SearchSettingsBottomSheet(
     private lateinit var tvHomeSector: TextView
     private lateinit var tvRadius: TextView
     private lateinit var seekBar: SeekBar
-    private lateinit var btnSave: MaterialButton
+    private lateinit var btnSave: AppCompatButton // <-- Изменили тип на AppCompatButton
 
     private var currentMode = DriverSearchMode.CHAIN
     private var currentRadius = 3.0
@@ -46,7 +46,9 @@ class SearchSettingsBottomSheet(
         tvHomeSector = view.findViewById(R.id.tvHomeSectorName)
         tvRadius = view.findViewById(R.id.tvRadiusValue)
         seekBar = view.findViewById(R.id.seekBarRadius)
-        btnSave = view.findViewById(R.id.btnSaveSettings)
+
+        // --- СВЯЗЫВАЕМ НОВЫЙ ID ИЗ СТРУКТУРЫ КОНТЕЙНЕРА ---
+        btnSave = view.findViewById(R.id.btn_save_action) // <-- Поменяли ID на новый
 
         val btnModeHome = view.findViewById<View>(R.id.btnModeHome)
         val btnModeChain = view.findViewById<View>(R.id.btnModeChain)
@@ -54,14 +56,10 @@ class SearchSettingsBottomSheet(
         val btnMinus = view.findViewById<View>(R.id.btnRadiusMinus)
         val btnPlus = view.findViewById<View>(R.id.btnRadiusPlus)
 
-        // 1. Сразу берем из сессии, чтобы галочка появилась МОМЕНТАЛЬНО
         val session = SessionManager(requireContext())
         currentMode = session.getSearchMode()
 
-        // 2. Рисуем UI до запроса к серверу (чтобы юзер видел выбор сразу)
         updateLocalUI()
-
-        // 3. Загружаем данные с сервера (радиус, лимиты, сектора)
         loadSettings()
 
         btnModeHome.setOnClickListener { selectMode(DriverSearchMode.HOME) }
@@ -104,7 +102,6 @@ class SearchSettingsBottomSheet(
     }
 
     private fun updateLocalUI() {
-        // Просто ставим галочки по текущему режиму (из сессии)
         radioHome.isChecked = currentMode == DriverSearchMode.HOME
         radioChain.isChecked = currentMode == DriverSearchMode.CHAIN
         updateRadiusText()
@@ -117,9 +114,6 @@ class SearchSettingsBottomSheet(
                 if (response.isSuccessful && response.body() != null) {
                     val state = response.body()!!
 
-                    // ИСПРАВЛЕНО: Логика обработки статуса от сервера
-                    // Если сервер прислал OFFLINE, MANUAL или BUSY -> мы считаем, что выбрана настройка "Ланцюг"
-                    // Только если сервер явно прислал HOME, мы ставим "Додому".
                     currentMode = if (state.mode == DriverSearchMode.HOME) {
                         DriverSearchMode.HOME
                     } else {
@@ -138,7 +132,6 @@ class SearchSettingsBottomSheet(
     }
 
     private fun updateUI(state: DriverSearchStateDto) {
-        // Обновляем галочки (теперь currentMode точно либо CHAIN, либо HOME)
         radioHome.isChecked = currentMode == DriverSearchMode.HOME
         radioChain.isChecked = currentMode == DriverSearchMode.CHAIN
 
@@ -168,7 +161,7 @@ class SearchSettingsBottomSheet(
 
     private fun saveSettings() {
         btnSave.isEnabled = false
-        btnSave.text = "ЗБЕРЕЖЕННЯ..."
+        btnSave.text = "ЗБЕРЕЖЕННЯ..." // По-прежнему отлично работает с AppCompatButton
 
         lifecycleScope.launch {
             try {
@@ -180,7 +173,6 @@ class SearchSettingsBottomSheet(
                 val response = ApiClient.getInstance().getApiService(requireContext()).updateSearchSettings(req)
 
                 if (response.isSuccessful && response.body() != null) {
-                    // Зберігаємо в сесію, щоб наступного разу відкрилось миттєво правильно
                     SessionManager(requireContext()).saveSearchMode(currentMode)
                     onSettingsChanged()
                     dismiss()

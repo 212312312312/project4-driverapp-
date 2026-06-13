@@ -6,11 +6,18 @@
         <item name="android:statusBarColor">@color/driver_black_bg</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:navigationBarColor">@color/driver_black_bg</item>
-        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">true</item>
+
+        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">false</item>
+
+        <item name="colorSurface">@color/driver_card_bg</item>
+        <item name="android:colorBackground">@color/driver_black_bg</item>
+        <item name="android:windowBackground">@color/driver_black_bg</item>
+        <item name="colorOnSurface">@color/driver_text_primary</item>
 
         <item name="android:fontFamily">@font/app_font_family</item>
         <item name="fontFamily">@font/app_font_family</item>
     </style>
+
     <style name="CarTabTextStyle" parent="TextAppearance.Design.Tab">
         <item name="android:textSize">15sp</item>
         <item name="android:textStyle">bold</item>
