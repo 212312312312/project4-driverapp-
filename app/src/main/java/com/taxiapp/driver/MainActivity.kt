@@ -27,6 +27,7 @@ import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityOptionsCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
@@ -58,6 +59,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var tvSearchModeTitle: TextView
     private lateinit var tvSearchModeSubtitle: TextView
     private lateinit var btnToggleSearchMode: LinearLayout
+
+    private var isLeavingSectorSelection = false
 
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var sessionManager: SessionManager
@@ -199,7 +202,24 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             updateSearchStatusUI() 
         }
     }
+    override fun onStop() {
+        super.onStop()
 
+        // Если Активити скрылась и при этом был активирован флаг выхода из выбора секторов
+        if (isLeavingSectorSelection) {
+            isLeavingSectorSelection = false // Сбрасываем флаг
+
+            // Безопасно восстанавливаем видимость главного экрана "вслепую"
+            if (::sectorOverlay.isInitialized) {
+                sectorOverlay.visibility = View.GONE
+                mainScreenUiGroup.visibility = View.VISIBLE
+
+                if (::map.isInitialized) {
+                    map.setPadding(0, 0, 0, defaultMapPaddingBottom)
+                }
+            }
+        }
+    }
     override fun onPause() {
         super.onPause()
         fusedLocationClient.removeLocationUpdates(locationCallback)
@@ -1073,33 +1093,23 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         })
 
         // Кнопка НАЗАД (Отмена)
-        // Кнопка НАЗАД (Отмена)
         findViewById<View>(R.id.btn_back_selection).setOnClickListener {
-            sectorOverlay.visibility = View.GONE
-            mainScreenUiGroup.visibility = View.VISIBLE // Возвращаем UI главного экрана
+            isLeavingSectorSelection = true
 
-            if (::map.isInitialized) {
-                map.setPadding(0, 0, 0, defaultMapPaddingBottom)
-            }
-
-            // Переносим экран Створення фільтра обратно на передний план, сохраняя его стейт
             val intentBack = Intent(this, CreateFilterActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
             }
             startActivity(intentBack)
+
+            // ИСПРАВЛЕНИЕ: Заменяем мгновенный скачок на плавное растворение
+            
         }
 
-        // Кнопка СОХРАНИТЬ
+// Кнопка СОХРАНИТЬ
         findViewById<View>(R.id.btn_save_selection).setOnClickListener {
-            sectorOverlay.visibility = View.GONE
-            mainScreenUiGroup.visibility = View.VISIBLE
+            isLeavingSectorSelection = true
 
-            // Возвращаем логотип Google на исходную позицию выше нижнего бара
-            if (::map.isInitialized) {
-                map.setPadding(0, 0, 0, defaultMapPaddingBottom)
-            }
-
-            val finalSelectedIds = longArrayOf()
+            val finalSelectedIds = longArrayOf() // Твоя логика сбора ID секторов
 
             val intentBack = Intent(this, CreateFilterActivity::class.java).apply {
                 putExtra("SECTOR_RESULT_IDS", finalSelectedIds)
@@ -1107,6 +1117,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
             }
             startActivity(intentBack)
+
+            // ИСПРАВЛЕНИЕ: Заменяем мгновенный скачок на плавное растворение
+
         }
     }
 

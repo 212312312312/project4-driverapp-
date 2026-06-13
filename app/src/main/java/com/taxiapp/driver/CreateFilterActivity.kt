@@ -272,27 +272,9 @@ class CreateFilterActivity : AppCompatActivity() {
     }
 
     override fun finish() {
-        val intent = Intent(this, FiltersActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-        }
-
-        // Переносим FiltersActivity на передний план мгновенно с нулевой анимацией
-        val options = ActivityOptionsCompat.makeCustomAnimation(this, 0, 0)
-        startActivity(intent, options.toBundle())
-
-        // Полностью гасим анимацию "открытия вперед" для всех версий Android
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            overrideActivityTransition(
-                android.app.Activity.OVERRIDE_TRANSITION_OPEN,
-                0,
-                0
-            )
-        } else {
-            @Suppress("DEPRECATION")
-            overridePendingTransition(0, 0)
-        }
-
-        // Вызываем родной finish, чтобы система сама красиво и нативно закрыла этот экран вправо
+        // Убираем все искусственные startActivity и зануления анимаций.
+        // Система сама нативно закроет CreateFilterActivity в правую сторону
+        // и вернет водителя на FiltersActivity.
         super.finish()
     }
 }
