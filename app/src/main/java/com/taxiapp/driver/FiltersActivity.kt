@@ -195,6 +195,8 @@ class FiltersActivity : AppCompatActivity() {
 
         inner class VH(v: View) : RecyclerView.ViewHolder(v) {
             val name: TextView = v.findViewById(R.id.tv_filter_name)
+            val from: TextView = v.findViewById(R.id.tv_filter_from)
+            val to: TextView = v.findViewById(R.id.tv_filter_to)
             val desc: TextView = v.findViewById(R.id.tv_filter_desc)
             val switchMain: SwitchMaterial = v.findViewById(R.id.switch_main_toggle)
 
@@ -220,68 +222,105 @@ class FiltersActivity : AppCompatActivity() {
             val f = list[position]
             holder.name.text = f.name
 
-            val type = if (f.fromType == "DISTANCE") "R${f.fromDistance}" else "Сектори (${f.fromSectors.size})"
-            val pay = if (f.paymentType == "CASH") "Готівка" else if (f.paymentType == "CARD") "Картка" else "Будь-яка"
-            holder.desc.text = "$type • $pay"
+            // 1. ЗВІДКИ
+            holder.from.text = if (f.fromType == "DISTANCE") {
+                "Радіус ${f.fromDistance ?: 0.0} км"
+            } else {
+                "Сектори подачі (${f.fromSectors.size})"
+            }
 
-            // --- ВІЗУАЛЬНИЙ СТАН (Кнопки незалежні) ---
-            updateBtnStyle(holder.btnEther, f.isEther, "#FFC107") // Amber
-            updateBtnStyle(holder.btnAuto, f.isAuto, "#00E5FF")   // Neon
-            updateBtnStyle(holder.btnCycle, f.isCycle, "#FFFFFF") // White
+            // 2. КУДИ
+            holder.to.text = if (f.toSectors.isEmpty()) {
+                "Будь-куди"
+            } else {
+                "Сектори (${f.toSectors.size})"
+            }
+
+            // 3. ТАРИФ
+            val tariffText = if (f.tariffType == "SIMPLE") {
+                val base = "від ${f.minPrice ?: 0.0} ₴"
+                if (f.minPricePerKm != null && f.minPricePerKm > 0) {
+                    "$base + ${f.minPricePerKm} ₴/км"
+                } else {
+                    base
+                }
+            } else {
+                "Мін: ${f.complexMinPrice ?: 0.0} ₴ • Місто: ${f.complexPriceKmCity ?: 0.0} ₴ • Передмістя: ${f.complexPriceKmSuburbs ?: 0.0} ₴"
+            }
+
+            val payType = when (f.paymentType) {
+                "CASH" -> "Готівка"
+                "CARD" -> "Картка"
+                else -> "Будь-яка"
+            }
+            holder.desc.text = "$tariffText • $payType"
+
+            // Первоначальная отрисовка подложек из базы данных
+            updateBtnStyle(holder.btnEther, f.isEther)
+            updateBtnStyle(holder.btnAuto, f.isAuto)
+            updateBtnStyle(holder.btnCycle, f.isCycle)
 
             // --- ГОЛОВНИЙ СВІТЧ ---
             holder.switchMain.setOnCheckedChangeListener(null)
             holder.switchMain.isChecked = f.isActive
             holder.switchMain.setOnCheckedChangeListener { _, isChecked ->
                 if (!isChecked) {
-                    // Вимкнути все
                     sendUpdate(f, ether = false, auto = false, cycle = false)
                 } else {
-                    // Увімкнути за замовчуванням Ефір (найбезпечніший варіант), якщо нічого не вибрано
-                    // Або можна відновити минулий стан, але для простоти вмикаємо Ефір.
                     sendUpdate(f, ether = true, auto = false, cycle = false)
                 }
             }
 
-            // --- ЛОГІКА КНОПОК ---
-
-            // Кнопка ЕФІР (Незалежна)
+            // --- КЛИКИ С ИГНОРИРОВАНИЕМ СЕРОГО МЕЛЬКАНИЯ ---
             holder.btnEther.setOnClickListener {
-                // Перемикаємо тільки Ефір. Інші режими не чіпаємо.
-                sendUpdate(f, ether = !f.isEther, auto = f.isAuto, cycle = f.isCycle)
+                val nextEther = !f.isEther
+                updateBtnStyle(holder.btnEther, nextEther) // Гасим/включаем мгновенно!
+                sendUpdate(f, ether = nextEther, auto = f.isAuto, cycle = f.isCycle)
             }
 
-            // Кнопка АВТО (Вимикає Цикл)
             holder.btnAuto.setOnClickListener {
                 val newAuto = !f.isAuto
-                // Якщо вмикаємо Авто -> вимикаємо Цикл. Ефір залишаємо як був.
                 val newCycle = if (newAuto) false else f.isCycle
+
+                updateBtnStyle(holder.btnAuto, newAuto)
+                updateBtnStyle(holder.btnCycle, newCycle)
+
                 sendUpdate(f, ether = f.isEther, auto = newAuto, cycle = newCycle)
             }
 
-            // Кнопка ЦИКЛ (Вимикає Авто)
             holder.btnCycle.setOnClickListener {
                 val newCycle = !f.isCycle
-                // Якщо вмикаємо Цикл -> вимикаємо Авто. Ефір залишаємо як був.
                 val newAuto = if (newCycle) false else f.isAuto
+
+                updateBtnStyle(holder.btnCycle, newCycle)
+                updateBtnStyle(holder.btnAuto, newAuto)
+
                 sendUpdate(f, ether = f.isEther, auto = newAuto, cycle = newCycle)
             }
         }
 
-        // Допоміжна функція для відправки оновлення на сервер
         private fun sendUpdate(f: DriverFilter, ether: Boolean, auto: Boolean, cycle: Boolean) {
-            // Фільтр вважається активним (isActive=true), якщо увімкнено хоч один режим
             val isActive = ether || auto || cycle
             onUpdateMode(f, UpdateFilterModeRequest(isActive, ether, auto, cycle))
         }
 
-        private fun updateBtnStyle(btn: MaterialButton, isActive: Boolean, colorHex: String) {
+        private fun updateBtnStyle(btn: MaterialButton, isActive: Boolean) {
+            val isDarkTheme = (btn.context.resources.configuration.uiMode
+                    and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+
+            btn.isSelected = isActive // Переключаем стейт селектора для иконок
+
             if (isActive) {
-                btn.setBackgroundColor(Color.parseColor(colorHex))
+                // Если режим горит -> накатываем бирюзовую подложку, красим контент в черный
+                btn.setBackgroundResource(R.drawable.bg_status_pill)
                 btn.setTextColor(Color.BLACK)
+                btn.iconTint = android.content.res.ColorStateList.valueOf(Color.BLACK)
             } else {
+                // Если режим выключен -> полностью затираем фон в прозрачный, без единого блика
                 btn.setBackgroundColor(Color.TRANSPARENT)
-                btn.setTextColor(Color.parseColor(colorHex))
+                val inactiveColor = if (isDarkTheme) Color.parseColor("#B0B0B0") else Color.parseColor("#757575")
+                btn.setTextColor(inactiveColor)
+                btn.iconTint = android.content.res.ColorStateList.valueOf(inactiveColor)
             }
         }
 

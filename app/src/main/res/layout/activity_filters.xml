@@ -9,70 +9,114 @@
     <RelativeLayout
         android:id="@+id/header_filters"
         android:layout_width="match_parent"
-        android:layout_height="60dp"
-        android:background="@color/driver_black_bg"
-        android:elevation="4dp"
-        app:layout_constraintTop_toTopOf="parent">
+        android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
+        android:layout_marginBottom="16dp"
+        android:layout_marginHorizontal="24dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
-        <ImageButton
+        <ImageView
             android:id="@+id/btn_back"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_centerVertical="true"
-            android:layout_marginStart="8dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
             android:src="@drawable/ic_arrow_back_black"
-            app:tint="@color/driver_text_primary" />
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:focusable="true"
+            app:tint="@color/driver_text_primary"
+            android:layout_centerVertical="true"
+            android:layout_alignParentStart="true"/>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_centerInParent="true"
             android:text="@string/filters_title"
+            android:textSize="22sp"
+            android:textStyle="bold"
             android:textColor="@color/driver_text_primary"
-            android:textSize="18sp"
-            android:textStyle="bold" />
+            android:layout_centerVertical="true"
+            android:layout_toEndOf="@id/btn_back"
+            android:layout_marginStart="16dp"/>
     </RelativeLayout>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rv_filters"
         android:layout_width="match_parent"
         android:layout_height="0dp"
+        android:layout_marginTop="24dp"
         android:padding="12dp"
         android:clipToPadding="false"
+        android:background="@color/driver_card_bg"
+        app:layout_constraintTop_toBottomOf="@id/header_filters"
         app:layout_constraintBottom_toTopOf="@+id/bottom_actions"
-        app:layout_constraintTop_toBottomOf="@id/header_filters" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <LinearLayout
         android:id="@+id/bottom_actions"
         android:layout_width="match_parent"
-        android:layout_height="80dp"
+        android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:padding="12dp"
-        android:gravity="center_vertical"
-        app:layout_constraintBottom_toBottomOf="parent">
+        android:paddingHorizontal="9dp"
+        android:paddingTop="16dp"
+        android:paddingBottom="16dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_disable_all"
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/btn_disable_container"
             android:layout_width="0dp"
-            android:layout_height="match_parent"
+            android:layout_height="60dp"
             android:layout_weight="4"
-            android:text="@string/filters_btn_disable_all"
-            android:backgroundTint="@color/driver_error"
-            android:textColor="@color/driver_text_primary"
-            app:cornerRadius="12dp" />
+            android:background="@drawable/bg_driver_btn">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_add_filter"
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btn_disable_all"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:text="@string/filters_btn_disable_all"
+                android:textAllCaps="false"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="@color/driver_text_black"
+                android:background="@android:color/transparent"
+                android:elevation="0dp"
+                android:stateListAnimator="@null"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/btn_add_container"
             android:layout_width="0dp"
-            android:layout_height="match_parent"
+            android:layout_height="60dp"
             android:layout_weight="1"
             android:layout_marginStart="12dp"
-            android:text="@string/filters_btn_add_symbol"
-            android:textSize="24sp"
-            android:backgroundTint="@color/driver_neon_teal"
-            android:textColor="@color/driver_black_bg"
-            app:cornerRadius="12dp" />
+            android:background="@drawable/bg_driver_btn">
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btn_add_filter"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:text="@string/filters_btn_add_symbol"
+                android:textAllCaps="false"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:textColor="@color/driver_text_black"
+                android:background="@android:color/transparent"
+                android:elevation="0dp"
+                android:stateListAnimator="@null"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
