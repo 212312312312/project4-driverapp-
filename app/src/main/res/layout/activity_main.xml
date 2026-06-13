@@ -129,17 +129,18 @@
                 app:cardBackgroundColor="@color/driver_black_bg"
                 app:strokeWidth="0dp"
                 app:cardElevation="6dp">
+
                 <ImageButton
                     android:id="@+id/btn_sectors"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:background="?attr/selectableItemBackground"
-                    android:src="@drawable/ic_list_bullet"
-                    android:padding="10dp"
                     android:clickable="true"
                     android:focusable="true"
-                    app:tint="@color/driver_text_primary"
-                    android:tooltipText="@string/main_tooltip_sectors" />
+                    android:padding="10dp"
+                    android:src="@drawable/ic_puzzle"
+                    android:tooltipText="@string/main_tooltip_sectors"
+                    app:tint="@color/driver_text_primary" />
             </com.google.android.material.card.MaterialCardView>
 
         </LinearLayout>
@@ -195,16 +196,6 @@
             </com.google.android.material.card.MaterialCardView>
 
         </LinearLayout>
-
-        <ImageView
-            android:id="@+id/img_google_maps_logo"
-            android:layout_width="wrap_content"
-            android:layout_height="18dp"
-            android:layout_marginBottom="6dp"
-            android:adjustViewBounds="true"
-            android:src="@drawable/ic_logo_google_maps"
-            app:layout_constraintBottom_toTopOf="@id/layoutSearchStatus"
-            app:layout_constraintStart_toStartOf="@id/layoutSearchStatus" />
 
         <LinearLayout
             android:id="@+id/layoutSearchStatus"
@@ -336,7 +327,7 @@
                 <ImageView
                     android:layout_width="26dp"
                     android:layout_height="26dp"
-                    android:src="@drawable/ic_menu_hamburger"
+                    android:src="@drawable/ic_menu_ether"
                     app:tint="@color/driver_text_primary" />
                 <TextView
                     android:layout_width="wrap_content"

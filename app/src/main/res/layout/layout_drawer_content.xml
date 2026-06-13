@@ -135,7 +135,7 @@
                         android:clickable="true"
                         android:focusable="true">
                         <ImageView
-                            android:src="@drawable/ic_stat_star"
+                            android:src="@drawable/ic_menu_stats"
                             android:layout_width="24dp"
                             android:layout_height="24dp"
                             android:layout_marginEnd="16dp"
@@ -317,7 +317,7 @@
                         android:clickable="true"
                         android:focusable="true">
                         <ImageView 
-                            android:src="@drawable/ic_menu_history" 
+                            android:src="@drawable/ic_menu_graph"
                             android:layout_width="24dp"
                             android:layout_height="24dp"
                             app:tint="@color/driver_text_primary" />
@@ -343,7 +343,7 @@
                         android:clickable="true"
                         android:focusable="true">
                         <ImageView
-                            android:src="@drawable/ic_list_bullet"
+                            android:src="@drawable/ic_news"
                             android:layout_width="24dp"
                             android:layout_height="24dp"
                             app:tint="@color/driver_text_primary" />
@@ -369,7 +369,7 @@
                         android:clickable="true"
                         android:focusable="true">
                         <ImageView
-                            android:src="@drawable/ic_list_bullet"
+                            android:src="@drawable/ic_messages"
                             android:layout_width="24dp"
                             android:layout_height="24dp"
                             app:tint="@color/driver_text_primary" />

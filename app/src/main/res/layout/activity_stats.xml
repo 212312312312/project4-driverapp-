@@ -131,7 +131,7 @@
         android:id="@+id/btn_lifetime_stats"
         android:layout_width="32dp"
         android:layout_height="32dp"
-        android:src="@drawable/ic_list_bullet"
+        android:src="@drawable/ic_car"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:clickable="true"
         android:focusable="true"

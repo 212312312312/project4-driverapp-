@@ -6,13 +6,13 @@ import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.view.*
+import com.google.android.material.checkbox.MaterialCheckBox
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.switchmaterial.SwitchMaterial
 import com.taxiapp.driver.network.ApiClient
 import com.taxiapp.driver.network.DriverFilter
 import com.taxiapp.driver.network.UpdateFilterModeRequest
@@ -198,7 +198,7 @@ class FiltersActivity : AppCompatActivity() {
             val from: TextView = v.findViewById(R.id.tv_filter_from)
             val to: TextView = v.findViewById(R.id.tv_filter_to)
             val desc: TextView = v.findViewById(R.id.tv_filter_desc)
-            val switchMain: SwitchMaterial = v.findViewById(R.id.switch_main_toggle)
+            val switchMain: MaterialCheckBox = v.findViewById(R.id.switch_main_toggle)
 
             val btnAuto: MaterialButton = v.findViewById(R.id.btn_mode_auto)
             val btnEther: MaterialButton = v.findViewById(R.id.btn_mode_ether)
@@ -255,10 +255,10 @@ class FiltersActivity : AppCompatActivity() {
             }
             holder.desc.text = "$tariffText • $payType"
 
-            // Первоначальная отрисовка подложек из базы данных
-            updateBtnStyle(holder.btnEther, f.isEther)
-            updateBtnStyle(holder.btnAuto, f.isAuto)
-            updateBtnStyle(holder.btnCycle, f.isCycle)
+            // БАГ ФИКС: Отрисовка подложек с проверкой активности самого фильтра
+            updateBtnStyle(holder.btnEther, f.isActive && f.isEther)
+            updateBtnStyle(holder.btnAuto, f.isActive && f.isAuto)
+            updateBtnStyle(holder.btnCycle, f.isActive && f.isCycle)
 
             // --- ГОЛОВНИЙ СВІТЧ ---
             holder.switchMain.setOnCheckedChangeListener(null)
@@ -311,10 +311,10 @@ class FiltersActivity : AppCompatActivity() {
             btn.isSelected = isActive // Переключаем стейт селектора для иконок
 
             if (isActive) {
-                // Если режим горит -> накатываем бирюзовую подложку, красим контент в черный
-                btn.setBackgroundResource(R.drawable.bg_status_pill)
-                btn.setTextColor(Color.BLACK)
-                btn.iconTint = android.content.res.ColorStateList.valueOf(Color.BLACK)
+                // Если режим горит -> накатываем БЕЛЫЙ ПОЛУПРОЗРАЧНЫЙ фон с БЕЛЫМ бордером
+                btn.setBackgroundResource(R.drawable.bg_filter_mode_active)
+                btn.setTextColor(Color.WHITE)
+                btn.iconTint = android.content.res.ColorStateList.valueOf(Color.WHITE)
             } else {
                 // Если режим выключен -> полностью затираем фон в прозрачный, без единого блика
                 btn.setBackgroundColor(Color.TRANSPARENT)
