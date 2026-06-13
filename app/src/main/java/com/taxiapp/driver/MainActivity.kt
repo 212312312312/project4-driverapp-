@@ -19,19 +19,24 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Looper
 import android.util.Log
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.EditText
+import android.widget.ImageView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityOptionsCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.GravityCompat
+import androidx.core.widget.addTextChangedListener
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.bumptech.glide.Glide
 import com.google.android.gms.location.*
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -48,6 +53,8 @@ import com.taxiapp.driver.network.UpdateDriverStatusRequest
 import com.taxiapp.driver.network.DriverSearchMode
 import com.taxiapp.driver.network.DriverSearchSettingsDto
 import com.taxiapp.driver.network.FcmTokenDto
+import com.taxiapp.driver.network.Sector
+import com.taxiapp.driver.network.SectorPointDto
 import com.taxiapp.driver.service.LocationService
 import com.taxiapp.driver.utils.SessionManager
 import kotlinx.coroutines.launch
@@ -55,6 +62,17 @@ import com.taxiapp.driver.service.FloatingWidgetService
 import com.taxiapp.driver.ServiceMessagesActivity
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback {
+
+    // --- НОВОЕ: Настройка целей выбора секторов ---
+    enum class SelectionTarget { FILTER_FROM, FILTER_TO, HOME }
+    private var currentSelectionTarget = SelectionTarget.FILTER_FROM
+
+    private var allSectors = listOf<Sector>()
+    private val selectedIds = mutableSetOf<Long>()
+    private val polygons = mutableMapOf<Long, Polygon>()
+    private val sectorMarkersList = mutableListOf<Marker>()
+    private var sectorsListAdapter: SectorsListAdapter? = null
+    // ----------------------------------------------
 
     private lateinit var tvSearchModeTitle: TextView
     private lateinit var tvSearchModeSubtitle: TextView
@@ -67,11 +85,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var btnStatusToggle: View
     private lateinit var switchThumbCard: com.google.android.material.card.MaterialCardView
     private lateinit var tvSwitchStatusText: TextView
-    private var isDriverOnline = false // Локальное состояние онлайна воителя
+    private var isDriverOnline = false
     private var searchBorderAnimator: android.animation.ObjectAnimator? = null
 
-
-    // Поля оверлея выбора секторов
     private var defaultMapPaddingBottom = 0
     private lateinit var mainScreenUiGroup: androidx.constraintlayout.widget.Group
     private lateinit var btnSaveSelection: android.widget.ImageView
@@ -80,7 +96,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var etSectorSearch: EditText
     private lateinit var rvSectorsList: androidx.recyclerview.widget.RecyclerView
     private var isPickingFromSectorsMode = true
-    private var initiallySelectedIds = LongArray(0)
 
     private lateinit var map: GoogleMap
     private lateinit var btnLockLocation: ImageButton
@@ -93,6 +108,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationCallback: LocationCallback
+
+    private var overlayBackPressedCallback: androidx.activity.OnBackPressedCallback? = null
     private var originalContainerElevation: Float = -1f
     private var searchRadiusCircle: Circle? = null
     private var currentSearchRadiusKm: Double = 3.0
@@ -119,7 +136,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     ) { permissions ->
         val fineLocation = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
         val coarseLocation = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
-        
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val postNotifs = permissions[Manifest.permission.POST_NOTIFICATIONS] ?: false
             if (!postNotifs) {
@@ -130,7 +147,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         if (fineLocation || coarseLocation) {
             updateMapUI()
             startLocationService()
-            startUILocationUpdates() 
+            startUILocationUpdates()
             if (::map.isInitialized) centerMapOnUser()
         } else {
             Toast.makeText(this, "Потрібен доступ до геолокації!", Toast.LENGTH_LONG).show()
@@ -160,10 +177,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         setupUI()
         loadUserProfile()
         setupLocationCallback()
-        
+
         checkPermissionsAndStart()
         initSectorSelectionOverlay()
         handleSectorSelectionRequest(intent)
+
+        // Кэшируем сектора сразу в память
+        loadSectorsDataSilently()
     }
 
     private fun updateFcmToken() {
@@ -179,47 +199,39 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
-
-
-
-
     override fun onResume() {
         super.onResume()
-
-        // 1. ГОЛОВНА ПЕРЕВІРКА: Якщо акаунт на видалення - блокуємо все!
         if (sessionManager.isPendingDeletion()) {
             showRestoreDialog()
-            return // <--- Важливо! Не пускаємо код далі, поки висить діалог
+            return
         }
         updateLockIconState()
         updateOrdersBadge()
-        checkActiveOrderOnStart() 
+        checkActiveOrderOnStart()
         startUILocationUpdates()
         updateCommissionInfo()
 
         if (::map.isInitialized) {
             updateMapUI()
-            updateSearchStatusUI() 
+            updateSearchStatusUI()
         }
     }
+
     override fun onStop() {
         super.onStop()
-
-        // Если Активити скрылась и при этом был активирован флаг выхода из выбора секторов
         if (isLeavingSectorSelection) {
-            isLeavingSectorSelection = false // Сбрасываем флаг
-
-            // Безопасно восстанавливаем видимость главного экрана "вслепую"
+            isLeavingSectorSelection = false
             if (::sectorOverlay.isInitialized) {
                 sectorOverlay.visibility = View.GONE
                 mainScreenUiGroup.visibility = View.VISIBLE
-
                 if (::map.isInitialized) {
                     map.setPadding(0, 0, 0, defaultMapPaddingBottom)
+                    clearOverlayPolygons()
                 }
             }
         }
     }
+
     override fun onPause() {
         super.onPause()
         fusedLocationClient.removeLocationUpdates(locationCallback)
@@ -229,10 +241,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult) {
                 val location = locationResult.lastLocation ?: return
-                
                 if (!sessionManager.isManualLocationActive()) {
                     currentDriverLocation = LatLng(location.latitude, location.longitude)
-                    drawSearchRadius() 
+                    drawSearchRadius()
                 }
             }
         }
@@ -241,28 +252,22 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     @SuppressLint("MissingPermission")
     private fun startUILocationUpdates() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) return
-        
         val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 3000)
             .setMinUpdateDistanceMeters(5f)
             .build()
-            
         fusedLocationClient.requestLocationUpdates(request, locationCallback, Looper.getMainLooper())
     }
 
     private fun drawSearchRadius() {
         if (!::map.isInitialized) return
-
         val center = if (sessionManager.isManualLocationActive()) {
             val manual = sessionManager.getManualLocation() ?: return
             LatLng(manual.first, manual.second)
         } else {
             currentDriverLocation
         }
-
         if (center == null) return
-
         val radiusMeters = currentSearchRadiusKm * 1000
-
         val strokeColor = ContextCompat.getColor(this, R.color.driver_neon_teal)
         val fillColor = Color.argb(40, Color.red(strokeColor), Color.green(strokeColor), Color.blue(strokeColor))
 
@@ -278,8 +283,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             searchRadiusCircle?.radius = radiusMeters
             searchRadiusCircle?.fillColor = fillColor
         }
-        
-        searchRadiusCircle?.isVisible = true
+        searchRadiusCircle?.isVisible = !sectorOverlay.isShown
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -312,19 +316,14 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         drawerLayout = findViewById(R.id.drawer_layout)
         navViewContent = findViewById(R.id.nav_view_content)
 
-
         tvSearchModeTitle = findViewById(R.id.tvSearchModeTitle)
         tvSearchModeSubtitle = findViewById(R.id.tvSearchModeSubtitle)
         btnToggleSearchMode = findViewById(R.id.btnToggleSearchMode)
 
-        // --- ВИПРАВЛЕНО ТУТ ---
-        // Ставимо правильний текст за замовчуванням (Ланцюг + Неактивно)
         tvSearchModeTitle.text = getString(R.string.main_search_chain_title)
         tvSearchModeSubtitle.text = "Натисніть для активації"
-        
-        // Примусово оновлюємо візуал, щоб він відповідав статусу isSearchActive = false
+
         updateSearchBlockVisuals(false)
-        // -----------------------
 
         btnToggleSearchMode.setOnClickListener { toggleSearchActivation() }
 
@@ -338,12 +337,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         tvSwitchStatusText = findViewById(R.id.tv_switch_status_text)
 
         btnStatusToggle.setOnClickListener {
-            // Мгновенно меняем локальный стейт (Optimistic UI)
             isDriverOnline = !isDriverOnline
-            // Сразу запускаем анимацию скольжения капсулы, не дожидаясь ответа сервера
             setOnlineVisualState(isDriverOnline, animate = true)
-
-            // Отправляем запрос на сервер в фоновом режиме
             updateDriverStatus(isDriverOnline)
         }
 
@@ -398,32 +393,28 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
 
         navViewContent.findViewById<View>(R.id.btn_logout).setOnClickListener {
-            setOnlineVisualState(false, animate = false) // Переводим тумблер в Офлайн без анимации
+            setOnlineVisualState(false, animate = false)
             lifecycleScope.launch {
                 try {
                     ApiClient.getInstance().getApiService(this@MainActivity).updateStatus(UpdateDriverStatusRequest(false, 0.0, 0.0))
                 } catch (e: Exception) {
                 } finally {
                     val intent = Intent(this@MainActivity, AccountSelectionActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK 
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                     startActivity(intent)
                     finish()
                 }
             }
         }
-
         updateSearchStatusUI()
     }
 
     private fun setOnlineVisualState(online: Boolean, animate: Boolean) {
         this.isDriverOnline = online
         val trackContainer = findViewById<android.view.ViewGroup>(R.id.switch_track_container)
-
         if (animate) {
-            // Запускает встроенный менеджер переходов для плавной анимации элементов внутри FrameLayout
             android.transition.TransitionManager.beginDelayedTransition(trackContainer)
         }
-
         val params = switchThumbCard.layoutParams as android.widget.FrameLayout.LayoutParams
         if (online) {
             params.gravity = android.view.Gravity.END
@@ -462,10 +453,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         builder.setView(customView)
         val dialog = builder.create()
         dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
-
         val btnCancel = customView.findViewById<View>(R.id.btnCancelSos)
         val btnConfirm = customView.findViewById<View>(R.id.btnConfirmSos)
-
         btnCancel.setOnClickListener { dialog.dismiss() }
         btnConfirm.setOnClickListener { dialog.dismiss(); sendSosSignal() }
         dialog.show()
@@ -482,7 +471,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             Toast.makeText(this, "Немає доступу до геолокації!", Toast.LENGTH_SHORT).show()
             return
         }
-
         fusedLocationClient.lastLocation.addOnSuccessListener { location ->
             if (location != null) {
                 lifecycleScope.launch {
@@ -516,30 +504,22 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val cardSearchMode = findViewById<com.google.android.material.card.MaterialCardView>(R.id.cardSearchMode)
         val borderAnimView = findViewById<View>(R.id.search_border_animator)
 
-        // Запоминаем нативную тень карточки при самом первом запуске
         if (originalContainerElevation == -1f) {
             originalContainerElevation = cardSearchContainer.cardElevation
         }
 
         if (isActive) {
-            // 1. ИСПРАВЛЕНИЕ ДОРОЖКИ: Делаем фон подложки прозрачным, чтобы сквозь 2dp-бордер была видна карта
             cardSearchContainer.setCardBackgroundColor(android.graphics.Color.TRANSPARENT)
-            cardSearchContainer.cardElevation = 0f // Отключаем тень подложки на время анимации
-            cardSearchContainer.clipToOutline = true // Важно! Обрезаем вращающийся световой круг строго по углам 8dp контейнера
-
-            // Саму рабочую кнопку делаем бирюзовой
+            cardSearchContainer.cardElevation = 0f
+            cardSearchContainer.clipToOutline = true
             cardSearchMode.setCardBackgroundColor(androidx.core.content.ContextCompat.getColor(this, R.color.driver_neon_teal))
-
-            // Текст горит чистым белым цветом
             tvSearchModeTitle.setTextColor(android.graphics.Color.WHITE)
             tvSearchModeSubtitle.setTextColor(android.graphics.Color.parseColor("#E0E0E0"))
             tvSearchModeSubtitle.text = "Пошук замовлень..."
-
-            // 2. ИСПРАВЛЕНИЕ НАПРАВЛЕНИЯ: Меняем углы на 360f -> 0f, чтобы свет бежал вперед
             borderAnimView.visibility = View.VISIBLE
             if (searchBorderAnimator == null) {
                 searchBorderAnimator = android.animation.ObjectAnimator.ofFloat(borderAnimView, "rotation", 360f, 0f).apply {
-                    duration = 2000 // Скорость кружения луча
+                    duration = 2000
                     repeatCount = android.animation.ValueAnimator.INFINITE
                     interpolator = android.view.animation.LinearInterpolator()
                 }
@@ -548,18 +528,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 searchBorderAnimator?.start()
             }
         } else {
-            // 3. Когда поиск отключен: возвращаем исходный монолитный driver_black_bg и восстанавливаем тень
             cardSearchContainer.setCardBackgroundColor(androidx.core.content.ContextCompat.getColor(this, R.color.driver_black_bg))
             cardSearchContainer.cardElevation = originalContainerElevation
-
             cardSearchMode.setCardBackgroundColor(androidx.core.content.ContextCompat.getColor(this, R.color.driver_black_bg))
-
-            // Возвращаем дефолтные неоновые и серые цвета текста
             tvSearchModeTitle.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.driver_neon_teal))
             tvSearchModeSubtitle.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.driver_text_secondary))
             tvSearchModeSubtitle.text = "Натисніть для активації"
-
-            // Полностью останавливаем и прячем анимацию контура
             searchBorderAnimator?.cancel()
             borderAnimView.visibility = View.GONE
         }
@@ -571,42 +545,35 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 val response = ApiClient.getInstance().getApiService(this@MainActivity).getSearchSettings()
                 if (response.isSuccessful && response.body() != null) {
                     val state = response.body()!!
-                    
                     currentSearchRadiusKm = state.radius
                     drawSearchRadius()
-
                     val sessionManager = SessionManager(this@MainActivity)
 
                     when (state.mode) {
                         DriverSearchMode.MANUAL -> {
-                            // Убираем хардкод, берем чистую строку из ресурсов
                             tvSearchModeTitle.text = getString(R.string.main_search_chain_title)
-                            searchRadiusCircle?.isVisible = true
+                            if (searchRadiusCircle != null) searchRadiusCircle?.isVisible = !sectorOverlay.isShown
                             isSearchActive = false
                             sessionManager.saveSearchMode(DriverSearchMode.CHAIN)
                         }
                         DriverSearchMode.CHAIN -> {
-                            // Убираем хардкод, берем чистую строку из ресурсов
                             tvSearchModeTitle.text = getString(R.string.main_search_chain_title)
-                            searchRadiusCircle?.isVisible = true
+                            if (searchRadiusCircle != null) searchRadiusCircle?.isVisible = !sectorOverlay.isShown
                             sessionManager.saveSearchMode(DriverSearchMode.CHAIN)
                         }
                         DriverSearchMode.HOME -> {
                             val sectorsText = if (state.homeSectorNames.isNullOrEmpty()) "?" else state.homeSectorNames
-                            // Убираем эмодзи домика, оставляем строго текст
                             tvSearchModeTitle.text = "Додому ($sectorsText)"
-                            searchRadiusCircle?.isVisible = true
+                            if (searchRadiusCircle != null) searchRadiusCircle?.isVisible = !sectorOverlay.isShown
                             sessionManager.saveSearchMode(DriverSearchMode.HOME)
                         }
                     }
 
-                    // Оновлення тексту в залежності від того, чи ми натиснули "Старт" (isSearchActive)
                     if (!isSearchActive && state.mode == DriverSearchMode.MANUAL) {
                         tvSearchModeSubtitle.text = "Радіус: ${state.radius} км • Натисніть для старту"
                         tvSearchModeTitle.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.driver_neon_teal))
                     } else if (!isSearchActive) {
-                        // Якщо просто оновлюємо дані з сервера, але пошук вимкнено локально
-                        tvSearchModeSubtitle.text = "Натисніть для активації" 
+                        tvSearchModeSubtitle.text = "Натисніть для активації"
                     } else {
                         tvSearchModeSubtitle.text = "Пошук замовлень..."
                     }
@@ -619,13 +586,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun loadUserProfile() {
-        // Знаходимо елементи в боковому меню
         val tvDriverName = navViewContent.findViewById<TextView>(R.id.tv_driver_name)
-        val tvRating = navViewContent.findViewById<TextView>(R.id.tv_menu_rating) // <-- ПЕРЕВІР ЦЕЙ ID в layout_drawer_content.xml
+        val tvRating = navViewContent.findViewById<TextView>(R.id.tv_menu_rating)
         val imgAvatar = navViewContent.findViewById<android.widget.ImageView>(R.id.img_avatar)
         val tvPlateNumber = navViewContent.findViewById<TextView>(R.id.tv_menu_plate_number)
 
-        // Спочатку показуємо те, що збережено локально
         val savedName = sessionManager.getDriverName()
         if (savedName != null) {
             tvDriverName.text = extractFirstName(savedName)
@@ -639,28 +604,19 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 val response = ApiClient.getInstance().getApiService(this@MainActivity).getDriverProfile()
                 if (response.isSuccessful && response.body() != null) {
                     val profile = response.body()!!
-                    
-                    // 1. Ім'я
                     val serverName = profile.fullName ?: "Водій"
                     sessionManager.saveDriverName(serverName)
                     tvDriverName.text = extractFirstName(serverName)
-
-                    // 2. Рейтинг (НОВЕ)
-                    // Форматуємо до 1 знаку після коми (наприклад, "4.8")
                     if (tvRating != null) {
                         tvRating.text = String.format("%.1f", profile.rating)
                     }
-
-                    // 3. Фото
                     if (!profile.photoUrl.isNullOrEmpty()) {
                         Glide.with(this@MainActivity)
                             .load(profile.photoUrl)
                             .circleCrop()
-                            .placeholder(R.drawable.ic_driver_avatar_placeholder) // Додай плейсхолдер, якщо є
+                            .placeholder(R.drawable.ic_driver_avatar_placeholder)
                             .into(imgAvatar)
                     }
-
-                    // 4. Номер авто
                     if (profile.car != null && !profile.car.plateNumber.isNullOrEmpty()) {
                         tvPlateNumber.text = profile.car.plateNumber
                         tvPlateNumber.visibility = View.VISIBLE
@@ -668,16 +624,14 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                         tvPlateNumber.visibility = View.GONE
                     }
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+            } catch (e: Exception) { e.printStackTrace() }
         }
     }
 
     @SuppressLint("MissingPermission")
     private fun centerMapOnUser() {
         if (!::map.isInitialized) return
-        if (isHeatmapVisible || isSectorsVisible) return
+        if (isHeatmapVisible || isSectorsVisible || sectorOverlay.isShown) return
 
         if (sessionManager.isManualLocationActive()) {
             try { map.isMyLocationEnabled = false } catch (e: Exception) {}
@@ -686,7 +640,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 val latLng = LatLng(manualLoc.first, manualLoc.second)
                 currentDriverLocation = latLng
                 drawSearchRadius()
-                
                 if (manualLocationMarker == null) {
                     manualLocationMarker = map.addMarker(MarkerOptions().position(latLng).title("Фіксована позиція").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN)))
                 } else manualLocationMarker?.position = latLng
@@ -699,10 +652,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 map.isMyLocationEnabled = true
                 map.uiSettings.isMyLocationButtonEnabled = false
                 fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-                    location?.let { 
+                    location?.let {
                         currentDriverLocation = LatLng(it.latitude, it.longitude)
                         drawSearchRadius()
-                        map.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(it.latitude, it.longitude), 16f)) 
+                        map.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(it.latitude, it.longitude), 16f))
                     }
                 }
             }
@@ -715,24 +668,29 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             map.setMapStyle(MapStyleOptions.loadRawResourceStyle(this, R.raw.map_style_dark))
         } catch (e: Exception) {}
 
-        // --- ПРАВИЛЬНОЕ ЗАКРЕПЛЕНИЕ И СМЕЩЕНИЕ ЦЕНТРА КАРТЫ ---
         val density = resources.displayMetrics.density
-        defaultMapPaddingBottom = (180 * density).toInt() // Сохраняем значение глобально
-
-        // Задаем внутренний отступ для карты (слева, сверху, справа, снизу)
+        defaultMapPaddingBottom = (180 * density).toInt()
         map.setPadding(0, 0, 0, defaultMapPaddingBottom)
-        // ------------------------------------------------------
-        // ------------------------------------------------------
+
+        // --- НОВОЕ: Обработчик клика по карте для полигонов оверлея секторов ---
+        map.setOnPolygonClickListener { polygon ->
+            if (sectorOverlay.isShown) {
+                val id = polygon.tag as? Long ?: return@setOnPolygonClickListener
+                toggleSectorSelection(id)
+            }
+        }
 
         updateMapUI()
         centerMapOnUser()
     }
+
     private fun resetHotspotsButton() {
         isHeatmapVisible = false
         clearHeatmapFromMap()
         btnHotspots.backgroundTintList = null
         btnHotspots.imageTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_text_primary))
     }
+
     private fun generateGlowBitmap(color: Int): BitmapDescriptor {
         val size = 512
         val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
@@ -750,18 +708,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             clearSectorsFromMap()
             isSectorsVisible = false
         }
-
         if (isHeatmapVisible) {
-            // Если рыбные места уже были включены — выключаем их
             resetHotspotsButton()
             Toast.makeText(this, "Рибні місця приховано", Toast.LENGTH_SHORT).show()
         } else {
-            // Включаем визуальный режим активности ТОЛЬКО при нажатии
             isHeatmapVisible = true
             btnHotspots.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_neon_teal))
             btnHotspots.imageTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_black_bg))
-
-            // Запускаем сетевой запрос
             loadAndDrawHeatmap()
         }
     }
@@ -777,17 +730,14 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                         Toast.makeText(this@MainActivity, "Знайдено ${zones.size} active зон", Toast.LENGTH_SHORT).show()
                     } else {
                         Toast.makeText(this@MainActivity, "Зараз немає скупчень замовлень", Toast.LENGTH_SHORT).show()
-                        // Если зон нет, то кнопка не должна гореть активной
                         resetHotspotsButton()
                     }
                 } else {
                     Toast.makeText(this@MainActivity, "Не вдалося отримати дані Heatmap", Toast.LENGTH_SHORT).show()
-                    // Ошибка сервера — гасим кнопку назад в дефолт
                     resetHotspotsButton()
                 }
             } catch (e: Exception) {
                 Toast.makeText(this@MainActivity, "Помилка завантаження Heatmap", Toast.LENGTH_SHORT).show()
-                // Сетевая ошибка — гасим кнопку назад в дефолт, она больше не исчезнет!
                 resetHotspotsButton()
             }
         }
@@ -806,10 +756,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun clearHeatmapFromMap() { heatmapOverlays.forEach { it.remove() }; heatmapOverlays.clear() }
 
     private fun toggleSectors() {
-        if (isHeatmapVisible) {
-            // ИСПРАВЛЕНО: При закрытии хитмапа из таба секторов сбрасываем иконку на driver_text_primary, а не на бирюзовый!
-            resetHotspotsButton()
-        }
+        if (isHeatmapVisible) resetHotspotsButton()
         if (isSectorsVisible) {
             clearSectorsFromMap()
             isSectorsVisible = false
@@ -830,7 +777,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
-    private fun drawSectorsOnMap(sectors: List<com.taxiapp.driver.network.Sector>) {
+    private fun drawSectorsOnMap(sectors: List<Sector>) {
         clearSectorsFromMap()
         for (sector in sectors) {
             if (sector.points.isEmpty()) continue
@@ -849,7 +796,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun clearSectorsFromMap() { sectorPolygons.forEach { it.remove() }; sectorPolygons.clear(); sectorMarkers.forEach { it.remove() }; sectorMarkers.clear() }
-    private fun getPolygonCenter(points: List<com.taxiapp.driver.network.SectorPointDto>): LatLng { val builder = LatLngBounds.Builder(); for (p in points) builder.include(LatLng(p.lat, p.lng)); return builder.build().center }
+    private fun getPolygonCenter(points: List<SectorPointDto>): LatLng { val builder = LatLngBounds.Builder(); for (p in points) builder.include(LatLng(p.lat, p.lng)); return builder.build().center }
 
     private fun updateMapUI() {
         if (!::map.isInitialized) return
@@ -918,7 +865,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun updateDriverStatus(isOnline: Boolean) {
-        btnStatusToggle.isEnabled = false // Блокируем кнопку на время сетевого запроса
+        btnStatusToggle.isEnabled = false
         LocationServices.getFusedLocationProviderClient(this).lastLocation.addOnSuccessListener { loc ->
             sendStatusRequest(isOnline, loc?.latitude ?: 0.0, loc?.longitude ?: 0.0)
         }.addOnFailureListener {
@@ -931,14 +878,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             try {
                 val response = ApiClient.getInstance().getApiService(this@MainActivity).updateStatus(UpdateDriverStatusRequest(isOnline, lat, lng))
                 if (!response.isSuccessful) {
-                    // Если сервер вернул ошибку -> откатываем дизайн и состояние назад
                     setOnlineVisualState(!isOnline, animate = true)
                 }
             } catch (e: Exception) {
-                // Если упала сеть -> также плавно откатываем бегунок назад
                 setOnlineVisualState(!isOnline, animate = true)
             } finally {
-                btnStatusToggle.isEnabled = true // Разблокируем переключатель
+                btnStatusToggle.isEnabled = true
             }
         }
     }
@@ -954,7 +899,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val allGranted = permissionsToRequest.all { ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED }
         if (allGranted) {
             startLocationService()
-            startUILocationUpdates() 
+            startUILocationUpdates()
         } else requestPermissionLauncher.launch(permissionsToRequest.toTypedArray())
     }
 
@@ -973,16 +918,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     val tvCommission = navViewContent.findViewById<TextView>(R.id.tv_menu_commission)
                     tvCommission.text = "Комісія сервісу: ${String.format("%.1f", percent)}%"
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+            } catch (e: Exception) { e.printStackTrace() }
         }
     }
-    /**
-     * Метод динамического обновления кнопки сохранения секторов.
-     * Если выбрано 0 секторов — кнопка серая и неактивная.
-     * Если выбрано > 0 секторов — кнопка бирюзовая и кликабельная.
-     */
+
     fun updateSectorSaveButtonState(selectedCount: Int) {
         if (::btnSaveSelection.isInitialized) {
             if (selectedCount > 0) {
@@ -1006,8 +945,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun showRestoreDialog() {
-        if (restoreDialog?.isShowing == true) return // Щоб не створити 10 діалогів
-
+        if (restoreDialog?.isShowing == true) return
         restoreDialog = android.app.Dialog(this)
         restoreDialog?.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
         restoreDialog?.setContentView(R.layout.dialog_restore_account)
@@ -1016,7 +954,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             android.view.ViewGroup.LayoutParams.MATCH_PARENT,
             android.view.ViewGroup.LayoutParams.WRAP_CONTENT
         )
-        restoreDialog?.setCancelable(false) // Забороняємо клікати по карті
+        restoreDialog?.setCancelable(false)
 
         val btnCancel = restoreDialog?.findViewById<androidx.appcompat.widget.AppCompatButton>(R.id.btnCancelRestore)
         val btnConfirm = restoreDialog?.findViewById<androidx.appcompat.widget.AppCompatButton>(R.id.btnConfirmRestore)
@@ -1031,12 +969,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
 
         btnConfirm?.setOnClickListener {
-            // Не закриваємо діалог одразу, нехай висить поки йде запит
             btnConfirm.isEnabled = false
             btnConfirm.text = "Відновлення..."
             restoreAccount()
         }
-
         restoreDialog?.show()
     }
 
@@ -1048,13 +984,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     sessionManager.setPendingDeletion(false)
                     restoreDialog?.dismiss()
                     Toast.makeText(this@MainActivity, "Акаунт успішно відновлено!", Toast.LENGTH_SHORT).show()
-
-                    // ПЕРЕЗАВАНТАЖУЄМО ЕКРАН, щоб запрацювала карта та замовлення
                     recreate()
                 } else {
                     Toast.makeText(this@MainActivity, "Помилка відновлення", Toast.LENGTH_SHORT).show()
                     restoreDialog?.dismiss()
-                    showRestoreDialog() // Показуємо знову, якщо помилка
+                    showRestoreDialog()
                 }
             } catch (e: Exception) {
                 Toast.makeText(this@MainActivity, "Помилка мережі", Toast.LENGTH_SHORT).show()
@@ -1064,15 +998,107 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
+    // --- НОВОЕ: Универсальный метод активации выбора секторов для "Додому" ---
+    fun startHomeSectorSelection(preSelectedIds: List<Long>?) {
+        currentSelectionTarget = SelectionTarget.HOME
+        selectedIds.clear()
+        preSelectedIds?.forEach { selectedIds.add(it) }
+
+        selectionTabs.getTabAt(0)?.select()
+        sectorOverlay.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+        etSectorSearch.setText("")
+
+        sectorOverlay.visibility = View.VISIBLE
+        mainScreenUiGroup.visibility = View.GONE
+
+        if (::map.isInitialized) {
+            map.setPadding(0, 0, 0, 0)
+            if (searchRadiusCircle != null) searchRadiusCircle?.isVisible = false
+            drawOverlaySectorsOnMap()
+        }
+        updateList()
+        updateSectorSaveButtonState(selectedIds.size)
+        overlayBackPressedCallback?.isEnabled = true
+    }
+
+    private fun loadSectorsDataSilently() {
+        lifecycleScope.launch {
+            try {
+                val res = ApiClient.getInstance().getApiService(this@MainActivity).getSectors()
+                if (res.isSuccessful) {
+                    allSectors = res.body() ?: emptyList()
+                }
+            } catch (e: Exception) { e.printStackTrace() }
+        }
+    }
+
+    private fun toggleSectorSelection(id: Long) {
+        if (selectedIds.contains(id)) selectedIds.remove(id) else selectedIds.add(id)
+
+        polygons[id]?.let { poly ->
+            val isSelected = selectedIds.contains(id)
+            poly.fillColor = if (isSelected) Color.argb(120, 0, 255, 170) else Color.argb(40, 128, 128, 128)
+            poly.strokeColor = if (isSelected) Color.parseColor("#00ffaa") else Color.GRAY
+        }
+        if (rvSectorsList.visibility == View.VISIBLE) {
+            sectorsListAdapter?.notifyDataSetChanged()
+        }
+        updateSectorSaveButtonState(selectedIds.size)
+    }
+
+    private fun drawOverlaySectorsOnMap() {
+        if (!::map.isInitialized || allSectors.isEmpty()) return
+        clearOverlayPolygons()
+
+        for (sector in allSectors) {
+            if (sector.points.isEmpty()) continue
+            val options = PolygonOptions()
+                .addAll(sector.points.map { LatLng(it.lat, it.lng) })
+                .clickable(true)
+                .strokeWidth(4f)
+
+            val isSelected = selectedIds.contains(sector.id)
+            options.fillColor(if (isSelected) Color.argb(120, 0, 255, 170) else Color.argb(40, 128, 128, 128))
+            options.strokeColor(if (isSelected) Color.parseColor("#00ffaa") else Color.GRAY)
+
+            val poly = map.addPolygon(options)
+            poly.tag = sector.id
+            polygons[sector.id] = poly
+
+            val center = getPolygonCenter(sector.points)
+            val textIcon = createTextIcon(sector.name)
+            val marker = map.addMarker(MarkerOptions().position(center).icon(textIcon).anchor(0.5f, 0.5f).flat(true))
+            marker?.let { sectorMarkersList.add(it) }
+        }
+    }
+
+    private fun clearOverlayPolygons() {
+        polygons.values.forEach { it.remove() }
+        polygons.clear()
+        sectorMarkersList.forEach { it.remove() }
+        sectorMarkersList.clear()
+    }
+
+    private fun updateList() {
+        val query = etSectorSearch.text.toString().lowercase()
+        val filtered = allSectors.filter { it.name.lowercase().contains(query) }
+        sectorsListAdapter = SectorsListAdapter(filtered, selectedIds) { sectorId ->
+            toggleSectorSelection(sectorId)
+        }
+        rvSectorsList.adapter = sectorsListAdapter
+    }
+    // ------------------------------------------------------------------------
+
     private fun initSectorSelectionOverlay() {
-        mainScreenUiGroup = findViewById(R.id.main_screen_ui_group) // <-- Инициализируем группу
+        mainScreenUiGroup = findViewById(R.id.main_screen_ui_group)
         btnSaveSelection = findViewById<android.widget.ImageView>(R.id.btn_save_selection)
         sectorOverlay = findViewById(R.id.sector_selection_overlay)
         selectionTabs = findViewById(R.id.selection_tabs)
         etSectorSearch = findViewById(R.id.et_search_query)
         rvSectorsList = findViewById(R.id.rv_sectors_list)
 
-        // Настраиваем табы прямо как в Эфире
+        rvSectorsList.layoutManager = LinearLayoutManager(this)
+
         selectionTabs.addTab(selectionTabs.newTab().setText("Карта"))
         selectionTabs.addTab(selectionTabs.newTab().setText("Список"))
 
@@ -1086,60 +1112,131 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     sectorOverlay.setBackgroundResource(R.color.driver_black_bg)
                     etSectorSearch.visibility = View.VISIBLE
                     rvSectorsList.visibility = View.VISIBLE
+                    updateList()
                 }
             }
             override fun onTabUnselected(tab: com.google.android.material.tabs.TabLayout.Tab) {}
             override fun onTabReselected(tab: com.google.android.material.tabs.TabLayout.Tab) {}
         })
 
+        etSectorSearch.addTextChangedListener { updateList() }
+
         // Кнопка НАЗАД (Отмена)
         findViewById<View>(R.id.btn_back_selection).setOnClickListener {
             isLeavingSectorSelection = true
-
-            val intentBack = Intent(this, CreateFilterActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+            if (currentSelectionTarget == SelectionTarget.HOME) {
+                overlayBackPressedCallback?.isEnabled = false
+                // Возврат в шторку настроек
+                sectorOverlay.visibility = View.GONE
+                mainScreenUiGroup.visibility = View.VISIBLE
+                if (::map.isInitialized) {
+                    map.setPadding(0, 0, 0, defaultMapPaddingBottom)
+                    if (searchRadiusCircle != null) searchRadiusCircle?.isVisible = true
+                }
+                clearOverlayPolygons()
+                val bottomSheet = SearchSettingsBottomSheet { updateSearchStatusUI() }
+                bottomSheet.show(supportFragmentManager, "SearchSettings")
+            } else {
+                // Старый возврат в создание фильтра
+                val intentBack = Intent(this, CreateFilterActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                }
+                startActivity(intentBack)
             }
-            startActivity(intentBack)
-
-            // ИСПРАВЛЕНИЕ: Заменяем мгновенный скачок на плавное растворение
-            
         }
 
-// Кнопка СОХРАНИТЬ
+        overlayBackPressedCallback = object : androidx.activity.OnBackPressedCallback(false) { // false — по умолчанию выключен
+            override fun handleOnBackPressed() {
+                // Имитируем нажатие кнопки "Назад" на самом оверлее
+                findViewById<View>(R.id.btn_back_selection).performClick()
+            }
+        }
+// Регистрируем его в диспетчере активити
+        onBackPressedDispatcher.addCallback(this, overlayBackPressedCallback!!)
+
+        // Кнопка СОХРАНИТЬ
         findViewById<View>(R.id.btn_save_selection).setOnClickListener {
             isLeavingSectorSelection = true
+            val finalSelectedIds = selectedIds.toLongArray()
 
-            val finalSelectedIds = longArrayOf() // Твоя логика сбора ID секторов
-
-            val intentBack = Intent(this, CreateFilterActivity::class.java).apply {
-                putExtra("SECTOR_RESULT_IDS", finalSelectedIds)
-                putExtra("IS_PICKING_FROM", isPickingFromSectorsMode)
-                flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+            if (currentSelectionTarget == SelectionTarget.HOME) {
+                overlayBackPressedCallback?.isEnabled = false
+                // Прямой сетевой запрос на сохранение секторов "Додому"
+                updateHomeSectors(finalSelectedIds.toList())
+                sectorOverlay.visibility = View.GONE
+                mainScreenUiGroup.visibility = View.VISIBLE
+                if (::map.isInitialized) {
+                    map.setPadding(0, 0, 0, defaultMapPaddingBottom)
+                    if (searchRadiusCircle != null) searchRadiusCircle?.isVisible = true
+                }
+                clearOverlayPolygons()
+            } else {
+                // Старая логика передачи ID обратно в фильтры
+                val intentBack = Intent(this, CreateFilterActivity::class.java).apply {
+                    putExtra("SECTOR_RESULT_IDS", finalSelectedIds)
+                    putExtra("IS_PICKING_FROM", isPickingFromSectorsMode)
+                    flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                }
+                startActivity(intentBack)
             }
-            startActivity(intentBack)
-
-            // ИСПРАВЛЕНИЕ: Заменяем мгновенный скачок на плавное растворение
-
         }
     }
 
     private fun handleSectorSelectionRequest(intent: Intent?) {
         if (intent != null && intent.getBooleanExtra("START_SECTOR_SELECTION", false)) {
+            currentSelectionTarget = if (intent.getBooleanExtra("IS_FROM", true)) SelectionTarget.FILTER_FROM else SelectionTarget.FILTER_TO
             isPickingFromSectorsMode = intent.getBooleanExtra("IS_FROM", true)
-            initiallySelectedIds = intent.getLongArrayExtra("CURRENT_IDS") ?: LongArray(0)
+            val initialArray = intent.getLongArrayExtra("CURRENT_IDS") ?: LongArray(0)
+
+            selectedIds.clear()
+            initialArray.forEach { selectedIds.add(it) }
 
             selectionTabs.getTabAt(0)?.select()
             sectorOverlay.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+            etSectorSearch.setText("")
 
             sectorOverlay.visibility = View.VISIBLE
             mainScreenUiGroup.visibility = View.GONE
 
             if (::map.isInitialized) {
                 map.setPadding(0, 0, 0, 0)
+                if (searchRadiusCircle != null) searchRadiusCircle?.isVisible = false
+                drawOverlaySectorsOnMap()
             }
-
-            // Проверяем количество пришедших секторов и выставляем цвет кнопки
-            updateSectorSaveButtonState(initiallySelectedIds.size) // <-- ДОБАВИТЬ ЭТУ СТРОКУ
+            updateList()
+            updateSectorSaveButtonState(selectedIds.size)
+            overlayBackPressedCallback?.isEnabled = true
         }
+    }
+
+    // --- НОВОЕ: Встроенный адаптер для rvSectorsList по твоей XML разметке ---
+    private inner class SectorsListAdapter(
+        private val sectors: List<Sector>,
+        private val selected: Set<Long>,
+        private val onClick: (Long) -> Unit
+    ) : androidx.recyclerview.widget.RecyclerView.Adapter<SectorsListAdapter.SectorVH>() {
+
+        inner class SectorVH(view: View) : androidx.recyclerview.widget.RecyclerView.ViewHolder(view) {
+            val tvName: TextView = view.findViewById(R.id.tv_sector_name)
+            val ivCheck: ImageView = view.findViewById(R.id.iv_selected_check)
+        }
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SectorVH {
+            val view = LayoutInflater.from(parent.context).inflate(R.layout.item_sector_selectable, parent, false)
+            return SectorVH(view)
+        }
+
+        override fun onBindViewHolder(holder: SectorVH, position: Int) {
+            val sector = sectors[position]
+            holder.tvName.text = sector.name
+
+            val isSelected = selected.contains(sector.id)
+            holder.ivCheck.visibility = if (isSelected) View.VISIBLE else View.GONE
+            holder.tvName.setTextColor(if (isSelected) Color.parseColor("#00ffaa") else Color.WHITE)
+
+            holder.itemView.setOnClickListener { onClick(sector.id) }
+        }
+
+        override fun getItemCount() = sectors.size
     }
 }

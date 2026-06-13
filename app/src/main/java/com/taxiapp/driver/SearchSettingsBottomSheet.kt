@@ -6,7 +6,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
-import androidx.appcompat.widget.AppCompatButton // <-- Изменили импорт кнопки
+import androidx.appcompat.widget.AppCompatButton
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.taxiapp.driver.network.ApiClient
@@ -27,7 +27,7 @@ class SearchSettingsBottomSheet(
     private lateinit var tvHomeSector: TextView
     private lateinit var tvRadius: TextView
     private lateinit var seekBar: SeekBar
-    private lateinit var btnSave: AppCompatButton // <-- Изменили тип на AppCompatButton
+    private lateinit var btnSave: AppCompatButton
 
     private var currentMode = DriverSearchMode.CHAIN
     private var currentRadius = 3.0
@@ -46,9 +46,7 @@ class SearchSettingsBottomSheet(
         tvHomeSector = view.findViewById(R.id.tvHomeSectorName)
         tvRadius = view.findViewById(R.id.tvRadiusValue)
         seekBar = view.findViewById(R.id.seekBarRadius)
-
-        // --- СВЯЗЫВАЕМ НОВЫЙ ID ИЗ СТРУКТУРЫ КОНТЕЙНЕРА ---
-        btnSave = view.findViewById(R.id.btn_save_action) // <-- Поменяли ID на новый
+        btnSave = view.findViewById(R.id.btn_save_action)
 
         val btnModeHome = view.findViewById<View>(R.id.btnModeHome)
         val btnModeChain = view.findViewById<View>(R.id.btnModeChain)
@@ -65,13 +63,10 @@ class SearchSettingsBottomSheet(
         btnModeHome.setOnClickListener { selectMode(DriverSearchMode.HOME) }
         btnModeChain.setOnClickListener { selectMode(DriverSearchMode.CHAIN) }
 
+        // --- ИСПРАВЛЕНО ТУТ: Перенаправляем выбор секторов в оверлей MainActivity ---
         btnEditHomeSector.setOnClickListener {
             dismiss()
-            val intent = Intent(requireContext(), SectorSelectionActivity::class.java)
-            if (selectedHomeSectorIds != null && selectedHomeSectorIds!!.isNotEmpty()) {
-                intent.putExtra("SELECTED_IDS", selectedHomeSectorIds!!.toLongArray())
-            }
-            requireActivity().startActivityForResult(intent, 1001)
+            (requireActivity() as MainActivity).startHomeSectorSelection(selectedHomeSectorIds)
         }
 
         seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
@@ -161,7 +156,7 @@ class SearchSettingsBottomSheet(
 
     private fun saveSettings() {
         btnSave.isEnabled = false
-        btnSave.text = "ЗБЕРЕЖЕННЯ..." // По-прежнему отлично работает с AppCompatButton
+        btnSave.text = "ЗБЕРЕЖЕННЯ..."
 
         lifecycleScope.launch {
             try {
