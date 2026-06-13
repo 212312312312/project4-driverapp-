@@ -9,35 +9,46 @@
     <RelativeLayout
         android:id="@+id/header_create"
         android:layout_width="match_parent"
-        android:layout_height="60dp"
-        app:layout_constraintTop_toTopOf="parent">
+        android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
+        android:layout_marginHorizontal="24dp"
+        android:paddingBottom="16dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
-        <ImageButton
-            android:id="@+id/btn_back_create"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_centerVertical="true"
-            android:layout_marginStart="8dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
+        <ImageView
+            android:id="@+id/btn_back"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
             android:src="@drawable/ic_arrow_back_black"
-            app:tint="@color/driver_text_primary" />
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:focusable="true"
+            app:tint="@color/driver_text_primary"
+            android:layout_centerVertical="true"
+            android:layout_alignParentStart="true"/>
 
         <TextView
             android:id="@+id/tv_header_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_centerInParent="true"
             android:text="@string/filter_create_title"
+            android:textSize="22sp"
+            android:textStyle="bold"
             android:textColor="@color/driver_text_primary"
-            android:textSize="18sp"
-            android:textStyle="bold" />
+            android:fontFamily="@font/app_font_family"
+            android:layout_centerVertical="true"
+            android:layout_toEndOf="@id/btn_back"
+            android:layout_marginStart="16dp"/>
     </RelativeLayout>
 
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
+        android:fillViewport="true"
         app:layout_constraintTop_toBottomOf="@id/header_create"
-        app:layout_constraintBottom_toTopOf="@id/btn_create_filter">
+        app:layout_constraintBottom_toTopOf="@id/btn_container_layout">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -53,7 +64,9 @@
                 android:hint="@string/filter_name_hint"
                 android:paddingHorizontal="16dp"
                 android:textColor="@color/driver_text_primary"
-                android:textColorHint="@color/driver_text_secondary" />
+                android:textColorHint="@color/driver_text_secondary"
+                android:fontFamily="@font/app_font_family"
+                android:inputType="textCapSentences" />
 
             <TextView
                 android:layout_width="match_parent"
@@ -61,7 +74,8 @@
                 android:layout_marginTop="24dp"
                 android:text="@string/filter_section_from"
                 android:textColor="@color/driver_neon_teal"
-                android:textSize="12sp"
+                android:textSize="13sp"
+                android:fontFamily="@font/app_font_family"
                 android:textStyle="bold" />
 
             <RadioGroup
@@ -78,6 +92,8 @@
                     android:layout_weight="1"
                     android:checked="true"
                     android:text="@string/filter_type_distance"
+                    android:buttonTint="@color/driver_neon_teal"
+                    android:fontFamily="@font/app_font_family"
                     android:textColor="@color/driver_text_primary" />
 
                 <RadioButton
@@ -86,6 +102,8 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="@string/filter_type_sectors"
+                    android:buttonTint="@color/driver_neon_teal"
+                    android:fontFamily="@font/app_font_family"
                     android:textColor="@color/driver_text_primary" />
             </RadioGroup>
 
@@ -101,26 +119,33 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/filter_radius_default"
+                    android:fontFamily="@font/app_font_family"
                     android:textColor="@color/driver_text_primary" />
 
                 <SeekBar
                     android:id="@+id/sb_distance"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="12dp"
                     android:max="60"
-                    android:progress="10" />
+                    android:progress="10"
+                    android:thumbTint="@color/driver_neon_teal"
+                    android:progressTint="@color/driver_neon_teal"
+                    android:progressBackgroundTint="@color/driver_text_secondary" />
             </LinearLayout>
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_select_from_sectors"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="50dp"
                 android:layout_marginTop="8dp"
                 android:text="@string/filter_btn_select_sectors"
+                android:fontFamily="@font/app_font_family"
+                android:textColor="@color/driver_text_primary"
                 android:visibility="gone"
-                app:strokeColor="@color/driver_neon_teal" />
+                app:strokeColor="@color/driver_neon_teal"
+                app:cornerRadius="8dp" />
 
             <TextView
                 android:layout_width="match_parent"
@@ -128,23 +153,29 @@
                 android:layout_marginTop="24dp"
                 android:text="@string/filter_section_to"
                 android:textColor="@color/driver_neon_teal"
-                android:textSize="12sp"
+                android:textSize="13sp"
+                android:fontFamily="@font/app_font_family"
                 android:textStyle="bold" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_select_to_sectors"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="50dp"
                 android:layout_marginTop="8dp"
                 android:text="@string/filter_btn_select_to_sectors"
-                app:strokeColor="@color/driver_neon_teal" />
+                android:fontFamily="@font/app_font_family"
+                android:textColor="@color/driver_text_primary"
+                app:strokeColor="@color/driver_neon_teal"
+                app:cornerRadius="8dp" />
 
             <TextView
                 android:id="@+id/tv_selected_to_count"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
                 android:text="@string/filter_selected_count_default"
+                android:fontFamily="@font/app_font_family"
                 android:textColor="@color/driver_text_secondary"
                 android:textSize="12sp" />
 
@@ -154,7 +185,8 @@
                 android:layout_marginTop="24dp"
                 android:text="@string/filter_section_tariff"
                 android:textColor="@color/driver_neon_teal"
-                android:textSize="12sp"
+                android:textSize="13sp"
+                android:fontFamily="@font/app_font_family"
                 android:textStyle="bold" />
 
             <RadioGroup
@@ -171,6 +203,8 @@
                     android:layout_weight="1"
                     android:checked="true"
                     android:text="@string/filter_tariff_simple"
+                    android:buttonTint="@color/driver_neon_teal"
+                    android:fontFamily="@font/app_font_family"
                     android:textColor="@color/driver_text_primary" />
 
                 <RadioButton
@@ -179,6 +213,8 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="@string/filter_tariff_complex"
+                    android:buttonTint="@color/driver_neon_teal"
+                    android:fontFamily="@font/app_font_family"
                     android:textColor="@color/driver_text_primary" />
             </RadioGroup>
 
@@ -197,7 +233,9 @@
                     android:hint="@string/filter_hint_min_price"
                     android:inputType="numberDecimal"
                     android:paddingHorizontal="12dp"
-                    android:textColor="@color/driver_text_primary" />
+                    android:fontFamily="@font/app_font_family"
+                    android:textColor="@color/driver_text_primary"
+                    android:textColorHint="@color/driver_text_secondary" />
 
                 <EditText
                     android:id="@+id/et_min_price_km"
@@ -208,7 +246,9 @@
                     android:hint="@string/filter_hint_min_price_km"
                     android:inputType="numberDecimal"
                     android:paddingHorizontal="12dp"
-                    android:textColor="@color/driver_text_primary" />
+                    android:fontFamily="@font/app_font_family"
+                    android:textColor="@color/driver_text_primary"
+                    android:textColorHint="@color/driver_text_secondary" />
             </LinearLayout>
 
             <LinearLayout
@@ -227,7 +267,9 @@
                     android:hint="@string/filter_hint_min_price"
                     android:inputType="numberDecimal"
                     android:paddingHorizontal="12dp"
-                    android:textColor="@color/driver_text_primary" />
+                    android:fontFamily="@font/app_font_family"
+                    android:textColor="@color/driver_text_primary"
+                    android:textColorHint="@color/driver_text_secondary" />
 
                 <EditText
                     android:id="@+id/et_complex_km_in_min"
@@ -239,7 +281,9 @@
                     android:hint="@string/filter_hint_complex_km"
                     android:inputType="numberDecimal"
                     android:paddingHorizontal="12dp"
-                    android:textColor="@color/driver_text_primary" />
+                    android:fontFamily="@font/app_font_family"
+                    android:textColor="@color/driver_text_primary"
+                    android:textColorHint="@color/driver_text_secondary" />
 
                 <EditText
                     android:id="@+id/et_complex_city"
@@ -250,7 +294,9 @@
                     android:hint="@string/filter_hint_city_price"
                     android:inputType="numberDecimal"
                     android:paddingHorizontal="12dp"
-                    android:textColor="@color/driver_text_primary" />
+                    android:fontFamily="@font/app_font_family"
+                    android:textColor="@color/driver_text_primary"
+                    android:textColorHint="@color/driver_text_secondary" />
 
                 <EditText
                     android:id="@+id/et_complex_suburbs"
@@ -262,7 +308,9 @@
                     android:hint="@string/filter_hint_suburb_price"
                     android:inputType="numberDecimal"
                     android:paddingHorizontal="12dp"
-                    android:textColor="@color/driver_text_primary" />
+                    android:fontFamily="@font/app_font_family"
+                    android:textColor="@color/driver_text_primary"
+                    android:textColorHint="@color/driver_text_secondary" />
             </LinearLayout>
 
             <TextView
@@ -271,7 +319,8 @@
                 android:layout_marginTop="24dp"
                 android:text="@string/filter_section_payment"
                 android:textColor="@color/driver_neon_teal"
-                android:textSize="12sp"
+                android:textSize="13sp"
+                android:fontFamily="@font/app_font_family"
                 android:textStyle="bold" />
 
             <Spinner
@@ -284,21 +333,40 @@
 
             <View
                 android:layout_width="match_parent"
-                android:layout_height="40dp" />
+                android:layout_height="24dp" />
 
         </LinearLayout>
     </ScrollView>
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btn_create_filter"
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/btn_container_layout"
         android:layout_width="match_parent"
         android:layout_height="60dp"
-        android:layout_margin="20dp"
-        android:text="@string/filter_btn_create"
-        android:textColor="@color/driver_black_bg"
-        android:textStyle="bold"
-        app:backgroundTint="@color/driver_neon_teal"
-        app:cornerRadius="12dp"
-        app:layout_constraintBottom_toBottomOf="parent" />
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="16dp"
+        android:background="@drawable/bg_driver_btn"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btn_create_filter"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:text="@string/filter_btn_create"
+            android:textAllCaps="false"
+            android:textSize="18sp"
+            android:fontFamily="@font/app_font_family"
+            android:textStyle="bold"
+            android:textColor="@color/driver_text_black"
+            android:background="@android:color/transparent"
+            android:elevation="0dp"
+            android:stateListAnimator="@null"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

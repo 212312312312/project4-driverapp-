@@ -23,6 +23,7 @@ import android.view.View
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -65,6 +66,19 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var tvSwitchStatusText: TextView
     private var isDriverOnline = false // Локальное состояние онлайна воителя
     private var searchBorderAnimator: android.animation.ObjectAnimator? = null
+
+
+    // Поля оверлея выбора секторов
+    private var defaultMapPaddingBottom = 0
+    private lateinit var mainScreenUiGroup: androidx.constraintlayout.widget.Group
+    private lateinit var btnSaveSelection: android.widget.ImageView
+    private lateinit var sectorOverlay: View
+    private lateinit var selectionTabs: com.google.android.material.tabs.TabLayout
+    private lateinit var etSectorSearch: EditText
+    private lateinit var rvSectorsList: androidx.recyclerview.widget.RecyclerView
+    private var isPickingFromSectorsMode = true
+    private var initiallySelectedIds = LongArray(0)
+
     private lateinit var map: GoogleMap
     private lateinit var btnLockLocation: ImageButton
     private lateinit var btnHotspots: ImageButton
@@ -145,6 +159,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         setupLocationCallback()
         
         checkPermissionsAndStart()
+        initSectorSelectionOverlay()
+        handleSectorSelectionRequest(intent)
     }
 
     private fun updateFcmToken() {
@@ -435,6 +451,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         dialog.show()
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleSectorSelectionRequest(intent)
+    }
+
     private fun sendSosSignal() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             Toast.makeText(this, "Немає доступу до геолокації!", Toast.LENGTH_SHORT).show()
@@ -674,12 +696,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         } catch (e: Exception) {}
 
         // --- ПРАВИЛЬНОЕ ЗАКРЕПЛЕНИЕ И СМЕЩЕНИЕ ЦЕНТРА КАРТЫ ---
-        // Переводим 180dp (суммарная высота панелей с отступами) в физические пиксели экрана смартфона
         val density = resources.displayMetrics.density
-        val paddingBottomInPixels = (180 * density).toInt()
+        defaultMapPaddingBottom = (180 * density).toInt() // Сохраняем значение глобально
 
         // Задаем внутренний отступ для карты (слева, сверху, справа, снизу)
-        map.setPadding(0, 0, 0, paddingBottomInPixels)
+        map.setPadding(0, 0, 0, defaultMapPaddingBottom)
+        // ------------------------------------------------------
         // ------------------------------------------------------
 
         updateMapUI()
@@ -936,6 +958,26 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             }
         }
     }
+    /**
+     * Метод динамического обновления кнопки сохранения секторов.
+     * Если выбрано 0 секторов — кнопка серая и неактивная.
+     * Если выбрано > 0 секторов — кнопка бирюзовая и кликабельная.
+     */
+    fun updateSectorSaveButtonState(selectedCount: Int) {
+        if (::btnSaveSelection.isInitialized) {
+            if (selectedCount > 0) {
+                btnSaveSelection.isEnabled = true
+                btnSaveSelection.imageTintList = android.content.res.ColorStateList.valueOf(
+                    androidx.core.content.ContextCompat.getColor(this, R.color.driver_neon_teal)
+                )
+            } else {
+                btnSaveSelection.isEnabled = false
+                btnSaveSelection.imageTintList = android.content.res.ColorStateList.valueOf(
+                    androidx.core.content.ContextCompat.getColor(this, R.color.driver_text_secondary)
+                )
+            }
+        }
+    }
 
     private fun checkPendingDeletionStatus() {
         if (sessionManager.isPendingDeletion()) {
@@ -999,6 +1041,92 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 restoreDialog?.dismiss()
                 showRestoreDialog()
             }
+        }
+    }
+
+    private fun initSectorSelectionOverlay() {
+        mainScreenUiGroup = findViewById(R.id.main_screen_ui_group) // <-- Инициализируем группу
+        btnSaveSelection = findViewById<android.widget.ImageView>(R.id.btn_save_selection)
+        sectorOverlay = findViewById(R.id.sector_selection_overlay)
+        selectionTabs = findViewById(R.id.selection_tabs)
+        etSectorSearch = findViewById(R.id.et_search_query)
+        rvSectorsList = findViewById(R.id.rv_sectors_list)
+
+        // Настраиваем табы прямо как в Эфире
+        selectionTabs.addTab(selectionTabs.newTab().setText("Карта"))
+        selectionTabs.addTab(selectionTabs.newTab().setText("Список"))
+
+        selectionTabs.addOnTabSelectedListener(object : com.google.android.material.tabs.TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: com.google.android.material.tabs.TabLayout.Tab) {
+                if (tab.position == 0) {
+                    sectorOverlay.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                    etSectorSearch.visibility = View.GONE
+                    rvSectorsList.visibility = View.GONE
+                } else {
+                    sectorOverlay.setBackgroundResource(R.color.driver_black_bg)
+                    etSectorSearch.visibility = View.VISIBLE
+                    rvSectorsList.visibility = View.VISIBLE
+                }
+            }
+            override fun onTabUnselected(tab: com.google.android.material.tabs.TabLayout.Tab) {}
+            override fun onTabReselected(tab: com.google.android.material.tabs.TabLayout.Tab) {}
+        })
+
+        // Кнопка НАЗАД (Отмена)
+        // Кнопка НАЗАД (Отмена)
+        findViewById<View>(R.id.btn_back_selection).setOnClickListener {
+            sectorOverlay.visibility = View.GONE
+            mainScreenUiGroup.visibility = View.VISIBLE // Возвращаем UI главного экрана
+
+            if (::map.isInitialized) {
+                map.setPadding(0, 0, 0, defaultMapPaddingBottom)
+            }
+
+            // Переносим экран Створення фільтра обратно на передний план, сохраняя его стейт
+            val intentBack = Intent(this, CreateFilterActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+            }
+            startActivity(intentBack)
+        }
+
+        // Кнопка СОХРАНИТЬ
+        findViewById<View>(R.id.btn_save_selection).setOnClickListener {
+            sectorOverlay.visibility = View.GONE
+            mainScreenUiGroup.visibility = View.VISIBLE
+
+            // Возвращаем логотип Google на исходную позицию выше нижнего бара
+            if (::map.isInitialized) {
+                map.setPadding(0, 0, 0, defaultMapPaddingBottom)
+            }
+
+            val finalSelectedIds = longArrayOf()
+
+            val intentBack = Intent(this, CreateFilterActivity::class.java).apply {
+                putExtra("SECTOR_RESULT_IDS", finalSelectedIds)
+                putExtra("IS_PICKING_FROM", isPickingFromSectorsMode)
+                flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+            }
+            startActivity(intentBack)
+        }
+    }
+
+    private fun handleSectorSelectionRequest(intent: Intent?) {
+        if (intent != null && intent.getBooleanExtra("START_SECTOR_SELECTION", false)) {
+            isPickingFromSectorsMode = intent.getBooleanExtra("IS_FROM", true)
+            initiallySelectedIds = intent.getLongArrayExtra("CURRENT_IDS") ?: LongArray(0)
+
+            selectionTabs.getTabAt(0)?.select()
+            sectorOverlay.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+
+            sectorOverlay.visibility = View.VISIBLE
+            mainScreenUiGroup.visibility = View.GONE
+
+            if (::map.isInitialized) {
+                map.setPadding(0, 0, 0, 0)
+            }
+
+            // Проверяем количество пришедших секторов и выставляем цвет кнопки
+            updateSectorSaveButtonState(initiallySelectedIds.size) // <-- ДОБАВИТЬ ЭТУ СТРОКУ
         }
     }
 }

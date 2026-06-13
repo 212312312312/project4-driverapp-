@@ -2,6 +2,7 @@ package com.taxiapp.driver
 
 import android.app.Activity
 import android.content.Intent
+import androidx.core.app.ActivityOptionsCompat
 import android.os.Bundle
 import android.view.View
 import android.widget.*
@@ -89,7 +90,8 @@ class CreateFilterActivity : AppCompatActivity() {
     }
 
     private fun setupListeners() {
-        findViewById<View>(R.id.btn_back_create).setOnClickListener { finish() }
+        // Изменили ID с btn_back_create на btn_back в соответствии с новым общим стилем хедера
+        findViewById<View>(R.id.btn_back).setOnClickListener { finish() }
 
         rgFromType.setOnCheckedChangeListener { _, checkedId ->
             if (checkedId == R.id.rb_distance) {
@@ -180,10 +182,33 @@ class CreateFilterActivity : AppCompatActivity() {
 
     private fun openSectorPicker(pickingFrom: Boolean) {
         isPickingFrom = pickingFrom
-        val intent = Intent(this, SectorSelectionActivity::class.java)
         val currentSelection = if (isPickingFrom) selectedFromIds else selectedToIds
-        intent.putExtra("SELECTED_IDS", currentSelection.toLongArray())
-        sectorPickerLauncher.launch(intent)
+
+        val intent = Intent(this, MainActivity::class.java).apply {
+            putExtra("START_SECTOR_SELECTION", true)
+            putExtra("IS_FROM", isPickingFrom)
+            putExtra("CURRENT_IDS", currentSelection.toLongArray())
+            flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+        }
+        startActivity(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+
+        if (intent.hasExtra("SECTOR_RESULT_IDS")) {
+            val ids = intent.getLongArrayExtra("SECTOR_RESULT_IDS")?.toMutableList() ?: mutableListOf()
+            val isFrom = intent.getBooleanExtra("IS_PICKING_FROM", true)
+
+            if (isFrom) {
+                selectedFromIds = ids
+                btnSelectFromSectors.text = "Вибрано секторів: ${ids.size}"
+            } else {
+                selectedToIds = ids
+                tvSelectedToCount.text = "Вибрано секторів: ${ids.size}"
+            }
+        }
     }
 
     private fun saveFilter() {
@@ -199,7 +224,6 @@ class CreateFilterActivity : AppCompatActivity() {
 
         val request = CreateFilterRequest(
             name = name,
-            // Если редактируем - сохраняем старые настройки режимов, если создаем - по умолчанию выкл
             isAuto = if (editingFilterId != null) savedIsAuto else false,
             isCycle = if (editingFilterId != null) savedIsCycle else false,
 
@@ -227,10 +251,8 @@ class CreateFilterActivity : AppCompatActivity() {
                 val api = ApiClient.getInstance().getApiService(this@CreateFilterActivity)
 
                 val res = if (editingFilterId != null) {
-                    // Вызываем UPDATE
                     api.updateFilter(editingFilterId!!, request)
                 } else {
-                    // Вызываем CREATE
                     api.createFilter(request)
                 }
 
@@ -247,5 +269,30 @@ class CreateFilterActivity : AppCompatActivity() {
                 Toast.makeText(this@CreateFilterActivity, "Помилка мережі", Toast.LENGTH_SHORT).show()
             }
         }
+    }
+
+    override fun finish() {
+        val intent = Intent(this, FiltersActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+        }
+
+        // Переносим FiltersActivity на передний план мгновенно с нулевой анимацией
+        val options = ActivityOptionsCompat.makeCustomAnimation(this, 0, 0)
+        startActivity(intent, options.toBundle())
+
+        // Полностью гасим анимацию "открытия вперед" для всех версий Android
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            overrideActivityTransition(
+                android.app.Activity.OVERRIDE_TRANSITION_OPEN,
+                0,
+                0
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            overridePendingTransition(0, 0)
+        }
+
+        // Вызываем родной finish, чтобы система сама красиво и нативно закрыла этот экран вправо
+        super.finish()
     }
 }

@@ -228,12 +228,13 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun showNavigatorBottomSheet() {
-        val bottomSheetDialog = BottomSheetDialog(this)
+        // Передаем кастомный стиль в конструктор
+        val bottomSheetDialog = BottomSheetDialog(this, R.style.BottomSheetDialogTheme)
         val view = layoutInflater.inflate(R.layout.bottom_sheet_navigator, null)
         bottomSheetDialog.setContentView(view)
 
-        val btnGoogle = view.findViewById<LinearLayout>(R.id.btn_nav_google)
-        val btnWaze = view.findViewById<LinearLayout>(R.id.btn_nav_waze)
+        val btnGoogle = view.findViewById<androidx.cardview.widget.CardView>(R.id.btn_nav_google)
+        val btnWaze = view.findViewById<androidx.cardview.widget.CardView>(R.id.btn_nav_waze)
 
         val tvStatusGoogle = view.findViewById<TextView>(R.id.tv_status_google)
         val tvStatusWaze = view.findViewById<TextView>(R.id.tv_status_waze)
@@ -255,7 +256,6 @@ class SettingsActivity : AppCompatActivity() {
                 Toast.makeText(this, "Google Maps обрано", Toast.LENGTH_SHORT).show()
             }
         } else {
-            tvStatusGoogle.text = getString(R.string.navigator_status_install)
             tvStatusGoogle.visibility = View.VISIBLE
             ivCheckGoogle.visibility = View.GONE
 
@@ -275,7 +275,6 @@ class SettingsActivity : AppCompatActivity() {
                 Toast.makeText(this, "Waze обрано", Toast.LENGTH_SHORT).show()
             }
         } else {
-            tvStatusWaze.text = getString(R.string.navigator_status_install)
             tvStatusWaze.visibility = View.VISIBLE
             ivCheckWaze.visibility = View.GONE
 
@@ -306,7 +305,8 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun showLanguageBottomSheet() {
-        val bottomSheetDialog = BottomSheetDialog(this)
+        // Передаем кастомный стиль в конструктор
+        val bottomSheetDialog = BottomSheetDialog(this, R.style.BottomSheetDialogTheme)
         val view = layoutInflater.inflate(R.layout.bottom_sheet_language, null)
         bottomSheetDialog.setContentView(view)
 
@@ -331,7 +331,8 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun showThemeBottomSheet() {
-        val bottomSheetDialog = BottomSheetDialog(this)
+        // Передаем кастомный стиль в конструктор
+        val bottomSheetDialog = BottomSheetDialog(this, R.style.BottomSheetDialogTheme)
         val view = layoutInflater.inflate(R.layout.bottom_sheet_theme, null)
         bottomSheetDialog.setContentView(view)
 

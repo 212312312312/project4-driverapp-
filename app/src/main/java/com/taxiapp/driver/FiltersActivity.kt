@@ -1,5 +1,6 @@
 package com.taxiapp.driver
 
+import androidx.core.app.ActivityOptionsCompat
 import android.app.Dialog
 import android.content.Intent
 import android.graphics.Color
@@ -325,5 +326,30 @@ class FiltersActivity : AppCompatActivity() {
         }
 
         override fun getItemCount() = list.size
+    }
+
+    override fun finish() {
+        val intent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
+
+        // Возвращаем главную карту на передний план мгновенно с нулевой анимацией
+        val options = ActivityOptionsCompat.makeCustomAnimation(this, 0, 0)
+        startActivity(intent, options.toBundle())
+
+        // Полностью гасим анимацию "открытия вперед" для всех версий Android
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            overrideActivityTransition(
+                android.app.Activity.OVERRIDE_TRANSITION_OPEN,
+                0,
+                0
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            overridePendingTransition(0, 0)
+        }
+
+        // Вызываем родной finish, чтобы система сама нативно и быстро закрыла экран фильтров вправо
+        super.finish()
     }
 }
