@@ -20,7 +20,7 @@ import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
 import com.google.maps.android.PolyUtil
-import com.taxiapp.driver.databinding.ActivityHistoryDetailsBinding // <-- Убедись, что этот класс сгенерировался
+import com.taxiapp.driver.databinding.ActivityHistoryDetailsBinding
 import com.taxiapp.driver.network.Order
 
 class HistoryDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
@@ -69,6 +69,24 @@ class HistoryDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
         binding.tvCarModel.text = order.carModel ?: "Авто"
         binding.tvCarPlate.text = order.carPlate ?: "---"
         binding.tvCarClass.text = order.tariffName ?: "Class"
+
+        // --- ДИНАМИЧЕСКОЕ И ЧЕСТНОЕ ОТОБРАЖЕНИЕ БАЛЛОВ АКТИВНОСТИ ---
+        val activityBonus = order.activityBonus
+        when {
+            activityBonus > 0 -> {
+                binding.tvActivityScore.text = "+$activityBonus"
+                binding.tvActivityScore.setTextColor(ContextCompat.getColor(this, R.color.driver_neon_teal))
+            }
+            activityBonus < 0 -> {
+                // Минус уже автоматически содержится в значении отрицательного Int
+                binding.tvActivityScore.text = activityBonus.toString()
+                binding.tvActivityScore.setTextColor(ContextCompat.getColor(this, R.color.driver_error))
+            }
+            else -> {
+                binding.tvActivityScore.text = "0"
+                binding.tvActivityScore.setTextColor(ContextCompat.getColor(this, R.color.driver_text_secondary))
+            }
+        }
     }
 
     override fun onMapReady(googleMap: GoogleMap) {
@@ -94,7 +112,7 @@ class HistoryDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
 
         if (!polylineString.isNullOrEmpty()) {
             try {
-                // Декодируем строку маршрута (это локальная математика, БЕСПЛАТНО)
+                // Декодируем строку маршрута
                 val path: List<LatLng> = PolyUtil.decode(polylineString)
 
                 // Рисуем линию
@@ -113,7 +131,7 @@ class HistoryDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
                         .position(path.first())
                         .icon(BitmapDescriptorFactory.fromBitmap(startBitmap))
                         .anchor(0.5f, 0.5f)
-                        .zIndex(2f)) // Поверх линии
+                        .zIndex(2f))
 
                     // Промежуточные остановки
                     order.stops?.sortedBy { it.stopOrder }?.forEach { stop ->
@@ -138,7 +156,6 @@ class HistoryDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
                     path.forEach { builder.include(it) }
 
                     try {
-                        // Отступ 50px, чтобы маркеры не прилипали к краям
                         map.moveCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 100))
                     } catch (e: Exception) {
                         map.moveCamera(CameraUpdateFactory.newLatLngZoom(path.first(), 13f))
@@ -154,7 +171,6 @@ class HistoryDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun drawFallbackMarkers() {
-        // Если маршрута нет, просто ставим точки А и Б
         val origin = LatLng(order.originLat ?: 0.0, order.originLng ?: 0.0)
         val dest = LatLng(order.destLat ?: 0.0, order.destLng ?: 0.0)
 
