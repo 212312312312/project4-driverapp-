@@ -27,7 +27,7 @@ class OrderConfirmationActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // --- БЛОК 1: Пробуждение экрана и показ поверх блокировки ---
+        // --- БЛОК 1: Пробудження экрана и показ поверх блокировки ---
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true)
             setTurnScreenOn(true)
@@ -100,6 +100,7 @@ class OrderConfirmationActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             try {
+                // ИСПРАВЛЕНО: Передаем String UUID на сервер
                 val response = ApiClient.getInstance().getApiService(this@OrderConfirmationActivity)
                     .confirmOrder(currentOrder!!.id)
 
@@ -126,25 +127,20 @@ class OrderConfirmationActivity : AppCompatActivity() {
         btnReject.isEnabled = false
         btnReject.text = "..."
 
-        // --- ВІДПРАВЛЯЄМО ВІДМОВУ НА СЕРВЕР ---
         lifecycleScope.launch {
             try {
-                // Використовуємо cancelOrder (сервер зрозуміє, що це SCHEDULED і поверне його в ефір)
-                // Можна передати reasonId (якщо є список причин), або null.
-                // Тут ми просто відмовляємось.
+                // ИСПРАВЛЕНО: Передаем String UUID в метод cancelOrder
                 val response = ApiClient.getInstance().getApiService(this@OrderConfirmationActivity)
                     .cancelOrder(currentOrder!!.id, null)
 
                 if (response.isSuccessful) {
                     Toast.makeText(this@OrderConfirmationActivity, if(isTimeout) "Час вийшов. Замовлення знято." else "Ви відмовились від замовлення", Toast.LENGTH_LONG).show()
                 } else {
-                    // Навіть якщо помилка, закриваємо екран, бо час вийшов або водій не хоче
                     Toast.makeText(this@OrderConfirmationActivity, "Замовлення скасовано локально", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
                 // Ignore network error on reject
             } finally {
-                // Повертаємось на головну (в Ефір)
                 val intent = Intent(this@OrderConfirmationActivity, EtherActivity::class.java)
                 intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                 startActivity(intent)

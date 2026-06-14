@@ -196,25 +196,24 @@ interface DriverApiService {
     suspend fun sendSos(@Body location: UpdateLocationRequest): Response<Void>
 
     @POST("api/v1/driver/orders/{id}/accept")
-    suspend fun acceptOrder(@Path("id") orderId: Long): Response<Order>
+    suspend fun acceptOrder(@Path("id") id: String): Response<Order>
 
     @POST("api/v1/driver/orders/{id}/complete")
-    suspend fun completeOrder(@Path("id") orderId: Long): Response<Void>
-
+    suspend fun completeOrder(@Path("id") id: String): Response<Order>
     @POST("api/v1/driver/orders/{id}/cancel")
     suspend fun cancelOrder(
-        @Path("id") orderId: Long,
-        @Query("reasonId") reasonId: Long? = null
-    ): Response<Void>
+        @Path("id") id: String,                                      // <-- ТУТ ТЕЖ String
+        @Query("reasonId") reasonId: Long?
+    ): Response<Order>
 
     @POST("api/v1/driver/orders/{id}/confirm")
-    suspend fun confirmOrder(@Path("id") orderId: Long): Response<Order>
+    suspend fun confirmOrder(@Path("id") id: String): Response<Order>
 
     @GET("api/v1/cancellation-reasons")
     suspend fun getCancellationReasons(): Response<List<CancellationReason>>
 
     @POST("api/v1/driver/orders/{id}/reject")
-    suspend fun rejectOffer(@Path("id") orderId: Long): Response<Unit>
+    suspend fun rejectOffer(@Path("id") id: String): Response<Void> // <-- Должно быть String
 
     // --- СТАТУС ---
     @PATCH("api/v1/driver/status")
@@ -229,10 +228,10 @@ interface DriverApiService {
 
     // --- УВЕДОМЛЕНИЯ ---
     @POST("api/v1/driver/orders/{id}/arrive")
-    suspend fun notifyArrived(@Path("id") orderId: Long): Response<Order>
+    suspend fun driverArrived(@Path("id") id: String): Response<Order>
 
     @POST("api/v1/driver/orders/{id}/start")
-    suspend fun startTrip(@Path("id") orderId: Long): Response<Order>
+    suspend fun startTrip(@Path("id") id: String): Response<Order>
 
     @GET("api/v1/driver/orders/active")
     suspend fun getActiveOrder(): Response<Order>
@@ -286,8 +285,8 @@ interface DriverApiService {
     @POST("api/v1/auth/fcm-token")
     suspend fun updateFcmToken(@Body request: FcmTokenDto): Response<Void>
 
-    @GET("api/v1/orders/{id}")
-    suspend fun getOrderById(@Path("id") id: Long): Response<Order>
+    @GET("api/v1/driver/orders/{id}")
+    suspend fun getOrderById(@Path("id") id: String): Response<Order>
 
     @POST("api/v1/driver/rate")
     suspend fun rateClient(@Body request: RateClientRequest): Response<Void>

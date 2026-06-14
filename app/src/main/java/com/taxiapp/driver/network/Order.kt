@@ -7,7 +7,8 @@ import java.util.Date
 import java.util.Locale
 
 data class Order(
-    @SerializedName("id") val id: Long,
+    @SerializedName("id") val id: String,
+    @SerializedName("idLong") val idLong: Long?,
     @SerializedName("price") val price: Double = 0.0,
     @SerializedName("tariffName") val tariffName: String? = null,
     @SerializedName("fromAddress") val fromAddress: String? = null,

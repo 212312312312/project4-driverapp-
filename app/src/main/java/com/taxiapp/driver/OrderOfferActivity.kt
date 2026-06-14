@@ -254,7 +254,10 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
         timer?.cancel()
         val orderId = currentOrder?.id ?: return
         lifecycleScope.launch {
-            try { ApiClient.getInstance().getApiService(this@OrderOfferActivity).rejectOffer(orderId) } catch (e: Exception) {}
+            try {
+                // ИСПРАВЛЕНО: Теперь передаем строковый UUID
+                ApiClient.getInstance().getApiService(this@OrderOfferActivity).rejectOffer(orderId)
+            } catch (e: Exception) {}
             finally {
                 val intent = Intent(this@OrderOfferActivity, MainActivity::class.java)
                 intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP

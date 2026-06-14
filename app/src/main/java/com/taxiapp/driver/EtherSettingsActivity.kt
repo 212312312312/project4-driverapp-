@@ -54,13 +54,14 @@ class EtherSettingsActivity : AppCompatActivity() {
         val rvPreview = findViewById<RecyclerView>(R.id.rv_preview)
         rvPreview.layoutManager = LinearLayoutManager(this)
 
-        // ВИПРАВЛЕНО: Тільки один аргумент
+        // Тільки один аргумент у конструкторі адаптера
         previewAdapter = OrderAdapter { }
         rvPreview.adapter = previewAdapter
 
         // Створюємо фейкове замовлення для прикладу
         val demoOrder = Order(
-            id = 9999,
+            id = "9999",     // ІСПРАВЛЕНО: Тепер передаємо String (UUID)
+            idLong = 9999L,  // ІСПРАВЛЕНО: Передаємо обов'язковий числовий idLong
             price = 245.0,
 
             // Вказуємо метри (5200 м = 5.2 км)

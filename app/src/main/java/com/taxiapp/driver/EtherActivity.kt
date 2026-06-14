@@ -126,7 +126,8 @@ class EtherActivity : AppCompatActivity() {
         acceptScheduledOrder(order)
     }
 
-    private fun removeOrderFromList(orderId: Long) {
+    // ИСПРАВЛЕНО: Тип параметра изменен на String под UUID
+    private fun removeOrderFromList(orderId: String) {
         allOrdersList.removeAll { it.id == orderId }
         filterAndShowOrders()
     }
@@ -163,7 +164,8 @@ class EtherActivity : AppCompatActivity() {
 
                 allOrdersList.clear()
                 allOrdersList.addAll(list)
-                allOrdersList.sortByDescending { it.id }
+                // ИСПРАВЛЕНО: Сортируем по числовому idLong, чтобы сохранить правильный хронологический порядок
+                allOrdersList.sortByDescending { it.idLong ?: 0L }
 
                 updateUI()
             } catch (e: Exception) {
@@ -189,14 +191,15 @@ class EtherActivity : AppCompatActivity() {
                 try {
                     val msgObj = JSONObject(topicMessage.payload)
                     val action = msgObj.optString("action")
-                    val orderId = msgObj.optLong("orderId")
+                    // ИСПРАВЛЕНО: Извлекаем orderId как String (UUID) вместо Long
+                    val orderId = msgObj.optString("orderId")
 
                     if (action == "REMOVE") {
                         removeOrderFromList(orderId)
                     } else if (action == "ADD") {
                         val orderJson = msgObj.optJSONObject("order")?.toString()
                         if (orderJson != null) {
-                            val newOrder = Gson().fromJson(orderJson as String, Order::class.java)
+                            val newOrder = Gson().fromJson(orderJson, Order::class.java)
                             handleSocketOrderUpdate(newOrder)
                         }
                     }
@@ -229,7 +232,8 @@ class EtherActivity : AppCompatActivity() {
 
         allOrdersList.removeAll { it.id == order.id }
         allOrdersList.add(0, order)
-        allOrdersList.sortByDescending { it.id }
+        // ИСПРАВЛЕНО: Сортируем по числовому idLong для сохранения структуры списков
+        allOrdersList.sortByDescending { it.idLong ?: 0L }
 
         filterAndShowOrders()
     }
