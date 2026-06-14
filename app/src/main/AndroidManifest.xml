@@ -54,7 +54,6 @@
         <activity android:name=".LoginPasswordActivity" android:screenOrientation="portrait"/>
 
         <activity android:name=".MainActivity" android:screenOrientation="portrait"/>
-        <activity android:name=".LocationPickerActivity" android:screenOrientation="portrait"/>
         <activity android:name=".EtherActivity" android:screenOrientation="portrait"/>
         <activity android:name=".OrderDetailsActivity" android:screenOrientation="portrait"/>
         <activity android:name=".ProfileActivity" android:screenOrientation="portrait" />

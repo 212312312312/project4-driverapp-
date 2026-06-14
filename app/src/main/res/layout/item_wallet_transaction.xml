@@ -2,99 +2,108 @@
 <com.google.android.material.card.MaterialCardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
+    xmlns:tools="http://tools.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     app:cardCornerRadius="0dp"
     app:cardElevation="0dp"
     app:strokeWidth="0dp"
-    app:cardBackgroundColor="@color/driver_black_bg"> <LinearLayout
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:orientation="vertical">
+    app:cardBackgroundColor="@color/driver_black_bg">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingHorizontal="24dp"
-        android:paddingVertical="12dp">
-
-        <ImageView
-            android:id="@+id/img_tx_icon"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:src="@drawable/ic_wallet"
-            android:background="@drawable/bg_circle_gray"
-            android:padding="8dp"
-            android:layout_marginEnd="16dp"
-            android:contentDescription="@null"/>
+        android:orientation="vertical"
+        android:background="?attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true">
 
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical">
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="24dp"
+            android:paddingVertical="14dp">
+
+            <ImageView
+                android:id="@+id/img_tx_icon"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                android:src="@drawable/ic_wallet"
+                android:background="@drawable/bg_circle_gray"
+                android:backgroundTint="@color/driver_card_bg"
+                android:padding="10dp"
+                android:layout_marginEnd="16dp"
+                android:contentDescription="@null"/>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tv_tx_type"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    tools:text="Комісія"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:fontFamily="@font/app_font_family"
+                    android:textColor="@color/driver_text_primary"/>
+
+                <TextView
+                    android:id="@+id/tv_tx_desc"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    tools:text="Замовлення #123"
+                    android:textSize="14sp"
+                    android:fontFamily="@font/app_font_family"
+                    android:textColor="@color/driver_text_secondary"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:layout_marginTop="2dp"/>
+
+                <TextView
+                    android:id="@+id/tv_tx_date"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    tools:text="12.05 14:30"
+                    android:textSize="12sp"
+                    android:fontFamily="@font/app_font_family"
+                    android:textColor="@color/driver_text_secondary"
+                    android:layout_marginTop="4dp"/>
+
+                <TextView
+                    android:id="@+id/tv_tx_balance_after"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    tools:text="Залишок: 1450.00 ₴"
+                    android:textSize="12sp"
+                    android:fontFamily="@font/app_font_family"
+                    android:textColor="@color/driver_text_secondary"
+                    android:layout_marginTop="2dp"
+                    android:textStyle="italic"
+                    android:visibility="gone"/>
+            </LinearLayout>
 
             <TextView
-                android:id="@+id/tv_tx_type"
+                android:id="@+id/tv_tx_amount"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                tools:text="Комісія"
-                android:textSize="16sp"
+                tools:text="-15.00 ₴"
+                android:textSize="18sp"
                 android:textStyle="bold"
                 android:fontFamily="@font/app_font_family"
-                android:textColor="@color/driver_text_primary"/>
+                android:textColor="@color/driver_error_red"/>
 
-            <TextView
-                android:id="@+id/tv_tx_desc"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                tools:text="Замовлення #123"
-                android:textSize="14sp"
-                android:fontFamily="@font/app_font_family"
-                android:textColor="@color/driver_text_secondary"
-                android:maxLines="1"
-                android:ellipsize="end"/>
-
-            <TextView
-                android:id="@+id/tv_tx_date"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                tools:text="12.05 14:30"
-                android:textSize="12sp"
-                android:fontFamily="@font/app_font_family"
-                android:textColor="@color/driver_text_secondary"
-                android:layout_marginTop="2dp"/>
-
-            <TextView
-                android:id="@+id/tv_tx_balance_after"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                tools:text="Залишок: 1450.00 ₴"
-                android:textSize="12sp"
-                android:fontFamily="@font/app_font_family"
-                android:textColor="@color/driver_text_secondary"
-                android:layout_marginTop="2dp"
-                android:textStyle="italic"/>
         </LinearLayout>
 
-        <TextView
-            android:id="@+id/tv_tx_amount"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            tools:text="-15.00 ₴"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:fontFamily="@font/app_font_family"
-            android:textColor="@color/driver_error_red"/>
-
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginHorizontal="24dp"
+            android:background="@color/driver_card_bg" />
     </LinearLayout>
-
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="@color/driver_card_bg" />
-</LinearLayout>
 </com.google.android.material.card.MaterialCardView>

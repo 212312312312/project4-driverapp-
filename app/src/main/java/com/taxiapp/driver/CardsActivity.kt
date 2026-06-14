@@ -8,6 +8,7 @@ import android.util.TypedValue // ДОБАВЛЕНО для правильной
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -48,23 +49,42 @@ class CardsActivity : AppCompatActivity() {
     private fun setupAdapter() {
         rvCards.adapter = object : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
             override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
-                val view = LayoutInflater.from(parent.context).inflate(android.R.layout.simple_list_item_2, parent, false)
+                // Підключаємо наш новий кастомний преміум-макет елемента списку
+                val view = LayoutInflater.from(parent.context).inflate(R.layout.item_driver_card, parent, false)
                 return object : RecyclerView.ViewHolder(view) {}
             }
 
             override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
                 val card = cardsList[position]
-                val text1 = holder.itemView.findViewById<TextView>(android.R.id.text1)
-                val text2 = holder.itemView.findViewById<TextView>(android.R.id.text2)
 
-                text1.text = card.cardNumber
-                text1.setTextColor(Color.WHITE)
+                val tvCardNumber = holder.itemView.findViewById<TextView>(R.id.tv_card_number)
+                val tvCardStatus = holder.itemView.findViewById<TextView>(R.id.tv_card_status)
+                val ivCardCheck = holder.itemView.findViewById<ImageView>(R.id.iv_card_check)
+                val ivCardIcon = holder.itemView.findViewById<ImageView>(R.id.iv_card_icon)
 
-                // СТАЛО ТАК (Исправление ошибки 16sp):
-                text1.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+                // Встановлюємо номер карти
+                tvCardNumber.text = card.cardNumber
 
-                text2.text = if (card.isMain) "Основна картка для виплат" else "Утримуйте для видалення"
-                text2.setTextColor(if (card.isMain) Color.GREEN else Color.GRAY)
+                // Логіка підсвічування та відображення елементів залежно від статусу карти
+                if (card.isMain) {
+                    tvCardStatus.text = "Основна картка для виплат"
+                    tvCardStatus.setTextColor(androidx.core.content.ContextCompat.getColor(this@CardsActivity, R.color.driver_neon_teal))
+
+                    // Включаем ЖИРНЫЙ стиль шрифта для главной карты
+                    tvCardStatus.setTypeface(tvCardStatus.typeface, android.graphics.Typeface.BOLD)
+
+                    ivCardCheck.visibility = View.VISIBLE
+                    ivCardIcon.setColorFilter(androidx.core.content.ContextCompat.getColor(this@CardsActivity, R.color.driver_neon_teal))
+                } else {
+                    tvCardStatus.text = "Утримуйте для видалення"
+                    tvCardStatus.setTextColor(androidx.core.content.ContextCompat.getColor(this@CardsActivity, R.color.driver_text_secondary))
+
+                    // Возвращаем ОБЫЧНЫЙ стиль шрифта для остальных карт
+                    tvCardStatus.setTypeface(tvCardStatus.typeface, android.graphics.Typeface.NORMAL)
+
+                    ivCardCheck.visibility = View.GONE
+                    ivCardIcon.setColorFilter(androidx.core.content.ContextCompat.getColor(this@CardsActivity, R.color.driver_text_primary))
+                }
 
                 holder.itemView.setOnClickListener {
                     if (!card.isMain) selectMainCard(card.id)
@@ -124,18 +144,36 @@ class CardsActivity : AppCompatActivity() {
     }
 
     private fun showDeleteConfirmDialog(id: Long) {
-        AlertDialog.Builder(this)
-            .setTitle("Видалити картку?")
-            .setMessage("Ви впевнені, що хочете видалити цю картку з профілю?")
-            .setPositiveButton("Видалити") { _, _ ->
-                lifecycleScope.launch {
-                    try {
-                        val resp = ApiClient.getInstance().getApiService(this@CardsActivity).deleteCard(id)
-                        if (resp.isSuccessful) loadCards()
-                    } catch (e: Exception) { e.printStackTrace() }
+        val builder = AlertDialog.Builder(this)
+        val dialogView = layoutInflater.inflate(R.layout.dialog_delete_card, null)
+        builder.setView(dialogView)
+
+        val dialog = builder.create()
+        // Делаем стандартный фон AlertDialog прозрачным, чтобы углы нашего bg_bottom_nav_floating не имели белых краев
+        dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
+
+        // Находим кнопки из нашего шаблона
+        val btnCancel = dialogView.findViewById<android.view.View>(R.id.btn_cancel_delete)
+        val btnConfirm = dialogView.findViewById<android.view.View>(R.id.btn_confirm_delete)
+
+        // Нажатие на "Скасувати"
+        btnCancel.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        // Нажатие на "Видалити"
+        btnConfirm.setOnClickListener {
+            dialog.dismiss()
+            lifecycleScope.launch {
+                try {
+                    val resp = ApiClient.getInstance().getApiService(this@CardsActivity).deleteCard(id)
+                    if (resp.isSuccessful) loadCards()
+                } catch (e: Exception) {
+                    e.printStackTrace()
                 }
             }
-            .setNegativeButton("Скасувати", null)
-            .show()
+        }
+
+        dialog.show()
     }
 }

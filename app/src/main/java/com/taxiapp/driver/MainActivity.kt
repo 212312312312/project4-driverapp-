@@ -97,9 +97,18 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var rvSectorsList: androidx.recyclerview.widget.RecyclerView
     private var isPickingFromSectorsMode = true
 
+    // --- Свойства для закрепления локации внутри MainActivity ---
+    private lateinit var locationPickerOverlay: View
+    private lateinit var tvPickerAddress: TextView
+    private lateinit var ivCenterMarker: android.widget.ImageView
+    private var isPickerModeActive = false
+    private var currentPickerCenter: LatLng? = null
+    private var pickerBackPressedCallback: androidx.activity.OnBackPressedCallback? = null
+
     private lateinit var map: GoogleMap
     private lateinit var btnLockLocation: ImageButton
     private lateinit var btnHotspots: ImageButton
+    private lateinit var btnSectors: ImageButton
 
     private lateinit var btnNavOrders: LinearLayout
     private lateinit var orderBadgeDot: View
@@ -181,7 +190,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         checkPermissionsAndStart()
         initSectorSelectionOverlay()
         handleSectorSelectionRequest(intent)
-
+        initLocationPickerOverlay()
         // Кэшируем сектора сразу в память
         loadSectorsDataSilently()
     }
@@ -352,7 +361,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         btnLockLocation.setOnClickListener { handleLockLocationClick() }
 
         findViewById<View>(R.id.btn_my_location).setOnClickListener { centerMapOnUser() }
-        findViewById<View>(R.id.btn_sectors).setOnClickListener { toggleSectors() }
+
+        btnSectors = findViewById(R.id.btn_sectors)
+        btnSectors.setOnClickListener { toggleSectors() }
 
         btnHotspots = findViewById(R.id.btn_hotspots)
         btnHotspots.setOnClickListener { toggleHeatmap() }
@@ -631,10 +642,17 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     @SuppressLint("MissingPermission")
     private fun centerMapOnUser() {
         if (!::map.isInitialized) return
-        if (isHeatmapVisible || isSectorsVisible || sectorOverlay.isShown) return
+        if (sectorOverlay.isShown) return
 
         if (sessionManager.isManualLocationActive()) {
             try { map.isMyLocationEnabled = false } catch (e: Exception) {}
+            with(map.uiSettings) {
+                isRotateGesturesEnabled = false  // Запретить крутить карту пальцами
+                isTiltGesturesEnabled = false    // Запретить наклон карты двумя пальцами (опционально, для строгого 2D)
+                isCompassEnabled = false         // Скрыть стандартный компас Google
+                isZoomControlsEnabled = false    // Скрыть системные кнопки +/- (если были включены)
+                isMapToolbarEnabled = false      // Отключить всплывающие кнопки навигатора Google при тапе на маркеры
+            }
             val manualLoc = sessionManager.getManualLocation()
             if (manualLoc != null) {
                 val latLng = LatLng(manualLoc.first, manualLoc.second)
@@ -679,6 +697,19 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 toggleSectorSelection(id)
             }
         }
+        map.setOnPolygonClickListener { polygon ->
+            if (sectorOverlay.isShown) {
+                val id = polygon.tag as? Long ?: return@setOnPolygonClickListener
+                toggleSectorSelection(id)
+            }
+        }
+        // Слушатель для ручного выбора локации
+        map.setOnCameraIdleListener {
+            if (isPickerModeActive) {
+                currentPickerCenter = map.cameraPosition.target
+                currentPickerCenter?.let { updatePickerAddress(it) }
+            }
+        }
 
         updateMapUI()
         centerMapOnUser()
@@ -707,14 +738,15 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         if (isSectorsVisible) {
             clearSectorsFromMap()
             isSectorsVisible = false
+            btnSectors.imageTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_text_primary))
         }
         if (isHeatmapVisible) {
             resetHotspotsButton()
             Toast.makeText(this, "Рибні місця приховано", Toast.LENGTH_SHORT).show()
         } else {
             isHeatmapVisible = true
-            btnHotspots.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_neon_teal))
-            btnHotspots.imageTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_black_bg))
+            btnHotspots.backgroundTintList = null
+            btnHotspots.imageTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_neon_teal))
             loadAndDrawHeatmap()
         }
     }
@@ -818,23 +850,165 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun updateLockIconState() {
+        btnLockLocation.backgroundTintList = null
         if (sessionManager.isManualLocationActive()) {
-            btnLockLocation.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_neon_teal))
-            btnLockLocation.imageTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_black_bg))
+            btnLockLocation.imageTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_neon_teal))
         } else {
-            btnLockLocation.backgroundTintList = null
             btnLockLocation.imageTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_text_primary))
         }
     }
 
     private fun handleLockLocationClick() {
-        if (sessionManager.isManualLocationActive()) showDisableManualLocationDialog()
-        else startActivity(Intent(this, LocationPickerActivity::class.java))
+        if (sessionManager.isManualLocationActive()) {
+            showDisableManualLocationDialog()
+        } else {
+            // Вместо открытия новой Activity активируем внутренний оверлей
+            startLocationPickerMode()
+        }
     }
 
+    // --- МЕТОДЫ ДЛЯ ЗАКРЕПЛЕНИЯ ЛОКАЦИИ (ОПТИМИЗАЦИЯ БЕЗ ЛИШНИХ КАРТ) ---
+
+    private fun initLocationPickerOverlay() {
+        locationPickerOverlay = findViewById(R.id.location_picker_overlay)
+        tvPickerAddress = findViewById(R.id.tv_picker_address)
+        ivCenterMarker = findViewById(R.id.iv_center_marker)
+
+        // Кнопка НАЗАД (Отмена режима)
+        findViewById<View>(R.id.btn_back_picker).setOnClickListener {
+            isPickerModeActive = false
+            pickerBackPressedCallback?.isEnabled = false
+            locationPickerOverlay.visibility = View.GONE
+            ivCenterMarker.visibility = View.GONE
+            mainScreenUiGroup.visibility = View.VISIBLE
+            map.setPadding(0, 0, 0, defaultMapPaddingBottom)
+            if (searchRadiusCircle != null) searchRadiusCircle?.isVisible = true
+        }
+
+        // Перехват системной кнопки "Назад" на смартфоне
+        pickerBackPressedCallback = object : androidx.activity.OnBackPressedCallback(false) {
+            override fun handleOnBackPressed() {
+                findViewById<View>(R.id.btn_back_picker).performClick()
+            }
+        }
+        onBackPressedDispatcher.addCallback(this, pickerBackPressedCallback!!)
+
+        // Кнопка СОХРАНИТЬ (Змінити локацію)
+        findViewById<View>(R.id.btn_save_picker_location).setOnClickListener {
+            currentPickerCenter?.let { loc ->
+                sessionManager.setManualLocation(loc.latitude, loc.longitude)
+                Toast.makeText(this, "Позицію успішно фіксовано!", Toast.LENGTH_SHORT).show()
+
+                // Выключаем оверлей и обновляем карту
+                findViewById<View>(R.id.btn_back_picker).performClick()
+                updateLockIconState()
+                updateMapUI()
+                centerMapOnUser()
+            }
+        }
+    }
+
+    private fun startLocationPickerMode() {
+        isPickerModeActive = true
+        mainScreenUiGroup.visibility = View.GONE
+        locationPickerOverlay.visibility = View.VISIBLE
+        ivCenterMarker.visibility = View.VISIBLE
+
+        // Сбрасываем паддинги карты, чтобы центр экрана был честным
+        map.setPadding(0, 0, 0, 0)
+        if (searchRadiusCircle != null) searchRadiusCircle?.isVisible = false
+        pickerBackPressedCallback?.isEnabled = true
+
+        // Фокусируем камеру на текущей известной позиции
+        val startLoc = currentDriverLocation ?: LatLng(50.4501, 30.5234)
+        map.moveCamera(CameraUpdateFactory.newLatLngZoom(startLoc, 17f))
+    }
+
+    private fun updatePickerAddress(latLng: LatLng) {
+        tvPickerAddress.text = "Визначення..."
+        lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val geocoder = android.location.Geocoder(this@MainActivity, java.util.Locale("uk"))
+                val addresses = geocoder.getFromLocation(latLng.latitude, latLng.longitude, 1)
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    if (!addresses.isNullOrEmpty()) {
+                        tvPickerAddress.text = addresses[0].getAddressLine(0)
+                    } else {
+                        tvPickerAddress.text = "Невідома адреса"
+                    }
+                }
+            } catch (e: Exception) {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    tvPickerAddress.text = String.format(java.util.Locale.US, "%.4f, %.4f", latLng.latitude, latLng.longitude)
+                }
+            }
+        }
+    }
+
+    // --- ОБНОВЛЕННЫЙ ДИАЛОГ ГЕОЛОКАЦИИ В PREMIUM BOTTOM SHEET СТИЛЕ ---
+
+    private data class BottomSheetOptionDto(val text: String, val iconRes: Int, val onClick: () -> Unit)
+
     private fun showDisableManualLocationDialog() {
-        AlertDialog.Builder(this).setTitle("Геолокація").setMessage("Вимкнути ручне закріплення?").setPositiveButton("Змінити") { _, _ -> startActivity(Intent(this, LocationPickerActivity::class.java)) }
-            .setNegativeButton("Вимкнути") { _, _ -> sessionManager.clearManualLocation(); updateLockIconState(); updateMapUI(); centerMapOnUser() }.setNeutralButton("Скасувати", null).show()
+        val bottomSheetDialog = com.google.android.material.bottomsheet.BottomSheetDialog(this)
+        val view = layoutInflater.inflate(R.layout.layout_bottom_sheet_generic, null)
+        bottomSheetDialog.setContentView(view)
+
+        // Устанавливаем заголовок по твоему шаблону
+        view.findViewById<TextView>(R.id.tv_sheet_title).text = "Вимкнути ручне закріплення?"
+
+        // Конструируем опции. Кнопка "Змінити" теперь вызывает наш новый режим карты
+        val options = listOf(
+            BottomSheetOptionDto("Змінити позицію", R.drawable.ic_lock_location) {
+                bottomSheetDialog.dismiss()
+                startLocationPickerMode()
+            },
+            BottomSheetOptionDto("Вимкнути закріплення", R.drawable.ic_circle_red) {
+                bottomSheetDialog.dismiss()
+                sessionManager.clearManualLocation()
+                updateLockIconState()
+                updateMapUI()
+                centerMapOnUser()
+            },
+            BottomSheetOptionDto("Скасувати", R.drawable.ic_arrow_back_black) {
+                bottomSheetDialog.dismiss()
+            }
+        )
+
+        // Привязываем RecyclerView из шаблона generic
+        val rvOptions = view.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.rv_sheet_options)
+        rvOptions.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this)
+
+        // Встроенный адаптер для полной автономности кода
+        rvOptions.adapter = object : androidx.recyclerview.widget.RecyclerView.Adapter<androidx.recyclerview.widget.RecyclerView.ViewHolder>() {
+
+            inner class OptionVH(v: View) : androidx.recyclerview.widget.RecyclerView.ViewHolder(v) {
+                val container: View = v.findViewById(R.id.container_option)
+                val icon: ImageView = v.findViewById(R.id.iv_option_icon)
+                val text: TextView = v.findViewById(R.id.tv_option_text)
+                val divider: View = v.findViewById(R.id.divider_option)
+            }
+
+            override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): androidx.recyclerview.widget.RecyclerView.ViewHolder {
+                val v = LayoutInflater.from(parent.context).inflate(R.layout.item_bottom_sheet_option, parent, false)
+                return OptionVH(v)
+            }
+
+            override fun onBindViewHolder(holder: androidx.recyclerview.widget.RecyclerView.ViewHolder, position: Int) {
+                val h = holder as OptionVH
+                val item = options[position]
+                h.text.text = item.text
+                h.icon.setImageResource(item.iconRes)
+                h.container.setOnClickListener { item.onClick() }
+
+                // Красивая деталь: у последнего элемента списка скрываем разделительную линию
+                h.divider.visibility = if (position == options.size - 1) View.GONE else View.VISIBLE
+            }
+
+            override fun getItemCount() = options.size
+        }
+
+        bottomSheetDialog.show()
     }
 
     private fun updateOrdersBadge() {

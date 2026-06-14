@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item android:id="@android:id/background"
+        android:width="32dp"
+        android:height="32dp"
+        android:drawable="@drawable/ic_stat_star"
+        android:tint="@color/driver_text_secondary" />
+
+    <item android:id="@android:id/secondaryProgress"
+        android:width="32dp"
+        android:height="32dp">
+        <clip android:drawable="@drawable/ic_stat_star" android:tint="@android:color/transparent" />
+    </item>
+
+    <item android:id="@android:id/progress"
+        android:width="32dp"
+        android:height="32dp">
+        <clip android:drawable="@drawable/ic_stat_star" android:tint="@color/driver_neon_teal" />
+    </item>
+
+</layer-list>

@@ -30,8 +30,9 @@ class DeleteAccountActivity : AppCompatActivity() {
             finish()
         }
 
+        // Вызываем безопасный кастомный диалог перед удалением
         btnConfirmDelete.setOnClickListener {
-            requestDeletion()
+            showConfirmDeleteAccountDialog()
         }
     }
 
@@ -67,5 +68,28 @@ class DeleteAccountActivity : AppCompatActivity() {
     private fun setLoading(isLoading: Boolean) {
         btnConfirmDelete.isEnabled = !isLoading
         btnConfirmDelete.text = if (isLoading) "Обробка..." else "Підтвердити"
+    }
+
+    private fun showConfirmDeleteAccountDialog() {
+        val builder = androidx.appcompat.app.AlertDialog.Builder(this)
+        val dialogView = layoutInflater.inflate(R.layout.dialog_confirm_delete_account, null)
+        builder.setView(dialogView)
+
+        val dialog = builder.create()
+        dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
+
+        val btnCancel = dialogView.findViewById<android.view.View>(R.id.btn_cancel_delete_account)
+        val btnConfirm = dialogView.findViewById<android.view.View>(R.id.btn_confirm_delete_account)
+
+        btnCancel.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        btnConfirm.setOnClickListener {
+            dialog.dismiss()
+            requestDeletion() // Запускаем удаление только после подтверждения
+        }
+
+        dialog.show()
     }
 }

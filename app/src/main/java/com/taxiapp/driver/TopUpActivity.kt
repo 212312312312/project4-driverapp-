@@ -75,6 +75,7 @@ class TopUpActivity : AppCompatActivity() {
         findViewById<ImageView>(R.id.btn_back).setOnClickListener { finish() }
 
         // Слушатели тапов на строки выбора оплаты
+        /*
         btnPayGoogle.setOnClickListener {
             if (selectedMethod != "GOOGLE_PAY") {
                 selectedMethod = "GOOGLE_PAY"
@@ -83,12 +84,14 @@ class TopUpActivity : AppCompatActivity() {
                 validateForm()
             }
         }
+        */
 
         btnPayCard.setOnClickListener {
             if (selectedMethod != "CARD") {
                 selectedMethod = "CARD"
                 animateCheckboxChange(btnPayCard, checkCard, imgCheckCard, true, true)
-                animateCheckboxChange(btnPayGoogle, checkGoogle, imgCheckGoogle, false, true)
+                // Анимацию скрытия Google Pay убираем, так как экран скрыт
+                // animateCheckboxChange(btnPayGoogle, checkGoogle, imgCheckGoogle, false, true)
                 validateForm()
             }
         }

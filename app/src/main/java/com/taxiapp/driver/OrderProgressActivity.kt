@@ -681,17 +681,69 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private fun showRatingDialog() {
         val dialog = Dialog(this)
+        // Надуваем макет диалога (убедись, что в файле dialog_rate_client.xml ты заменил RatingBar на наш LinearLayout со звездами star1..star5)
         dialog.setContentView(R.layout.dialog_rate_client)
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
         dialog.setCancelable(false)
-        val ratingBar = dialog.findViewById<RatingBar>(R.id.rating_bar)
+
         val etComment = dialog.findViewById<EditText>(R.id.et_comment)
         val btnSubmit = dialog.findViewById<Button>(R.id.btn_submit_rating)
-        btnSubmit.setOnClickListener {
-            if (ratingBar.rating.toInt() == 0) { Toast.makeText(this, "Поставте оцінку", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
-            sendRating(ratingBar.rating.toInt(), etComment.text.toString(), dialog)
+
+        // ======================================================================
+        // НАЧАЛО БЛОКА: ЛОГИКА НАШИХ НОВЫХ КРУПНЫХ ЗВЕЗД (48dp)
+        // ======================================================================
+        var selectedRating = 0 // Хранит выбранную водителем оценку (от 1 до 5)
+
+        // Находим все 5 крупных звёздочек внутри контейнера диалога
+        val starsList = listOf<ImageView>(
+            dialog.findViewById(R.id.star1),
+            dialog.findViewById(R.id.star2),
+            dialog.findViewById(R.id.star3),
+            dialog.findViewById(R.id.star4),
+            dialog.findViewById(R.id.star5)
+        )
+
+        // Внутренняя функция для динамического перекрашивания звезд
+        fun renderStars(rating: Int) {
+            selectedRating = rating
+            starsList.forEachIndexed { index, imageView ->
+                if (index < rating) {
+                    // Активные звёзды плавно загораются фирменным неоново-бирюзовым
+                    imageView.imageTintList = android.content.res.ColorStateList.valueOf(
+                        ContextCompat.getColor(this@OrderProgressActivity, R.color.driver_neon_teal)
+                    )
+                } else {
+                    // Неактивные звёзды остаются благородными серыми
+                    imageView.imageTintList = android.content.res.ColorStateList.valueOf(
+                        ContextCompat.getColor(this@OrderProgressActivity, R.color.driver_text_secondary)
+                    )
+                }
+            }
         }
+
+        // Принудительно вызываем один раз на старте, чтобы все звёзды стали серыми (0 звёзд)
+        renderStars(0)
+
+        // Навешиваем обработчики кликов на каждую звёздочку по её порядковому индексу
+        starsList.forEachIndexed { index, imageView ->
+            imageView.setOnClickListener {
+                renderStars(index + 1) // Индекс идет от 0, поэтому прибавляем 1 (1-я звезда = 1 балл)
+            }
+        }
+        // ======================================================================
+        // КОНЕЦ БЛОКА ЗВЕЗД
+        // ======================================================================
+
+        btnSubmit.setOnClickListener {
+            if (selectedRating == 0) {
+                Toast.makeText(this, "Поставте оцінку", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            // Передаем выбранный нами selectedRating вместо старого ratingBar.rating
+            sendRating(selectedRating, etComment.text.toString(), dialog)
+        }
+
         dialog.show()
     }
 

@@ -63,26 +63,27 @@ class WalletAdapter : ListAdapter<WalletTransactionDto, WalletAdapter.WalletView
 
         // 3. Динамические цвета из colors.xml и Иконки
         // DEPOSIT (Пополнение) или BONUS -> Зеленый
+        // DEPOSIT (Пополнение) или BONUS -> Наш фирменный бирюзовый неон
         if (item.operationType == "DEPOSIT" || item.operationType == "BONUS") {
-            val greenColor = ContextCompat.getColor(context, R.color.activity_green)
+            val neonTealColor = ContextCompat.getColor(context, R.color.driver_neon_teal)
 
             holder.tvAmount.text = "+%.2f ₴".format(item.amount)
-            holder.tvAmount.setTextColor(greenColor)
+            holder.tvAmount.setTextColor(neonTealColor)
 
             holder.imgIcon.setImageResource(R.drawable.ic_wallet)
-            holder.imgIcon.setColorFilter(greenColor)
+            holder.imgIcon.setColorFilter(neonTealColor)
 
             holder.tvType.text = if (item.operationType == "DEPOSIT") "Поповнення" else "Бонус"
         }
-        // COMMISSION / PENALTY / WITHDRAWAL -> Красный
+        // COMMISSION / PENALTY / WITHDRAWAL -> Наш фирменный красный
         else {
-            val redColor = ContextCompat.getColor(context, R.color.activity_red)
+            val errorRedColor = ContextCompat.getColor(context, R.color.driver_error_red)
 
             holder.tvAmount.text = "%.2f ₴".format(item.amount)
-            holder.tvAmount.setTextColor(redColor)
+            holder.tvAmount.setTextColor(errorRedColor)
 
             holder.imgIcon.setImageResource(R.drawable.ic_payment_card)
-            holder.imgIcon.setColorFilter(redColor)
+            holder.imgIcon.setColorFilter(errorRedColor)
 
             holder.tvType.text = when (item.operationType) {
                 "COMMISSION" -> "Комісія"

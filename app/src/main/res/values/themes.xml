@@ -50,7 +50,7 @@
     </style>
     <style name="RatingBarNoRipple" parent="Widget.AppCompat.RatingBar">
         <item name="colorControlNormal">@color/driver_text_secondary</item>
-        <item name="colorControlActivated">@color/taxi_yellow</item>
+        <item name="colorControlActivated">@color/driver_neon_teal</item>
         <item name="android:colorControlHighlight">@android:color/transparent</item>
     </style>
 
