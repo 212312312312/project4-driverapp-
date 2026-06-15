@@ -620,7 +620,7 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
                 val api = ApiClient.getInstance().getApiService(this@OrderProgressActivity)
                 when (currentState) {
                     RideState.TO_CLIENT -> {
-                        val response = api.notifyArrived(orderId)
+                        val response = api.driverArrived(orderId) // <-- Вызываем правильное имя метода
                         if (response.isSuccessful) {
                             // Беремо оновлене замовлення від сервера (з полем arrivedAt) або генеруємо час локально як запасний план
                             currentOrder = response.body() ?: currentOrder?.copy(
@@ -748,7 +748,7 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun sendRating(score: Int, comment: String, dialog: Dialog) {
-        val orderId = currentOrder?.id ?: return
+        val orderId = currentOrder?.idLong ?: return // <-- Используем idLong вместо строкового id
         lifecycleScope.launch {
             try {
                 val response = ApiClient.getInstance().getApiService(this@OrderProgressActivity).rateClient(RateClientRequest(orderId, score, comment))

@@ -40,9 +40,9 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         }
         if (type == "ORDER_OFFER" || type == "ORDER_CONFIRMATION") {
             wakeUpScreen()
-            val orderId = data["orderId"]?.toLongOrNull()
-            if (orderId != null) {
-                // Передаємо тип далі, щоб знати яку Activity відкрити
+            val orderId = data["orderId"]
+            if (!orderId.isNullOrEmpty()) {
+                // Передаємо строковый UUID дальше
                 fetchOrderAndShowNotification(orderId, type)
             }
         }
@@ -60,7 +60,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         }
     }
 
-    private fun fetchOrderAndShowNotification(orderId: Long, type: String) {
+    private fun fetchOrderAndShowNotification(orderId: String, type: String) {
         if (SessionManager(this).fetchAuthToken() == null) return
 
         CoroutineScope(Dispatchers.Main).launch {
@@ -85,7 +85,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             putExtra("EXTRA_ORDER", order)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         }
-        showFullScreen(intent, "offer_channel", "Пропозиція замовлення", "Нове замовлення!", order.id.toInt())
+        showFullScreen(intent, "offer_channel", "Пропозиція замовлення", "Нове замовлення!", order.idLong?.toInt() ?: 0)
     }
 
     // --- ПІДТВЕРДЖЕННЯ ПОПЕРЕДНЬОГО (60 сек) ---
@@ -106,7 +106,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         }
 
         // 2. FullScreen Notification (працює завжди: і для звуку, і як фолбек)
-        showFullScreen(intent, "confirm_channel", "Підтвердження замовлення", "Підтвердіть поїздку!", order.id.toInt() + 1000)
+        showFullScreen(intent, "confirm_channel", "Підтвердження замовлення", "Підтвердіть поїздку!", (order.idLong?.toInt() ?: 0) + 1000)
     }
 
     private fun showFullScreen(intent: Intent, channelId: String, channelName: String, title: String, notifId: Int) {

@@ -70,6 +70,11 @@ class HistoryDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
         binding.tvCarPlate.text = order.carPlate ?: "---"
         binding.tvCarClass.text = order.tariffName ?: "Class"
 
+        // --- ЛОГИКА ОТОБРАЖЕНИЯ СОКРАЩЕННОГО UUID ДЛЯ ДИСПЕТЧЕРА ---
+        val fullUuid = order.id
+        val shortUuid = if (fullUuid.length >= 6) fullUuid.takeLast(6) else fullUuid
+        binding.tvOrderUuidShort.text = "Код замовлення: ****$shortUuid"
+
         // --- ДИНАМИЧЕСКОЕ И ЧЕСТНОЕ ОТОБРАЖЕНИЕ БАЛЛОВ АКТИВНОСТИ ---
         val activityBonus = order.activityBonus
         when {
@@ -78,7 +83,6 @@ class HistoryDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
                 binding.tvActivityScore.setTextColor(ContextCompat.getColor(this, R.color.driver_neon_teal))
             }
             activityBonus < 0 -> {
-                // Минус уже автоматически содержится в значении отрицательного Int
                 binding.tvActivityScore.text = activityBonus.toString()
                 binding.tvActivityScore.setTextColor(ContextCompat.getColor(this, R.color.driver_error))
             }
