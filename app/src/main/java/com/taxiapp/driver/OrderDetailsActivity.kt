@@ -9,6 +9,7 @@ import android.graphics.PorterDuff
 import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
@@ -22,25 +23,24 @@ import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
 import com.google.maps.android.PolyUtil
-import com.taxiapp.driver.databinding.ActivityOrderDetailsBinding // ВАЖНО: Импорт Binding
+import com.taxiapp.driver.databinding.ActivityOrderDetailsBinding
 import com.taxiapp.driver.network.ApiClient
 import com.taxiapp.driver.network.Order
 import kotlinx.coroutines.launch
 
 class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
 
-    private lateinit var binding: ActivityOrderDetailsBinding // Объявляем Binding
+    private lateinit var binding: ActivityOrderDetailsBinding
     private lateinit var map: GoogleMap
     private var currentOrder: Order? = null
+    private var swipeTriggered = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 1. Инициализация ViewBinding
         binding = ActivityOrderDetailsBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // 2. Безопасное получение объекта заказа
         currentOrder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             intent.getSerializableExtra("EXTRA_ORDER", Order::class.java)
         } else {
@@ -56,24 +56,44 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
 
         setupUI()
 
-        // 3. Инициализация карты
-        // Используем findFragmentById с R.id.map, так как это надежнее для фрагментов
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
 
-        // 4. Обработчики кнопок через Binding
-        binding.btnBackCard.setOnClickListener { finish() }
-        binding.btnAccept.setOnClickListener { acceptOrder() }
+        binding.btnBack.setOnClickListener { finish() }
+        setupSwipeGesture()
     }
 
     private fun setupUI() {
-        // Заполняем данные через binding (больше никаких findViewById!)
-        binding.tvOrderId.text = "Замовлення #${currentOrder?.id}"
-        binding.tvTariff.text = currentOrder?.tariffName ?: "Стандарт"
+        val order = currentOrder ?: return
 
-        val distInfo = "${currentOrder?.getFormattedDistance()} • ${currentOrder?.getPricePerKm()}"
-        binding.tvDistanceInfo.text = distInfo
-        binding.tvPrice.text = currentOrder?.getFormattedPrice()
+        binding.tvTariff.text = order.tariffName ?: "Стандарт"
+
+        // Заменяем текстовое "грн" на символ "₴"
+        binding.tvPrice.text = order.getFormattedPrice().replace("грн", "₴")
+        binding.tvTotalDistanceHeader.text = order.getFormattedDistance().replace("грн", "₴")
+
+        binding.tvBlockActivityBonus.text = if (order.activityBonus >= 0) "+${order.activityBonus}" else "${order.activityBonus}"
+
+        // ЛОГИКА КАЛЬКУЛЯЦИИ ТАРИФА (Если путь меньше 1 км -> показываем — ₴/км)
+        val distanceKm = (order.distanceMeters ?: 0) / 1000.0
+        if (distanceKm < 1.0) {
+            binding.tvBlockPricePerKm.text = "— ₴/км"
+        } else {
+            binding.tvBlockPricePerKm.text = order.getPricePerKm().replace("грн", "₴")
+        }
+
+        // Вывод секторов чистым текстом без скобок
+        binding.tvStartSector.text = if (!order.fromSector.isNullOrEmpty()) order.fromSector else "Не визначено"
+        binding.tvEndSector.text = if (!order.toSector.isNullOrEmpty()) order.toSector else "Не визначено"
+
+        val clientData = order.client
+        if (clientData != null) {
+            binding.tvClientRides.text = "Поїздок: ${clientData.completedRides}"
+            binding.tvClientRating.text = clientData.rating.toString()
+        } else {
+            binding.tvClientRides.text = "Поїздок: 0"
+            binding.tvClientRating.text = "5.0"
+        }
 
         setupPaymentMethod()
         buildRouteList()
@@ -81,14 +101,47 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
         setupComment()
     }
 
+    private fun setupSwipeGesture() {
+        var startX = 0f
+
+        binding.btnAccept.setOnTouchListener { _, event ->
+            if (swipeTriggered) return@setOnTouchListener false
+
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    startX = event.x
+                    true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    val currentX = event.x
+                    val deltaX = currentX - startX
+                    val threshold = binding.btnContainerLayout.width * 0.4f
+
+                    if (deltaX > threshold && !swipeTriggered) {
+                        swipeTriggered = true
+                        binding.tvBtnTitle.text = "ОБРОБКА..."
+                        binding.tvBtnSubtitle.text = "Будь ласка, зачекайте"
+                        acceptOrder()
+                    }
+                    true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    startX = 0f
+                    true
+                }
+                else -> false
+            }
+        }
+    }
+
     private fun setupPaymentMethod() {
         val method = currentOrder?.paymentMethod ?: "CASH"
 
         if (method == "CASH") {
-            binding.llPriceBackground.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#FFD600"))
+            binding.llPriceBackground.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_neon_teal))
             binding.ivPaymentIcon.setImageResource(R.drawable.ic_payment_cash)
         } else {
-            binding.llPriceBackground.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#2979FF"))
+            binding.llPriceBackground.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#54b1f0"))
             binding.ivPaymentIcon.setImageResource(R.drawable.ic_payment_card)
         }
     }
@@ -141,7 +194,6 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
             val point = allPoints[i]
             val isLast = (i == allPoints.size - 1)
 
-            // Здесь мы инфлейтим отдельный элемент списка, он не часть ActivityBinding
             val view = inflater.inflate(R.layout.item_route_point, binding.llRouteContainer, false)
 
             val tvAddress = view.findViewById<TextView>(R.id.tv_point_address)
@@ -168,7 +220,6 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun acceptOrder() {
         val orderId = currentOrder?.id ?: return
         binding.btnAccept.isEnabled = false
-        binding.btnAccept.text = "ОБРОБКА..."
 
         lifecycleScope.launch {
             try {
@@ -177,13 +228,10 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
                 if (response.isSuccessful && response.body() != null) {
                     val updatedOrder = response.body()!!
 
-                    // --- ИСПРАВЛЕНИЕ ЛОГИКИ ПЕРЕХОДА ---
                     if (updatedOrder.status == "SCHEDULED") {
-                        // Если заказ запланированный - просто уведомляем и закрываем экран
                         Toast.makeText(this@OrderDetailsActivity, "Замовлення успішно заплановано!", Toast.LENGTH_LONG).show()
-                        finish() // Возвращаемся в список/эфир
+                        finish()
                     } else {
-                        // Если заказ активный ("на сейчас") - переходим к выполнению
                         Toast.makeText(this@OrderDetailsActivity, "Замовлення прийнято!", Toast.LENGTH_SHORT).show()
                         val intent = Intent(this@OrderDetailsActivity, OrderProgressActivity::class.java)
                         intent.putExtra("EXTRA_ORDER", updatedOrder)
@@ -191,27 +239,29 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
                         startActivity(intent)
                         finish()
                     }
-                    // -----------------------------------
-
                 } else {
-                    binding.btnAccept.isEnabled = true
-                    binding.btnAccept.text = "ПРИЙНЯТИ ЗАМОВЛЕННЯ"
+                    resetSwipeButtonState()
 
-                    // Пытаемся распарсить ошибку
                     val errorBody = response.errorBody()?.string()
                     if (errorBody?.contains("Вже має водія") == true || response.code() == 409) {
                         Toast.makeText(this@OrderDetailsActivity, "Замовлення вже забрали", Toast.LENGTH_SHORT).show()
-                        finish() // Закрываем, так как заказ ушел
+                        finish()
                     } else {
                         Toast.makeText(this@OrderDetailsActivity, "Помилка сервера: ${response.code()}", Toast.LENGTH_SHORT).show()
                     }
                 }
             } catch (e: Exception) {
-                binding.btnAccept.isEnabled = true
-                binding.btnAccept.text = "ПРИЙНЯТИ ЗАМОВЛЕННЯ"
+                resetSwipeButtonState()
                 Toast.makeText(this@OrderDetailsActivity, "Помилка мережі", Toast.LENGTH_SHORT).show()
             }
         }
+    }
+
+    private fun resetSwipeButtonState() {
+        binding.btnAccept.isEnabled = true
+        binding.tvBtnTitle.text = "Прийняти"
+        binding.tvBtnSubtitle.text = "Проведіть, щоб прийняти"
+        swipeTriggered = false
     }
 
     override fun onMapReady(googleMap: GoogleMap) {
@@ -250,11 +300,9 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
                     val builder = LatLngBounds.Builder()
                     path.forEach { builder.include(it) }
 
-                    // Безопасное перемещение камеры с проверкой размера экрана
                     try {
                         map.moveCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 150))
                     } catch (e: Exception) {
-                        // Фолбек, если карта еще не готова по размеру
                         map.moveCamera(CameraUpdateFactory.newLatLngZoom(path.first(), 14f))
                     }
                 }
