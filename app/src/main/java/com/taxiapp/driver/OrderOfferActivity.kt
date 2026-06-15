@@ -44,7 +44,7 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var btnBackCard: CardView
     private lateinit var tvHeaderPrice: TextView
     private lateinit var tvHeaderDistance: TextView
-    private lateinit var tvPickupDistance: TextView // Тут будет реальное время подачи
+    private lateinit var tvPickupDistance: TextView
     private lateinit var tvPricePerKm: TextView
     private lateinit var tvAddressFrom: TextView
     private lateinit var tvAddressTo: TextView
@@ -52,6 +52,7 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var tvClientTrips: TextView
     private lateinit var tvClientRating: TextView
     private lateinit var tvTariffBadge: TextView
+    private lateinit var tvActivityBonus: TextView // ИСПРАВЛЕНО: Объявили переменную под баллы активности
 
     override fun onCreate(savedInstanceState: Bundle?) {
         turnScreenOnAndKeyguardOff()
@@ -107,6 +108,7 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
         tvClientTrips = findViewById(R.id.tv_client_trips)
         tvClientRating = findViewById(R.id.tv_client_rating)
         tvTariffBadge = findViewById(R.id.tv_tariff_badge)
+        tvActivityBonus = findViewById(R.id.tv_activity_bonus) // ИСПРАВЛЕНО: Связали View по ID
 
         btnAcceptContainer.setOnClickListener { acceptOrder() }
         btnBackCard.setOnClickListener { rejectOrder() }
@@ -116,7 +118,7 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
         val order = currentOrder ?: return
         tvHeaderPrice.text = order.getFormattedPrice()
         tvHeaderDistance.text = order.getFormattedDistance()
-        tvPickupDistance.text = "Рахуємо..." // Ждем Google API
+        tvPickupDistance.text = "Рахуємо..."
         tvPricePerKm.text = order.getPricePerKm()
         tvAddressFrom.text = order.fromAddress ?: "Точка А"
         tvAddressTo.text = order.toAddress ?: "Точка Б"
@@ -124,15 +126,14 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
         tvClientTrips.text = "Поїздки: ${order.client?.completedRides ?: 0}"
         tvClientRating.text = String.format("%.1f", order.client?.rating ?: 5.0)
         tvTariffBadge.text = order.tariffName ?: "Standard"
+
+        // ИСПРАВЛЕНО: Выводим реальные баллы от бэкенда со знаком "+" (если они положительные)
+        tvActivityBonus.text = if (order.activityBonus > 0) "+${order.activityBonus}" else order.activityBonus.toString()
     }
 
-    // --- ГЛАВНАЯ МАГИЯ: Запрос к Google Maps ---
     private fun fetchRouteToPickup(driverLat: Double, driverLng: Double) {
         val pickupLat = currentOrder?.originLat ?: return
         val pickupLng = currentOrder?.originLng ?: return
-
-        // Вставь свой ключ сюда или бери из strings.xml
-        // !!! ВАЖНО: Ключ должен быть в AndroidManifest или String ресурсах
         val apiKey = getString(R.string.google_maps_key)
 
         lifecycleScope.launch {
@@ -140,7 +141,6 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
                 val origin = "$driverLat,$driverLng"
                 val dest = "$pickupLat,$pickupLng"
 
-                // ИСПРАВЛЕНО: Передаем аргументы вместо (...)
                 val response = ApiClient.getInstance().getGoogleMapsApi().getDirections(
                     origin = origin,
                     destination = dest,
@@ -151,20 +151,17 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
                     val route = response.routes[0]
                     val leg = route.legs[0]
 
-                    // Обновляем UI реальными данными
                     tvPickupDistance.text = "${leg.duration.text} (${leg.distance.text})"
 
-                    // Рисуем ПУНКТИРНУЮ линию до клиента (Серую)
                     val points = PolyUtil.decode(route.overview_polyline.points)
                     val polylineOptions = PolylineOptions()
                         .addAll(points)
                         .width(10f)
                         .color(Color.GRAY)
-                        .pattern(listOf(Dash(20f), Gap(10f))) // Пунктир
+                        .pattern(listOf(Dash(20f), Gap(10f)))
 
                     map.addPolyline(polylineOptions)
 
-                    // Фокусируем камеру, чтобы видно было и водителя, и заказ
                     val bounds = LatLngBounds.Builder()
                         .include(LatLng(driverLat, driverLng))
                         .include(LatLng(pickupLat, pickupLng))
@@ -172,7 +169,6 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
-                // Фолбэк: если нет интернета, считаем по прямой
                 updateDistanceUIFallback(driverLat, driverLng, pickupLat, pickupLng)
             }
         }
@@ -191,21 +187,18 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
         map.uiSettings.isScrollGesturesEnabled = false
         map.uiSettings.isZoomGesturesEnabled = false
 
-        // Рисуем маршрут ЗАКАЗА (Зеленый/Неоновый)
         val order = currentOrder ?: return
         if (!order.polyline.isNullOrEmpty()) {
             val path = PolyUtil.decode(order.polyline)
             map.addPolyline(PolylineOptions().addAll(path).width(12f).color(ContextCompat.getColor(this, R.color.driver_neon_teal)))
         }
 
-        // Получаем позицию водителя и строим маршрут ПОДАЧИ
         getCurrentLocation()
     }
 
     private fun getCurrentLocation() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) return
 
-        // Проверяем AntiGPS
         if (sessionManager.isManualLocationActive()) {
             val manual = sessionManager.getManualLocation()!!
             fetchRouteToPickup(manual.first, manual.second)
@@ -217,8 +210,6 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
             }
         }
     }
-
-    // ... (startTimer, acceptOrder, rejectOrder, onDestroy, onBackPressed - без изменений) ...
 
     private fun startTimer() {
         timer = object : CountDownTimer(20000, 1000) {
@@ -255,7 +246,6 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
         val orderId = currentOrder?.id ?: return
         lifecycleScope.launch {
             try {
-                // ИСПРАВЛЕНО: Теперь передаем строковый UUID
                 ApiClient.getInstance().getApiService(this@OrderOfferActivity).rejectOffer(orderId)
             } catch (e: Exception) {}
             finally {

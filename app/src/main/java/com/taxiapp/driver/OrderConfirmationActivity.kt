@@ -3,12 +3,13 @@ package com.taxiapp.driver
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import androidx.activity.OnBackPressedCallback
 import android.os.CountDownTimer
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.google.android.material.button.MaterialButton
+import androidx.appcompat.widget.AppCompatButton // ИСПРАВЛЕНО: Импортируем AppCompatButton вместо MaterialButton
 import com.taxiapp.driver.network.ApiClient
 import com.taxiapp.driver.network.Order
 import kotlinx.coroutines.launch
@@ -19,8 +20,8 @@ import android.view.WindowManager
 class OrderConfirmationActivity : AppCompatActivity() {
 
     private lateinit var tvTimer: TextView
-    private lateinit var btnConfirm: MaterialButton
-    private lateinit var btnReject: MaterialButton
+    private lateinit var btnConfirm: AppCompatButton // ИСПРАВЛЕНО: тип изменен на AppCompatButton
+    private lateinit var btnReject: AppCompatButton  // ИСПРАВЛЕНО: тип изменен на AppCompatButton
     private lateinit var timer: CountDownTimer
     private var currentOrder: Order? = null
 
@@ -45,6 +46,13 @@ class OrderConfirmationActivity : AppCompatActivity() {
         // -----------------------------------------------------------
 
         setContentView(R.layout.activity_order_confirmation)
+
+        // ХАРДКОРНАЯ БЛОКИРОВКА КНОПКИ НАЗАД (БЕЗ ВОРНИНГОВ)
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                // Оставляем пустым. Перехватывает нажатие и ничего не делает, блокируя шаг назад.
+            }
+        })
 
         // --- БЛОК 2: Получение данных заказа ---
         currentOrder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -100,7 +108,6 @@ class OrderConfirmationActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             try {
-                // ИСПРАВЛЕНО: Передаем String UUID на сервер
                 val response = ApiClient.getInstance().getApiService(this@OrderConfirmationActivity)
                     .confirmOrder(currentOrder!!.id)
 
@@ -129,7 +136,6 @@ class OrderConfirmationActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             try {
-                // ИСПРАВЛЕНО: Передаем String UUID в метод cancelOrder
                 val response = ApiClient.getInstance().getApiService(this@OrderConfirmationActivity)
                     .cancelOrder(currentOrder!!.id, null)
 
