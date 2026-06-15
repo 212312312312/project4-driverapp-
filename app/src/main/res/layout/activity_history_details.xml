@@ -222,6 +222,151 @@
                     android:textStyle="bold"
                     android:textSize="16sp" />
             </LinearLayout>
+            <TextView
+                android:id="@+id/tv_label_finance"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Рух коштів на балансі"
+                android:textColor="@color/driver_text_secondary"
+                android:layout_marginStart="24dp"
+                android:layout_marginTop="24dp"
+                android:textSize="14sp" />
+
+            <LinearLayout
+                android:id="@+id/layout_finance_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@color/driver_card_bg"
+                android:layout_marginTop="8dp"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:id="@+id/layout_finance_header"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="16dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Деталізація розрахунку"
+                        android:textColor="@color/driver_text_primary"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <ImageView
+                        android:id="@+id/iv_finance_chevron"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_chevron"
+                        app:tint="@color/driver_text_secondary" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/layout_finance_details"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="16dp"
+                    android:paddingBottom="16dp"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:id="@+id/row_service_commission"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="8dp">
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Комісія Сервісу"
+                            android:textColor="@color/driver_text_secondary"
+                            android:textSize="14sp"/>
+                        <TextView
+                            android:id="@+id/tv_service_commission"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/driver_error"
+                            android:textSize="14sp"
+                            android:textStyle="bold"/>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/row_amount_to_balance"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="8dp">
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Нараховано на баланс"
+                            android:textColor="@color/driver_text_secondary"
+                            android:textSize="14sp"/>
+                        <TextView
+                            android:id="@+id/tv_amount_to_balance"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/driver_neon_teal"
+                            android:textSize="14sp"
+                            android:textStyle="bold"/>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/row_bank_commission"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="8dp">
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Комісія фінансових установ"
+                            android:textColor="@color/driver_text_secondary"
+                            android:textSize="14sp"/>
+                        <TextView
+                            android:id="@+id/tv_bank_commission"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/driver_error"
+                            android:textSize="14sp"
+                            android:textStyle="bold"/>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/row_transfer_to_card"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="8dp">
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Перерахування на картку"
+                            android:textColor="@color/driver_text_secondary"
+                            android:textSize="14sp"/>
+                        <TextView
+                            android:id="@+id/tv_transfer_to_card"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/driver_text_primary"
+                            android:textSize="14sp"
+                            android:textStyle="bold"/>
+                    </LinearLayout>
+
+                </LinearLayout>
+            </LinearLayout>
 
             <TextView
                 android:layout_width="wrap_content"

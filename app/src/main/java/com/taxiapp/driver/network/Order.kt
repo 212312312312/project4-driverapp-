@@ -47,7 +47,11 @@ data class Order(
     @SerializedName("isDriverConfirmed") val isDriverConfirmed: Boolean = false,
 
     // --- СИНХРОНИЗАЦИЯ: ПРИНИМАЕМ РЕАЛЬНЫЕ БАЛЛЫ АКТИВНОСТИ ОТ СЕРВЕРА ---
-    @SerializedName("activityBonus") val activityBonus: Int = 0
+    @SerializedName("activityBonus") val activityBonus: Int = 0,
+    @SerializedName("serviceCommission") val serviceCommission: Double? = null,
+    @SerializedName("amountToBalance") val amountToBalance: Double? = null,
+    @SerializedName("bankCommission") val bankCommission: Double? = null,
+    @SerializedName("transferToCard") val transferToCard: Double? = null
 ) : Serializable {
 
     fun getFormattedPrice(): String = "${price.toInt()} ₴"

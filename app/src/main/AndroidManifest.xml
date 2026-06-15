@@ -105,7 +105,11 @@
             android:name=".CarActivity"
             android:screenOrientation="portrait"
             android:exported="false" />
-
+        <activity
+            android:name=".LockLocationActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+           />
         <activity
             android:name=".CarDocumentsActivity"
             android:screenOrientation="portrait"

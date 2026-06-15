@@ -91,6 +91,69 @@ class HistoryDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
                 binding.tvActivityScore.setTextColor(ContextCompat.getColor(this, R.color.driver_text_secondary))
             }
         }
+
+        // --- ЛОГИКА ОТОБРАЖЕНИЯ ФИНАНСОВОЙ ДЕТАЛИЗАЦИИ ---
+        // Копируем во внутренние val для безопасного Smart Cast
+        val serviceCommission = order.serviceCommission
+        val amountToBalance = order.amountToBalance
+        val bankCommission = order.bankCommission
+        val transferToCard = order.transferToCard
+
+        val hasFinanceData = serviceCommission != null ||
+                amountToBalance != null ||
+                bankCommission != null ||
+                transferToCard != null
+
+        if (!hasFinanceData) {
+            binding.tvLabelFinance.visibility = View.GONE
+            binding.layoutFinanceContainer.visibility = View.GONE
+        } else {
+            binding.tvLabelFinance.visibility = View.VISIBLE
+            binding.layoutFinanceContainer.visibility = View.VISIBLE
+
+            // 1. Комиссия Сервиса
+            if (serviceCommission != null) {
+                binding.rowServiceCommission.visibility = View.VISIBLE
+                binding.tvServiceCommission.text = "-${serviceCommission.toInt()} ₴"
+            } else {
+                binding.rowServiceCommission.visibility = View.GONE
+            }
+
+            // 2. Начислено на баланс
+            if (amountToBalance != null) {
+                binding.rowAmountToBalance.visibility = View.VISIBLE
+                binding.tvAmountToBalance.text = "+${amountToBalance.toInt()} ₴"
+            } else {
+                binding.rowAmountToBalance.visibility = View.GONE
+            }
+
+            // 3. Комиссия LiqPay (с копейками)
+            if (bankCommission != null) {
+                binding.rowBankCommission.visibility = View.VISIBLE
+                binding.tvBankCommission.text = "-${String.format("%.2f", bankCommission)} ₴"
+            } else {
+                binding.rowBankCommission.visibility = View.GONE
+            }
+
+            // 4. Фактический перевод на карту (с копейками)
+            if (transferToCard != null) {
+                binding.rowTransferToCard.visibility = View.VISIBLE
+                binding.tvTransferToCard.text = "${String.format("%.2f", transferToCard)} ₴"
+            } else {
+                binding.rowTransferToCard.visibility = View.GONE
+            }
+
+            // Обработка раскрытия / закрытия с микро-анимацией стрелки
+            binding.layoutFinanceHeader.setOnClickListener {
+                if (binding.layoutFinanceDetails.visibility == View.VISIBLE) {
+                    binding.layoutFinanceDetails.visibility = View.GONE
+                    binding.ivFinanceChevron.animate().rotation(0f).setDuration(200).start()
+                } else {
+                    binding.layoutFinanceDetails.visibility = View.VISIBLE
+                    binding.ivFinanceChevron.animate().rotation(180f).setDuration(200).start()
+                }
+            }
+        }
     }
 
     override fun onMapReady(googleMap: GoogleMap) {
