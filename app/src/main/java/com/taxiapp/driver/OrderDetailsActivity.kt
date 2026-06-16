@@ -99,6 +99,7 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
         buildRouteList()
         setupServices()
         setupComment()
+        setupMarketingPaymentSplit()
     }
 
     private fun setupSwipeGesture() {
@@ -255,6 +256,20 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
                 resetSwipeButtonState()
                 Toast.makeText(this@OrderDetailsActivity, "Помилка мережі", Toast.LENGTH_SHORT).show()
             }
+        }
+    }
+
+    private fun setupMarketingPaymentSplit() {
+        val order = currentOrder ?: return
+
+        if (order.companyDiscountCompensation > 0.0) {
+            binding.llPaymentSplitBlock.visibility = View.VISIBLE
+
+            val paymentTypeWord = if (order.paymentMethod == "CARD") "на карту" else "готівкою"
+            binding.tvClientPayDetail.text = "${order.clientPayAmount.toInt()} ₴ $paymentTypeWord"
+            binding.tvCompanyCompensationDetail.text = "+${order.companyDiscountCompensation.toInt()} ₴ на баланс"
+        } else {
+            binding.llPaymentSplitBlock.visibility = View.GONE
         }
     }
 

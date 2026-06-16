@@ -51,7 +51,11 @@ data class Order(
     @SerializedName("serviceCommission") val serviceCommission: Double? = null,
     @SerializedName("amountToBalance") val amountToBalance: Double? = null,
     @SerializedName("bankCommission") val bankCommission: Double? = null,
-    @SerializedName("transferToCard") val transferToCard: Double? = null
+    @SerializedName("transferToCard") val transferToCard: Double? = null, // Было
+
+    // 👈 ДОБАВИТЬ ЭТИ ДВА ПОЛЯ ДЛЯ СИНХРОНИЗАЦИИ СКИДОК:
+    @SerializedName("clientPayAmount") val clientPayAmount: Double = 0.0,
+    @SerializedName("companyDiscountCompensation") val companyDiscountCompensation: Double = 0.0
 ) : Serializable {
 
     fun getFormattedPrice(): String = "${price.toInt()} ₴"
