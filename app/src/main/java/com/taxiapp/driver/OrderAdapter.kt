@@ -118,10 +118,14 @@ class OrderAdapter(
                 }
             }
 
-            // --- ИНТЕЛЛЕКТУАЛЬНАЯ ЛОГИКА ДЛЯ ЗАПЛАНИРОВАННЫХ ЗАКАЗОВ (НА ВРЕМЯ) ---
             tvDistance.text = order.getFormattedDistance()
             tvDistance.setTextColor(ContextCompat.getColor(context, R.color.driver_text_primary))
 
+            // ---ДИНАМИЧЕСКИЙ ВЫВОД БАЛЛОВ АКТИВНОСТИ ОТ СЕРВЕРА---
+            val bonus = order.activityBonus
+            tvActivityBonus.text = if (bonus >= 0) "+$bonus" else "$bonus"
+
+            // --- ИНТЕЛЛЕКТУАЛЬНАЯ ЛОГИКА ДЛЯ ЗАПЛАНИРОВАННЫХ ЗАКАЗОВ (НА ВРЕМЯ) ---
             if (order.isScheduled()) {
                 val scheduledDate = order.getScheduledDate()
                 if (scheduledDate != null) {
@@ -167,12 +171,9 @@ class OrderAdapter(
                     } catch (e: Exception) { "" }
                     tvScheduledTime.text = timeOnly
                 }
-
                 tvScheduledTime.visibility = View.VISIBLE
-                tvActivityBonus.text = "+11"
             } else {
                 tvScheduledTime.visibility = View.GONE
-                tvActivityBonus.text = "+3"
             }
 
             // --- СТИЛИЗАЦИЯ ТИПА ОПЛАТЫ + ВСЕГДА ЧЕРНЫЙ ЦВЕТ UI ---

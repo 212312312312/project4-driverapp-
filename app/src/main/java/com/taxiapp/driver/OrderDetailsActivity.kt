@@ -170,6 +170,7 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
 
         if (!comment.isNullOrEmpty()) {
             binding.llCommentBlock.visibility = View.VISIBLE
+            binding.llCommentBubble.background = createNeonBackground() // Добавляем эту строку
             binding.tvCommentText.text = comment
         } else {
             binding.llCommentBlock.visibility = View.GONE
@@ -314,7 +315,22 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
             map.moveCamera(CameraUpdateFactory.newLatLngZoom(origin, 14f))
         }
     }
+    private fun createNeonBackground(): android.graphics.drawable.GradientDrawable {
+        return android.graphics.drawable.GradientDrawable().apply {
+            shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+            setColor(Color.parseColor("#2633CCA1")) // 15% прозрачности неона
+            setStroke(4, ContextCompat.getColor(this@OrderDetailsActivity, R.color.driver_neon_teal))
 
+            val radius = 14f * resources.displayMetrics.density
+            // Массив из 8 значений (по 2 радиуса X и Y на каждый угол):
+            cornerRadii = floatArrayOf(
+                0f, 0f,          // Top-Left (острый)
+                radius, radius,  // Top-Right (скругленный)
+                radius, radius,  // Bottom-Right (скругленный)
+                radius, radius   // Bottom-Left (скругленный)
+            )
+        }
+    }
     private fun createCustomMarkerBitmap(number: Int, colorResId: Int): Bitmap {
         val inflater = LayoutInflater.from(this)
         val view = inflater.inflate(R.layout.layout_custom_marker, null)
