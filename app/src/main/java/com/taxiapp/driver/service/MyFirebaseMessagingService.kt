@@ -3,8 +3,6 @@ package com.taxiapp.driver.service
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
-import kotlinx.coroutines.launch
-import com.taxiapp.driver.ChatEventBus
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -13,7 +11,8 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
-import com.taxiapp.driver.OrderConfirmationActivity // <--- НОВА ACTIVITY
+import com.taxiapp.driver.ChatEventBus
+import com.taxiapp.driver.OrderConfirmationActivity
 import com.taxiapp.driver.OrderOfferActivity
 import com.taxiapp.driver.R
 import com.taxiapp.driver.network.ApiClient
@@ -30,10 +29,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         val type = data["type"]
         Log.d("FCM", "Message received type: $type")
         if (type == "CHAT_MESSAGE") {
-            // Мгновенно отправляем сигнал в нашу внутреннюю шину Kotlin
-            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
-                // Для клиента: com.taxiapp.client.ChatEventBus.triggerUpdate()
-                // Для водителя: com.taxiapp.driver.ChatEventBus.triggerUpdate()
+            CoroutineScope(Dispatchers.IO).launch {
                 ChatEventBus.triggerUpdate()
             }
             return
@@ -42,7 +38,6 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             wakeUpScreen()
             val orderId = data["orderId"]
             if (!orderId.isNullOrEmpty()) {
-                // Передаємо строковый UUID дальше
                 fetchOrderAndShowNotification(orderId, type)
             }
         }
@@ -79,24 +74,32 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         }
     }
 
-    // --- ЗВИЧАЙНА ПРОПОЗИЦІЯ (15 сек) ---
+    // --- ИСПРАВЛЕНО: ОБЫЧНОЕ ПРЕДЛОЖЕНИЕ ТЕПЕРЬ ТОЖЕ ФОРСИРУЕТ ЭКРАН ---
     private fun showOfferNotification(order: Order) {
         val intent = Intent(this, OrderOfferActivity::class.java).apply {
             putExtra("EXTRA_ORDER", order)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         }
+
+        // 1. ПОПЫТКА ПРИНУДИТЕЛЬНОГО ЗАПУСКА НА ЭКРАН (работает при включенных всплывающих окнах в фоне)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || android.provider.Settings.canDrawOverlays(this)) {
+            try {
+                startActivity(intent)
+            } catch (e: Exception) {
+                Log.e("FCM", "Не вдалося запустити OrderOfferActivity напряму: ${e.message}")
+            }
+        }
+
+        // 2. FullScreen Notification (как стопроцентный фолбек и будилник для экрана lockscreen)
         showFullScreen(intent, "offer_channel", "Пропозиція замовлення", "Нове замовлення!", order.idLong?.toInt() ?: 0)
     }
 
-    // --- ПІДТВЕРДЖЕННЯ ПОПЕРЕДНЬОГО (60 сек) ---
     private fun showConfirmationNotification(order: Order) {
         val intent = Intent(this, OrderConfirmationActivity::class.java).apply {
             putExtra("EXTRA_ORDER", order)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         }
 
-        // 1. СПРОБА ПРИМУСОВОГО ЗАПУСКУ
-        // Якщо версія Android < 10 АБО надано дозвіл "Поверх інших вікон" -> відкриваємо одразу
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || android.provider.Settings.canDrawOverlays(this)) {
             try {
                 startActivity(intent)
@@ -105,7 +108,6 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             }
         }
 
-        // 2. FullScreen Notification (працює завжди: і для звуку, і як фолбек)
         showFullScreen(intent, "confirm_channel", "Підтвердження замовлення", "Підтвердіть поїздку!", (order.idLong?.toInt() ?: 0) + 1000)
     }
 
@@ -128,7 +130,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             .setContentTitle(title)
             .setContentText("Натисніть для деталей")
             .setPriority(NotificationCompat.PRIORITY_MAX)
-            .setCategory(NotificationCompat.CATEGORY_ALARM) // ALARM краще будить
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setAutoCancel(true)
             .setFullScreenIntent(pendingIntent, true)
             .setContentIntent(pendingIntent)

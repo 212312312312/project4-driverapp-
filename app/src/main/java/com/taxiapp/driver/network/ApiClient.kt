@@ -29,7 +29,12 @@ class ApiClient private constructor() {
 
             val authInterceptor = AuthInterceptor(context.applicationContext)
 
-            // --- НОВЫЙ АВТОРИЗАТОР ДЛЯ РЕФРЕША ---
+            // --- ИСПРАВЛЕНИЕ: Гарантируем, что sessionManager проинициализирован ---
+            if (sessionManager == null) {
+                sessionManager = SessionManager(context.applicationContext)
+            }
+
+            // --- АВТОРИЗАТОР ДЛЯ РЕФРЕША ---
             val tokenAuthenticator = object : Authenticator {
                 override fun authenticate(route: Route?, response: Response): Request? {
                     if (response.priorResponse?.code == 401) return null
@@ -117,6 +122,7 @@ class ApiClient private constructor() {
     }
 }
 
+// --- ИНТЕРФЕЙС И МОДЕЛИ ДЛЯ КАРТ (КОТОРЫЕ БЫЛИ ПОТЕРЯНЫ) ---
 interface GoogleMapsApi {
     @GET("directions/json")
     suspend fun getDirections(

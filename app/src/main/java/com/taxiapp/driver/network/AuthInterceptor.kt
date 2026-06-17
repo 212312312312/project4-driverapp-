@@ -1,7 +1,7 @@
 package com.taxiapp.driver.network
 
 import android.content.Context
-import android.util.Log // <--- Важливо: додали імпорт для логів
+import android.util.Log
 import com.taxiapp.driver.utils.SessionManager
 import okhttp3.Interceptor
 import okhttp3.Response
@@ -14,11 +14,12 @@ class AuthInterceptor(context: Context) : Interceptor {
         val originalRequest = chain.request()
         val url = originalRequest.url.toString()
 
-        // 1. Пропускаем добавление токена для входа и регистрации,
+        // 1. Пропускаем добавление токена для входа, регистрации и ОБНОВЛЕНИЯ ТОКЕНА,
         // чтобы не отправлять старый/протухший токен.
         if (url.contains("auth/login") ||
             url.contains("auth/register") ||
-            url.contains("auth/driver/login")) {
+            url.contains("auth/driver/login") ||
+            url.contains("auth/refresh")) { // <--- ИСПРАВЛЕНО: Добавлено исключение для рефреша
             return chain.proceed(originalRequest)
         }
 
@@ -29,7 +30,6 @@ class AuthInterceptor(context: Context) : Interceptor {
 
         if (!token.isNullOrBlank()) {
             // Защита: если в SessionManager уже сохранен "Bearer ...", не добавляем второй раз.
-            // Если сохранен чистый токен, добавляем префикс.
             val finalHeader = if (token.startsWith("Bearer ")) {
                 token
             } else {
