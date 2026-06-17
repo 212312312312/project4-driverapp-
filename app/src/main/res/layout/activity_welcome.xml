@@ -2,28 +2,60 @@
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://tools.android.com/tools"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/driver_black_bg"
     android:padding="24dp">
 
-    <TextView
-        android:id="@+id/tv_logo"
+    <LinearLayout
+        android:id="@+id/layout_logo_group"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/welcome_logo"
-        android:textSize="48sp"
-        android:textStyle="bold"
-        android:textColor="@color/driver_neon_teal"
-        android:gravity="center"
-        android:letterSpacing="0.1"
-        android:fontFamily="@font/app_font_family"
+        android:layout_height="96dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
         app:layout_constraintBottom_toTopOf="@+id/btn_login_container"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintVertical_bias="0.4" />
+        app:layout_constraintVertical_bias="0.3">
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="0dp"
+            app:strokeWidth="0dp"
+            app:cardBackgroundColor="@color/driver_neon_teal">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:text="Unit"
+                android:textColor="#000000"
+                android:textSize="70sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:paddingHorizontal="20dp"
+                android:fontFamily="@font/app_font_family" />
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="96dp"
+            android:layout_height="96dp"
+            android:layout_marginStart="8dp"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/driver_card_bg"
+            app:cardBackgroundColor="#000000">
+
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:src="@drawable/ic_unit_logo"
+                android:scaleType="fitCenter" />
+        </com.google.android.material.card.MaterialCardView>
+    </LinearLayout>
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/btn_login_container"

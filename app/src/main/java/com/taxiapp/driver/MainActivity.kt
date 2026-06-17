@@ -672,8 +672,31 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     override fun onMapReady(googleMap: GoogleMap) {
         map = googleMap
         try {
-            map.setMapStyle(MapStyleOptions.loadRawResourceStyle(this, R.raw.map_style_dark))
-        } catch (e: Exception) {}
+            val isNightMode = when (androidx.appcompat.app.AppCompatDelegate.getDefaultNightMode()) {
+                androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES -> true
+                androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO -> false
+                else -> {
+                    // Если в приложении переключатель стоит на "Системная тема" — смотрим на настройки Android
+                    val currentNightMode = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
+                    currentNightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES
+                }
+            }
+
+            val styleRes = if (isNightMode) {
+                R.raw.map_style_dark
+            } else {
+                R.raw.map_style_standard
+            }
+
+            val success = googleMap.setMapStyle(
+                MapStyleOptions.loadRawResourceStyle(this, styleRes)
+            )
+            if (!success) {
+                android.util.Log.e("UNIT_MAP", "Не удалось распарсить JSON стиля карты.")
+            }
+        } catch (e: android.content.res.Resources.NotFoundException) {
+            android.util.Log.e("UNIT_MAP", "Файл стиля карты не найден в папке res/raw", e)
+        }
 
         val density = resources.displayMetrics.density
         defaultMapPaddingBottom = (180 * density).toInt()
@@ -697,6 +720,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         btnHotspots.imageTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_text_primary))
     }
 
+    private fun resetSectorsButton() {
+        isSectorsVisible = false
+        clearSectorsFromMap()
+        btnSectors.imageTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_text_primary))
+    }
+
     private fun generateGlowBitmap(color: Int): BitmapDescriptor {
         val size = 512
         val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
@@ -710,10 +739,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun toggleHeatmap() {
+        // ✅ ИСПРАВЛЕНО: Используем новую чистую функцию сброса секторов
         if (isSectorsVisible) {
-            clearSectorsFromMap()
-            isSectorsVisible = false
-            btnSectors.imageTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_text_primary))
+            resetSectorsButton()
         }
         if (isHeatmapVisible) {
             resetHotspotsButton()
@@ -765,12 +793,14 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun toggleSectors() {
         if (isHeatmapVisible) resetHotspotsButton()
         if (isSectorsVisible) {
-            clearSectorsFromMap()
-            isSectorsVisible = false
+            // ✅ ИСПРАВЛЕНО: Теперь при выключении кнопка корректно сбрасывает цвет в дефолтный
+            resetSectorsButton()
             Toast.makeText(this, "Сектори приховано", Toast.LENGTH_SHORT).show()
         } else {
-            loadAndDrawSectors()
             isSectorsVisible = true
+            // ✅ ИСПРАВЛЕНО: При активации мгновенно красим иконку пазла в бирюзовый (неоновый) цвет
+            btnSectors.imageTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_neon_teal))
+            loadAndDrawSectors()
         }
     }
 
@@ -778,9 +808,17 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         lifecycleScope.launch {
             try {
                 val response = ApiClient.getInstance().getApiService(this@MainActivity).getSectors()
-                if (response.isSuccessful && response.body() != null) drawSectorsOnMap(response.body()!!)
-                else { Toast.makeText(this@MainActivity, "Помилка завантаження секторів", Toast.LENGTH_SHORT).show(); isSectorsVisible = false }
-            } catch (e: Exception) { isSectorsVisible = false }
+                if (response.isSuccessful && response.body() != null) {
+                    drawSectorsOnMap(response.body()!!)
+                } else {
+                    Toast.makeText(this@MainActivity, "Помилка завантаження секторів", Toast.LENGTH_SHORT).show()
+                    // ✅ ИСПРАВЛЕНО: Если сервер ответил ошибкой — тушим бирюзовый цвет кнопки обратно
+                    resetSectorsButton()
+                }
+            } catch (e: Exception) {
+                // ✅ ИСПРАВЛЕНО: В случае падения сети также откатываем состояние кнопки
+                resetSectorsButton()
+            }
         }
     }
 

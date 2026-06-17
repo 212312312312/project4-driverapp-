@@ -159,20 +159,43 @@ class HistoryDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
     override fun onMapReady(googleMap: GoogleMap) {
         map = googleMap
 
-        // 1. Блокируем карту (нельзя двигать)
-        map.uiSettings.setAllGesturesEnabled(false)
-        map.uiSettings.isMapToolbarEnabled = false
+        // 🛠️ 1. Очищаем карту от лишнего мусора Google (компас, кнопки +/-, панель инструментов)
+        map.uiSettings.apply {
+            isScrollGesturesEnabled = true
+            isZoomGesturesEnabled = true
+            isMapToolbarEnabled = false
+            isCompassEnabled = false
+            isZoomControlsEnabled = false
+            isMyLocationButtonEnabled = false
+            isIndoorLevelPickerEnabled = false
+        }
 
-        // 2. Устанавливаем темный стиль
+        // 🛠️ 2. Интеллектуальное определение темы (проверяет и настройки приложения UNIT, и систему Android)
         try {
-            val success = map.setMapStyle(
-                MapStyleOptions.loadRawResourceStyle(this, R.raw.map_style_dark)
+            val isNightMode = when (androidx.appcompat.app.AppCompatDelegate.getDefaultNightMode()) {
+                androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES -> true
+                androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO -> false
+                else -> {
+                    // Если в приложении выставлено "Следовать системе" — смотрим на настройки шторки телефона
+                    val currentNightMode = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
+                    currentNightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES
+                }
+            }
+
+            val styleRes = if (isNightMode) {
+                R.raw.map_style_dark
+            } else {
+                R.raw.map_style_standard
+            }
+
+            val success = googleMap.setMapStyle(
+                MapStyleOptions.loadRawResourceStyle(this, styleRes)
             )
             if (!success) {
-                // Лог ошибки, если стиль не применился
+                android.util.Log.e("UNIT_MAP", "Не удалось распарсить JSON стиля карты.")
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
+        } catch (e: android.content.res.Resources.NotFoundException) {
+            android.util.Log.e("UNIT_MAP", "Файл стиля карты не найден в папке res/raw", e)
         }
 
         val polylineString = order.polyline

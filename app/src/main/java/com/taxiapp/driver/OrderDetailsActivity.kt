@@ -68,7 +68,6 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
 
         binding.tvTariff.text = order.tariffName ?: "Стандарт"
 
-        // 🎁 ИСПРАВЛЕНО: В шапке деталей заказа показываем водителю ПОЛНУЮ сумму его заработка
         val fullPrice = order.getTotalFullPrice()
         binding.tvPrice.text = "${fullPrice.toInt()} ₴"
 
@@ -76,17 +75,14 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
 
         binding.tvBlockActivityBonus.text = if (order.activityBonus >= 0) "+${order.activityBonus}" else "${order.activityBonus}"
 
-        // ЛОГИКА КАЛЬКУЛЯЦИИ ТАРИФА (Если путь меньше 1 км -> показываем — ₴/км)
         val distanceKm = (order.distanceMeters ?: 0) / 1000.0
         if (distanceKm < 1.0) {
             binding.tvBlockPricePerKm.text = "— ₴/км"
         } else {
-            // 🎁 ИСПРАВЛЕНО: Считаем цену за километр на экране деталей от полной стоимости заказа
             val pricePerKm = fullPrice / distanceKm
             binding.tvBlockPricePerKm.text = String.format(java.util.Locale.US, "%.0f ₴/км", pricePerKm)
         }
 
-        // Вывод секторов чистым текстом без скобок
         binding.tvStartSector.text = if (!order.fromSector.isNullOrEmpty()) order.fromSector else "Не визначено"
         binding.tvEndSector.text = if (!order.toSector.isNullOrEmpty()) order.toSector else "Не визначено"
 
@@ -114,23 +110,64 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
 
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
-                    startX = event.x
+                    startX = event.rawX
                     true
                 }
                 MotionEvent.ACTION_MOVE -> {
-                    val currentX = event.x
+                    val currentX = event.rawX
                     val deltaX = currentX - startX
-                    val threshold = binding.btnContainerLayout.width * 0.4f
+                    val threshold = binding.btnContainerLayout.width * 0.45f
+
+                    if (deltaX > 0 && !swipeTriggered) {
+                        binding.llChevronsLayer.translationX = deltaX
+                        
+                        val currentChevronRight = binding.llChevronsLayer.left + deltaX + binding.llChevronsLayer.width
+                        val textStartPos = binding.llStaticTextLayer.left.toFloat()
+
+                        if (currentChevronRight > textStartPos) {
+                            val textWidth = binding.llStaticTextLayer.width.toFloat()
+                            val eraseProgress = (currentChevronRight - textStartPos) / (textWidth * 0.6f)
+                            val dynamicAlpha = 1f - eraseProgress
+
+                            val finalAlpha = if (dynamicAlpha < 0f) 0f else dynamicAlpha
+                            binding.tvBtnTitle.alpha = finalAlpha
+                            binding.tvBtnSubtitle.alpha = finalAlpha * 0.7f
+                        } else {
+                            binding.tvBtnTitle.alpha = 1f
+                            binding.tvBtnSubtitle.alpha = 0.7f
+                        }
+                    }
 
                     if (deltaX > threshold && !swipeTriggered) {
                         swipeTriggered = true
-                        binding.tvBtnTitle.text = "ОБРОБКА..."
-                        binding.tvBtnSubtitle.text = "Будь ласка, зачекайте"
-                        acceptOrder()
+                        binding.btnAccept.isEnabled = false
+
+                        binding.tvBtnTitle.alpha = 0f
+                        binding.tvBtnSubtitle.alpha = 0f
+
+                        val flyOutDistance = binding.btnContainerLayout.width.toFloat()
+                        binding.llChevronsLayer.animate()
+                            .translationX(flyOutDistance)
+                            .alpha(0f)
+                            .setDuration(200)
+                            .withEndAction {
+                                acceptOrder()
+                            }
+                            .start()
                     }
                     true
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    if (!swipeTriggered) {
+                        binding.llChevronsLayer.animate()
+                            .translationX(0f)
+                            .alpha(1f)
+                            .setDuration(250)
+                            .start()
+
+                        binding.tvBtnTitle.animate().alpha(1f).setDuration(250).start()
+                        binding.tvBtnSubtitle.animate().alpha(0.7f).setDuration(250).start()
+                    }
                     startX = 0f
                     true
                 }
@@ -175,7 +212,7 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
 
         if (!comment.isNullOrEmpty()) {
             binding.llCommentBlock.visibility = View.VISIBLE
-            binding.llCommentBubble.background = createNeonBackground() // Добавляем эту строку
+            binding.llCommentBubble.background = createNeonBackground()
             binding.tvCommentText.text = comment
         } else {
             binding.llCommentBlock.visibility = View.GONE
@@ -198,24 +235,49 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
 
         for (i in allPoints.indices) {
             val point = allPoints[i]
+            val isFirst = (i == 0)
             val isLast = (i == allPoints.size - 1)
 
             val view = inflater.inflate(R.layout.item_route_point, binding.llRouteContainer, false)
 
             val tvAddress = view.findViewById<TextView>(R.id.tv_point_address)
             val ivIcon = view.findViewById<ImageView>(R.id.iv_point_icon)
-            val line = view.findViewById<View>(R.id.view_line)
+            val lineTop = view.findViewById<View>(R.id.view_line_top)
+            val lineBottom = view.findViewById<View>(R.id.view_line_bottom)
 
             tvAddress.text = point.address
+
+            // Идеальная соосность: центрируем иконки разного размера по оси 26dp от края экрана
+            val params = ivIcon.layoutParams as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams
+            if (point.type == PointType.START || point.type == PointType.END) {
+                params.width = (18 * resources.displayMetrics.density).toInt()
+                params.height = (18 * resources.displayMetrics.density).toInt()
+                params.marginStart = (17 * resources.displayMetrics.density).toInt() 
+            } else {
+                params.width = (14 * resources.displayMetrics.density).toInt()
+                params.height = (14 * resources.displayMetrics.density).toInt()
+                params.marginStart = (19 * resources.displayMetrics.density).toInt() 
+            }
+            ivIcon.layoutParams = params
+            
             when (point.type) {
-                PointType.START -> ivIcon.setImageResource(R.drawable.ic_circle_green)
-                PointType.END -> ivIcon.setImageResource(R.drawable.ic_circle_red)
+                PointType.START -> {
+                    ivIcon.setImageResource(R.drawable.ic_marker_from)
+                    ivIcon.clearColorFilter()
+                }
+                PointType.END -> {
+                    ivIcon.setImageResource(R.drawable.ic_marker_to)
+                    ivIcon.clearColorFilter()
+                }
                 PointType.WAYPOINT -> {
-                    ivIcon.setImageResource(R.drawable.ic_circle_green)
-                    ivIcon.setColorFilter(ContextCompat.getColor(this, R.color.driver_neon_teal))
+                    ivIcon.setImageResource(R.drawable.ic_marker_waypoint)
+                    ivIcon.clearColorFilter()
                 }
             }
-            line.visibility = if (isLast) View.INVISIBLE else View.VISIBLE
+
+            lineTop.visibility = if (isFirst) View.INVISIBLE else View.VISIBLE
+            lineBottom.visibility = if (isLast) View.INVISIBLE else View.VISIBLE
+
             binding.llRouteContainer.addView(view)
         }
     }
@@ -266,34 +328,58 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun setupMarketingPaymentSplit() {
         val order = currentOrder ?: return
 
-        // Используем правильный ID: ll_marketing_split_block
         if (order.companyDiscountCompensation > 0.0) {
-            binding.llMarketingSplitBlock.visibility = View.VISIBLE
+            binding.llPaymentSplitBlock.visibility = View.VISIBLE
 
             val paymentTypeWord = if (order.paymentMethod == "CARD") "на картку" else "готівкою"
 
-            // Используем правильные ID из твоего XML:
-            binding.tvClientPaymentLabel.text = "Оплата від клієнта ($paymentTypeWord)"
-            binding.tvClientPaymentValue.text = "${order.clientPayAmount.toInt()} ₴"
-            binding.tvCompanyBonusValue.text = "+${order.companyDiscountCompensation.toInt()} ₴ на баланс"
+            binding.tvClientPayDetail.text = "${order.clientPayAmount.toInt()} ₴ $paymentTypeWord,"
+            binding.tvCompanyCompensationDetail.text = "+${order.companyDiscountCompensation.toInt()} ₴ на баланс"
         } else {
-            binding.llMarketingSplitBlock.visibility = View.GONE
+            binding.llPaymentSplitBlock.visibility = View.GONE
         }
     }
 
     private fun resetSwipeButtonState() {
         binding.btnAccept.isEnabled = true
-        binding.tvBtnTitle.text = "Прийняти"
-        binding.tvBtnSubtitle.text = "Проведіть, щоб прийняти"
+        binding.llChevronsLayer.translationX = 0f
+        binding.llChevronsLayer.alpha = 1f
+        binding.tvBtnTitle.alpha = 1f
+        binding.tvBtnSubtitle.alpha = 0.7f
         swipeTriggered = false
     }
 
     override fun onMapReady(googleMap: GoogleMap) {
         map = googleMap
         map.uiSettings.apply {
-            isScrollGesturesEnabled = true
-            isZoomGesturesEnabled = true
-            isMapToolbarEnabled = false
+    isScrollGesturesEnabled = true
+    isZoomGesturesEnabled = true
+    isMapToolbarEnabled = false // Уже отключено (убирает переход в стороннее приложение Гугл карт)
+    
+    // 🛠️ ДОБАВЛЯЕМ СЮДА ЭТИ СТРОКИ:
+    isCompassEnabled = false          // Отключает компас, который появляется при вращении карты
+    isZoomControlsEnabled = false     // Отключает наэкранные кнопки "+" и "-"
+    isMyLocationButtonEnabled = false // Отключает стандартную кнопку привязки к геопозиции
+    isIndoorLevelPickerEnabled = false // Отключает переключатель этажей (для зданий внутри)
+}
+
+        // 🌟 ИСПРАВЛЕНО: Установка динамического стиля карты на основе текущей темы Android
+        try {
+            val currentNightMode = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
+            val styleRes = if (currentNightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES) {
+                R.raw.map_style_dark
+            } else {
+                R.raw.map_style_standard
+            }
+            
+            val success = googleMap.setMapStyle(
+                MapStyleOptions.loadRawResourceStyle(this, styleRes)
+            )
+            if (!success) {
+                android.util.Log.e("UNIT_MAP", "Не удалось распарсить JSON стиля карты.")
+            }
+        } catch (e: android.content.res.Resources.NotFoundException) {
+            android.util.Log.e("UNIT_MAP", "Файл стиля карты не найден в папке res/raw", e)
         }
 
         val order = currentOrder ?: return
@@ -338,22 +424,23 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
             map.moveCamera(CameraUpdateFactory.newLatLngZoom(origin, 14f))
         }
     }
+
     private fun createNeonBackground(): android.graphics.drawable.GradientDrawable {
         return android.graphics.drawable.GradientDrawable().apply {
             shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-            setColor(Color.parseColor("#2633CCA1")) // 15% прозрачности неона
+            setColor(Color.parseColor("#2633CCA1"))
             setStroke(4, ContextCompat.getColor(this@OrderDetailsActivity, R.color.driver_neon_teal))
 
             val radius = 14f * resources.displayMetrics.density
-            // Массив из 8 значений (по 2 радиуса X и Y на каждый угол):
             cornerRadii = floatArrayOf(
-                0f, 0f,          // Top-Left (острый)
-                radius, radius,  // Top-Right (скругленный)
-                radius, radius,  // Bottom-Right (скругленный)
-                radius, radius   // Bottom-Left (скругленный)
+                0f, 0f,          
+                radius, radius,  
+                radius, radius,  
+                radius, radius   
             )
         }
     }
+
     private fun createCustomMarkerBitmap(number: Int, colorResId: Int): Bitmap {
         val inflater = LayoutInflater.from(this)
         val view = inflater.inflate(R.layout.layout_custom_marker, null)

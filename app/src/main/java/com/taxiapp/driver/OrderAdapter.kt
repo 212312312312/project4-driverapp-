@@ -61,7 +61,7 @@ class OrderAdapter(
         fun bind(order: Order) {
             val context = itemView.context
 
-            // 🎁 ИСПРАВЛЕНО: Выводим полную суммарную стоимость поездки для привлечения водителя
+            // 🎁 Выводим полную суммарную стоимость поездки для привлечения водителя
             val fullPrice = order.getTotalFullPrice()
             tvPrice.text = "${fullPrice.toInt()} ₴"
 
@@ -74,7 +74,7 @@ class OrderAdapter(
 
                 if (meters >= 1000) {
                     val km = meters / 1000.0
-                    // 🎁 ИСПРАВЛЕНО: Считаем цену за км от полной стоимости, а не от урезанной
+                    // Считаем цену за км от полной стоимости, а не от урезанной
                     val calculatedPricePerKm = fullPrice / km
                     tvPricePerKm.text = String.format(java.util.Locale.US, "%.2f ₴/км", calculatedPricePerKm)
                 } else {
@@ -130,7 +130,6 @@ class OrderAdapter(
             if (order.isScheduled()) {
                 val scheduledDate = order.getScheduledDate()
                 if (scheduledDate != null) {
-                    // Текущий день (обнуляем время)
                     val today = java.util.Calendar.getInstance().apply {
                         set(java.util.Calendar.HOUR_OF_DAY, 0)
                         set(java.util.Calendar.MINUTE, 0)
@@ -138,7 +137,6 @@ class OrderAdapter(
                         set(java.util.Calendar.MILLISECOND, 0)
                     }
 
-                    // День заказа (обнуляем время)
                     val orderDay = java.util.Calendar.getInstance().apply {
                         time = scheduledDate
                         set(java.util.Calendar.HOUR_OF_DAY, 0)
@@ -147,19 +145,16 @@ class OrderAdapter(
                         set(java.util.Calendar.MILLISECOND, 0)
                     }
 
-                    // Считаем разницу в днях
                     val diffMillis = orderDay.timeInMillis - today.timeInMillis
                     val diffDays = java.util.concurrent.TimeUnit.MILLISECONDS.toDays(diffMillis).toInt()
 
-                    // Форматируем чистое время заказа
                     val timeFormat = java.text.SimpleDateFormat("HH:mm", java.util.Locale.US)
                     val timeStr = timeFormat.format(scheduledDate)
 
                     val displayStr = when {
-                        diffDays <= 0 -> timeStr // Сегодня
-                        diffDays == 1 -> "Завтра, $timeStr" // Завтра
+                        diffDays <= 0 -> timeStr
+                        diffDays == 1 -> "Завтра, $timeStr"
                         else -> {
-                            // Позже (например, "14 черв., 14:30")
                             val ukrLocale = java.util.Locale("uk")
                             val dateFormat = java.text.SimpleDateFormat("d MMM, HH:mm", ukrLocale)
                             dateFormat.format(scheduledDate)
@@ -188,7 +183,6 @@ class OrderAdapter(
                 ivPaymentIcon.setImageResource(R.drawable.ic_payment_card)
             }
 
-            // Фиксируем черный цвет текста цены, знака ₴ и иконки оплаты принудительно
             tvPrice.setTextColor(Color.BLACK)
             ivPaymentIcon.setColorFilter(Color.BLACK)
 
@@ -201,12 +195,20 @@ class OrderAdapter(
                     val stopView = inflater.inflate(R.layout.item_route_point, stopsContainer, false)
                     val tvAddress = stopView.findViewById<TextView>(R.id.tv_point_address)
                     val ivIcon = stopView.findViewById<ImageView>(R.id.iv_point_icon)
-                    val line = stopView.findViewById<View>(R.id.view_line)
+
+                    // Находим новые ID верхней и нижней полу-линий
+                    val lineTop = stopView.findViewById<View>(R.id.view_line_top)
+                    val lineBottom = stopView.findViewById<View>(R.id.view_line_bottom)
 
                     tvAddress.text = stop.address
-                    ivIcon.setImageResource(R.drawable.ic_circle_green)
-                    ivIcon.setColorFilter(ContextCompat.getColor(context, R.color.driver_neon_teal))
-                    line.visibility = View.VISIBLE
+                    ivIcon.setImageResource(R.drawable.ic_marker_waypoint)
+                    ivIcon.clearColorFilter()
+
+                    // 🛠️ ИСПРАВЛЕНО: Скрываем полу-линии, так как в карточке списка у нас уже
+                    // работает идеальная сквозная фоновая линия view_route_line
+                    lineTop.visibility = View.GONE
+                    lineBottom.visibility = View.GONE
+
                     stopsContainer.addView(stopView)
                 }
             }

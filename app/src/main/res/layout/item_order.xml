@@ -81,8 +81,7 @@
                 android:id="@+id/view_route_line"
                 android:layout_width="2dp"
                 android:layout_height="0dp"
-                android:background="@color/driver_text_secondary"
-                android:alpha="0.25"
+                android:background="#444444"
                 app:layout_constraintTop_toTopOf="@id/iv_icon_from"
                 app:layout_constraintBottom_toBottomOf="@id/iv_icon_to"
                 app:layout_constraintStart_toStartOf="@id/iv_icon_from"
@@ -90,10 +89,11 @@
 
             <ImageView
                 android:id="@+id/iv_icon_from"
-                android:layout_width="14dp"
-                android:layout_height="14dp"
-                android:src="@drawable/ic_circle_green"
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:layout_marginStart="14dp"
                 android:layout_marginTop="4dp"
+                android:src="@drawable/ic_marker_from"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="@id/ll_from_text" />
 
@@ -114,6 +114,7 @@
                     android:textColor="@color/driver_text_primary"
                     android:textSize="15sp"
                     android:fontFamily="@font/app_font_family"
+                    android:textStyle="bold"
                     tools:text="ул. Крещатик, 1" />
 
                 <TextView
@@ -123,13 +124,14 @@
                     android:textColor="@color/driver_text_secondary"
                     android:textSize="13sp"
                     android:fontFamily="@font/app_font_family"
+                    android:textStyle="bold"
                     android:layout_marginTop="1dp"
                     tools:text="Печерский район" />
             </LinearLayout>
 
             <LinearLayout
                 android:id="@+id/ll_stops_container"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:layout_marginTop="6dp"
@@ -141,10 +143,11 @@
 
             <ImageView
                 android:id="@+id/iv_icon_to"
-                android:layout_width="14dp"
-                android:layout_height="14dp"
-                android:src="@drawable/ic_circle_red"
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:layout_marginStart="14dp"
                 android:layout_marginTop="4dp"
+                android:src="@drawable/ic_marker_to"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="@id/ll_to_text" />
 
@@ -165,6 +168,7 @@
                     android:textColor="@color/driver_text_primary"
                     android:textSize="15sp"
                     android:fontFamily="@font/app_font_family"
+                    android:textStyle="bold"
                     tools:text="проспект Победы, 45" />
 
                 <TextView
@@ -174,6 +178,7 @@
                     android:textColor="@color/driver_text_secondary"
                     android:textSize="13sp"
                     android:fontFamily="@font/app_font_family"
+                    android:textStyle="bold"
                     android:layout_marginTop="1dp"
                     tools:text="Шулявка" />
             </LinearLayout>
