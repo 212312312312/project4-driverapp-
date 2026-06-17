@@ -23,6 +23,7 @@
         android:id="@+id/tv_phone_number"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:textFontWeight="600"
         android:text="@string/acc_phone_placeholder"
         android:textColor="@color/driver_text_primary"
         android:textSize="22sp"

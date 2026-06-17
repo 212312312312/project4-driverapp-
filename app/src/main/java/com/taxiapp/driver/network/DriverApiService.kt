@@ -18,7 +18,7 @@ data class TokenRefreshRequestDto(val refreshToken: String)
 
 data class ChatMessageDto(
     val id: Long?,
-    val orderId: Long,
+    val orderId: String, // 👈 ИСПРАВЛЕНО: теперь String, чтобы успешно парсить UUID от сервера
     val senderRole: String, // "CLIENT" или "DRIVER"
     val senderId: Long,
     val content: String,
@@ -282,8 +282,8 @@ interface DriverApiService {
     @POST("api/v1/driver/search-settings")
     suspend fun updateSearchSettings(@Body settings: DriverSearchSettingsDto): Response<DriverSearchStateDto>
 
-    @POST("api/v1/auth/fcm-token")
-    suspend fun updateFcmToken(@Body request: FcmTokenDto): Response<Void>
+    @POST("api/v1/driver/profile/fcm-token")
+    suspend fun updateFcmToken(@Body request: Map<String, String>): Response<MessageResponse>
 
     @GET("api/v1/driver/orders/{id}")
     suspend fun getOrderById(@Path("id") id: String): Response<Order>

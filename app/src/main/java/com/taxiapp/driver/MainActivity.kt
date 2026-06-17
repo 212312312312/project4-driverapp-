@@ -182,6 +182,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         initSectorSelectionOverlay()
         handleSectorSelectionRequest(intent)
         loadSectorsDataSilently()
+        updateFcmToken()
     }
 
     private fun updateFcmToken() {
@@ -191,7 +192,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             sessionManager.saveFcmToken(token)
             lifecycleScope.launch {
                 try {
-                    ApiClient.getInstance().getApiService(this@MainActivity).updateFcmToken(FcmTokenDto(token))
+                    // --- ИСПРАВЛЕНО: Передаем Map, соответствующий @RequestBody сервера ---
+                    ApiClient.getInstance().getApiService(this@MainActivity).updateFcmToken(mapOf("token" to token))
+                    Log.d("FCM_UNIT", "✅ FCM Token successfully synchronized with server on MainActivity start.")
                 } catch (e: Exception) { e.printStackTrace() }
             }
         }
@@ -423,7 +426,19 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             tvSwitchStatusText.setTextColor(android.graphics.Color.BLACK)
         } else {
             params.gravity = android.view.Gravity.START
-            switchThumbCard.setCardBackgroundColor(android.graphics.Color.parseColor("#2A2A2A"))
+
+            // Динамически проверяем, включена ли темная тема в системе прямо сейчас
+            val currentNightMode = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
+            val isNightMode = currentNightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES
+
+            // Если ночной режим — оставляем #2A2A2A, если светлый — вытаскиваем цвет driver_card_bg из ресурсов
+            val offlineBgColor = if (isNightMode) {
+                android.graphics.Color.parseColor("#2A2A2A")
+            } else {
+                androidx.core.content.ContextCompat.getColor(this, R.color.driver_card_bg)
+            }
+
+            switchThumbCard.setCardBackgroundColor(offlineBgColor)
             tvSwitchStatusText.text = "Офлайн"
             tvSwitchStatusText.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.driver_text_primary))
         }

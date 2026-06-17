@@ -15,6 +15,7 @@ import com.taxiapp.driver.ChatEventBus
 import com.taxiapp.driver.OrderConfirmationActivity
 import com.taxiapp.driver.OrderOfferActivity
 import com.taxiapp.driver.R
+import com.taxiapp.driver.network.ApiClient
 import com.taxiapp.driver.network.Order
 import com.taxiapp.driver.utils.SessionManager
 import kotlinx.coroutines.CoroutineScope
@@ -62,32 +63,28 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     // --- ГЕНИАЛЬНЫЙ ОБХОД ЗАМОРОЗКИ СЕТИ: СБОРКА ОБЪЕКТА ИЗ DATA PAYLOAD ---
     private fun processOrderPushDirectly(data: Map<String, String>, type: String) {
-        // Проверяем сессию: если водитель разлогинен, игнорируем
         if (SessionManager(this).fetchAuthToken() == null) return
 
-        val orderId = data["orderId"]
+        val orderId = data["orderId"] // Тепер сюди прилітає чистий UUID (наприклад: 8eb7a78c-...)
+        val idLongStr = data["idLong"] // Числовий ID (наприклад: 617)
+
         if (orderId.isNullOrEmpty()) {
-            Log.e("FCM_UNIT", "Помилка: orderId отсутствует в пуше!")
+            Log.e("FCM_UNIT", "Помилка: orderId (UUID) відсутній у пуші!")
             return
         }
 
         try {
-            // Извлекаем и парсим все отправленные сервером данные по контракту
             val priceValue = data["price"]?.toDoubleOrNull() ?: 0.0
             val addressValue = data["address"] ?: "Адреса не вказана"
 
-            // Сервер шлет дистанцию в километрах как строку (например "5.5").
-            // Класс Order на клиенте ждет дистанцию в МЕТРАХ (distanceMeters: Int). Переводим.
             val distanceKm = data["distance"]?.toDoubleOrNull() ?: 0.0
             val distanceMetersValue = (distanceKm * 1000).toInt()
-
-            // Для предварительных заказов шлется "time"
             val scheduledAtValue = data["time"]
 
-            // Собираем полноценный объект Order на лету (Offline-first)
+            // 🔥 ВИПРАВЛЕНО: id отримує чистий UUID, а idLong отримує числовий Long
             val order = Order(
-                id = orderId,
-                idLong = orderId.toLongOrNull(),
+                id = orderId, // Передаємо строковий UUID для Retrofit-запитів
+                idLong = idLongStr?.toLongOrNull(), // Передаємо число для ID нотифікацій
                 price = priceValue,
                 fromAddress = addressValue,
                 distanceMeters = distanceMetersValue,
@@ -95,9 +92,8 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                 status = if (type == "ORDER_CONFIRMATION") "SCHEDULED" else "PENDING"
             )
 
-            Log.d("FCM_UNIT", "✅ Объект Order успешно собран локально: ID=${order.id}, Price=${order.price}")
+            Log.d("FCM_UNIT", "✅ Об'єкт Order успішно зібрано з UUID: ID=${order.id}, idLong=${order.idLong}")
 
-            // Направляем объект в нужное русло
             if (type == "ORDER_CONFIRMATION") {
                 showConfirmationNotification(order)
             } else {
@@ -105,7 +101,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             }
 
         } catch (e: Exception) {
-            Log.e("FCM_UNIT", "Критическая ошибка сборки Order из пуша: ${e.message}")
+            Log.e("FCM_UNIT", "Критична помилка збирання Order: ${e.message}")
             e.printStackTrace()
         }
     }
@@ -186,5 +182,26 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
         notificationManager.notify(notifId, builder.build())
         Log.d("FCM_UNIT", "🔔 Системное FullScreen-уведомление отправлено в менеджер. ID: $notifId")
+    }
+
+    override fun onNewToken(token: String) {
+        super.onNewToken(token)
+        Log.d("FCM_UNIT", "🔄 Google generated a new FCM token: $token")
+
+        val sessionManager = SessionManager(applicationContext)
+        sessionManager.saveFcmToken(token)
+
+        // Если водитель уже вошел в аккаунт, сразу обновляем токен в базе данных бэкенда
+        if (sessionManager.fetchAuthToken() != null) {
+            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                try {
+                    ApiClient.getInstance().getApiService(applicationContext).updateFcmToken(mapOf("token" to token))
+                    Log.d("FCM_UNIT", "✅ Automatically updated new FCM token on server via onNewToken.")
+                } catch (e: Exception) {
+                    Log.e("FCM_UNIT", "❌ Failed to update fcm token via onNewToken: ${e.message}")
+                    e.printStackTrace()
+                }
+            }
+        }
     }
 }

@@ -23,6 +23,8 @@ class ChatActivity : AppCompatActivity() {
     private lateinit var rvChat: RecyclerView
     private lateinit var etMessage: EditText
     private lateinit var btnSend: ImageView
+
+    private lateinit var layoutQuickPhrases: android.view.View
     private lateinit var btnBack: ImageView
 
     private val chatAdapter = ChatAdapter(mutableListOf())
@@ -68,6 +70,23 @@ class ChatActivity : AppCompatActivity() {
                 sendMessage(text)
             }
         }
+
+        layoutQuickPhrases = findViewById(R.id.layout_quick_phrases)
+
+        findViewById<android.view.View>(R.id.btn_phrase_on_my_way).setOnClickListener {
+            sendMessage("Вже у дорозі")
+            layoutQuickPhrases.visibility = android.view.View.GONE
+        }
+
+        findViewById<android.view.View>(R.id.btn_phrase_where_waiting).setOnClickListener {
+            sendMessage("Де Вас очікувати?")
+            layoutQuickPhrases.visibility = android.view.View.GONE
+        }
+
+        findViewById<android.view.View>(R.id.btn_phrase_arrived).setOnClickListener {
+            sendMessage("Я на місці")
+            layoutQuickPhrases.visibility = android.view.View.GONE
+        }
     }
 
     override fun onStart() {
@@ -98,6 +117,12 @@ class ChatActivity : AppCompatActivity() {
                 if (response.isSuccessful) {
                     response.body()?.let { newMessages ->
                         val isUpdated = chatAdapter.updateMessages(newMessages)
+
+                        // Если в истории переписки уже есть хоть одно сообщение от DRIVER — скрываем блок шаблонов
+                        if (newMessages.any { it.senderRole == "DRIVER" }) {
+                            layoutQuickPhrases.visibility = android.view.View.GONE
+                        }
+
                         if (isUpdated) {
                             scrollToBottom()
                         }

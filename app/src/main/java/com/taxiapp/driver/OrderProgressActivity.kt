@@ -7,6 +7,9 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import android.content.res.ColorStateList
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.location.Location
@@ -20,10 +23,11 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
-import android.widget.RatingBar
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -35,7 +39,6 @@ import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
 import com.google.android.material.bottomsheet.BottomSheetDialog
-import com.google.android.material.button.MaterialButton
 import com.google.maps.android.PolyUtil
 import com.taxiapp.driver.network.ApiClient
 import com.taxiapp.driver.network.CancellationReason
@@ -54,13 +57,13 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var map: GoogleMap
     private var currentOrder: Order? = null
 
-    private lateinit var layoutWaitingInfo: android.widget.LinearLayout
+    private lateinit var layoutWaitingInfo: LinearLayout
     private lateinit var tvWaitingTimer: TextView
     private var waitingTimerHandler = Handler(Looper.getMainLooper())
     private var waitingTimerRunnable: Runnable? = null
 
-    // --- ПЕРЕМЕННЫЕ ЧАТА ---
-    private lateinit var btnChatClient: ImageView
+    // ЧАТ ПЕРЕМЕННЫЕ
+    private lateinit var btnChatClient: View
     private lateinit var tvChatBadge: TextView
     private var unreadChatMessages = 0
 
@@ -68,14 +71,19 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var locationCallback: LocationCallback
     private var driverMarker: Marker? = null
 
-    private lateinit var btnAction: MaterialButton
-    private lateinit var btnOptions: ImageView
+    private var driverPositionAnimator: android.animation.ValueAnimator? = null
+    private var driverRotationAnimator: android.animation.ValueAnimator? = null
+    private var previousDriverLocation: android.location.Location? = null
+
+    // КНОПКИ ВЗАИМОДЕЙСТВИЯ (ОБНОВЛЕНО ПОД ТВОЮ СТРУКТУРУ)
+    private lateinit var btnSaveAction: Button
+    private lateinit var btnContainerLayout: ConstraintLayout
+    private lateinit var btnOptions: View
     private lateinit var tvStatusTitle: TextView
     private lateinit var tvDestinationLabel: TextView
     private lateinit var tvClientName: TextView
     private lateinit var tvOrderInfo: TextView
 
-    // Додав стан SCHEDULED
     private enum class RideState { SCHEDULED, TO_CLIENT, WAITING, TO_DESTINATION, COMPLETED }
     private var currentState = RideState.TO_CLIENT
 
@@ -93,14 +101,13 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
-    // Хендлер для таймера (перевірка часу кожну хвилину)
     private val timeHandler = Handler(Looper.getMainLooper())
     private val timeRunnable = object : Runnable {
         override fun run() {
             if (currentState == RideState.SCHEDULED) {
                 updateScheduledUi()
             }
-            timeHandler.postDelayed(this, 30000) // Перевірка кожні 30 сек
+            timeHandler.postDelayed(this, 30000)
         }
     }
 
@@ -156,21 +163,29 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
         tvDestinationLabel = findViewById(R.id.tv_destination_label)
         tvClientName = findViewById(R.id.tv_client_name)
         tvOrderInfo = findViewById(R.id.tv_order_info)
-        btnAction = findViewById(R.id.btn_action)
-        btnOptions = findViewById(R.id.btn_options)
 
+        // Связываем новые ID из твоей структуры макета
+        btnSaveAction = findViewById(R.id.btn_save_action)
+        btnContainerLayout = findViewById(R.id.btn_container_layout)
+
+        btnOptions = findViewById(R.id.btn_options)
         btnChatClient = findViewById(R.id.btn_chat_client)
         tvChatBadge = findViewById(R.id.tv_chat_badge)
 
         btnChatClient.setOnClickListener {
-            currentOrder?.id?.let { orderId ->
+            // Берем idLong (Long) или пробуем распарсить текстовый id в Long для ChatActivity
+            val correctLongId = currentOrder?.idLong ?: currentOrder?.id?.toLongOrNull()
+
+            if (correctLongId != null) {
                 unreadChatMessages = 0
                 updateChatBadgeUI()
 
-                // Открываем экран чата
+                // Открываем экран чата с корректным числовым типом данных
                 val intent = Intent(this@OrderProgressActivity, ChatActivity::class.java)
-                intent.putExtra("ORDER_ID", orderId)
+                intent.putExtra("ORDER_ID", correctLongId)
                 startActivity(intent)
+            } else {
+                Toast.makeText(this, "Помилка: невірний ID замовлення", Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -180,11 +195,23 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
             finish()
         }
 
-        btnAction.setOnClickListener { handleActionButton() }
+        btnSaveAction.setOnClickListener { handleActionButton() }
         btnOptions.setOnClickListener { showStylishActions() }
+        findViewById<View>(R.id.btn_call_client).setOnClickListener {
+            val clientPhone = currentOrder?.client?.phoneNumber
+            if (!clientPhone.isNullOrEmpty()) {
+                try {
+                    val intent = Intent(Intent.ACTION_DIAL, android.net.Uri.parse("tel:$clientPhone"))
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    Toast.makeText(this, "Не вдалося відкрити звонилку", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                Toast.makeText(this, "Номер телефону клієнта відсутній", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
-    // --- ЛОГІКА ДІАЛОГІВ ---
     data class SheetOption(
         val id: Long,
         val text: String,
@@ -208,8 +235,6 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
-
-
     private fun showStylishCancellationReasons() {
         if (cancellationReasons.isEmpty()) {
             Toast.makeText(this, "Завантаження списку...", Toast.LENGTH_SHORT).show()
@@ -229,7 +254,6 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private fun startWaitingTimer(order: Order) {
         stopWaitingTimer()
-
         if (order.arrivedAt == null) return
         layoutWaitingInfo.visibility = View.VISIBLE
 
@@ -257,20 +281,18 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
                 val freeMins = order.freeWaitingMinutes
 
                 if (diffMinutesFull <= freeMins) {
-                    // Безкоштовне очікування
                     val remainingMs = (freeMins * 60 * 1000) - diffMs
                     val remMin = (remainingMs / (1000 * 60)).toInt()
                     val remSec = ((remainingMs / 1000) % 60).toInt()
 
-                    layoutWaitingInfo.backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#EBFBEE"))
+                    layoutWaitingInfo.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#EBFBEE"))
                     tvWaitingTimer.setTextColor(Color.parseColor("#2B8A3E"))
                     tvWaitingTimer.text = String.format("⏱ Безкоштовне очікування: %02d:%02d", remMin, remSec)
                 } else {
-                    // Платне очікування
                     val paidMins = Math.floor(diffMinutesFull - freeMins).toInt()
                     val extraCost = paidMins * order.pricePerWaitingMinute
 
-                    layoutWaitingInfo.backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#FFF5F5"))
+                    layoutWaitingInfo.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#FFF5F5"))
                     tvWaitingTimer.setTextColor(Color.parseColor("#C92A2A"))
                     tvWaitingTimer.text = String.format("⏳ Платне очікування: %d хв (+%.2f ₴)", paidMins, extraCost)
                 }
@@ -285,11 +307,7 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
         waitingTimerRunnable = null
     }
 
-    private fun showStylishBottomSheet(
-        title: String,
-        options: List<SheetOption>,
-        onOptionClick: (SheetOption) -> Unit
-    ) {
+    private fun showStylishBottomSheet(title: String, options: List<SheetOption>, onOptionClick: (SheetOption) -> Unit) {
         val dialog = BottomSheetDialog(this)
         val view = layoutInflater.inflate(R.layout.layout_bottom_sheet_generic, null)
         dialog.setContentView(view)
@@ -307,27 +325,20 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
         dialog.show()
     }
 
-    inner class GenericOptionsAdapter(
-        private val items: List<SheetOption>,
-        private val onClick: (SheetOption) -> Unit
-    ) : RecyclerView.Adapter<GenericOptionsAdapter.ViewHolder>() {
-
+    inner class GenericOptionsAdapter(private val items: List<SheetOption>, private val onClick: (SheetOption) -> Unit) : RecyclerView.Adapter<GenericOptionsAdapter.ViewHolder>() {
         inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
             val tvText: TextView = view.findViewById(R.id.tv_option_text)
             val ivIcon: ImageView = view.findViewById(R.id.iv_option_icon)
             val divider: View = view.findViewById(R.id.divider_option)
             val container: View = view.findViewById(R.id.container_option)
         }
-
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
             val view = LayoutInflater.from(parent.context).inflate(R.layout.item_bottom_sheet_option, parent, false)
             return ViewHolder(view)
         }
-
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
             val item = items[position]
             holder.tvText.text = item.text
-
             if (item.iconRes != null) {
                 holder.ivIcon.visibility = View.VISIBLE
                 holder.ivIcon.setImageResource(item.iconRes)
@@ -342,23 +353,17 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
                 holder.ivIcon.visibility = View.GONE
                 holder.tvText.setTextColor(ContextCompat.getColor(this@OrderProgressActivity, R.color.driver_text_primary))
             }
-
             holder.divider.visibility = if (position == items.size - 1) View.GONE else View.VISIBLE
             holder.container.setOnClickListener { onClick(item) }
         }
-
         override fun getItemCount() = items.size
     }
-
-    // ------------------------------------
 
     private fun fetchCancellationReasons() {
         lifecycleScope.launch {
             try {
                 val response = ApiClient.getInstance().getApiService(this@OrderProgressActivity).getCancellationReasons()
-                if (response.isSuccessful && response.body() != null) {
-                    cancellationReasons = response.body()!!
-                }
+                if (response.isSuccessful && response.body() != null) { cancellationReasons = response.body()!! }
             } catch (e: Exception) {}
         }
     }
@@ -369,73 +374,119 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
             dialog.setContentView(R.layout.layout_bottom_sheet_support)
             dialog.window?.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.background = ColorDrawable(Color.TRANSPARENT)
             dialog.show()
-        } catch (e: Exception) {
-            Toast.makeText(this, "Помилка відкриття діалогу", Toast.LENGTH_SHORT).show()
-        }
+        } catch (e: Exception) { Toast.makeText(this, "Помилка", Toast.LENGTH_SHORT).show() }
     }
 
     private fun performCancellation(reasonId: Long) {
         val orderId = currentOrder?.id ?: return
-        val progressDialog = androidx.appcompat.app.AlertDialog.Builder(this)
-            .setMessage("Скасування...")
-            .setCancelable(false)
-            .create()
+        val progressDialog = androidx.appcompat.app.AlertDialog.Builder(this).setMessage("Скасування...").setCancelable(false).create()
         progressDialog.show()
 
         lifecycleScope.launch {
             try {
-                val api = ApiClient.getInstance().getApiService(this@OrderProgressActivity)
-                val response = api.cancelOrder(orderId, reasonId)
+                val response = ApiClient.getInstance().getApiService(this@OrderProgressActivity).cancelOrder(orderId, reasonId)
                 progressDialog.dismiss()
                 if (response.isSuccessful) {
                     Toast.makeText(this@OrderProgressActivity, "Замовлення скасовано", Toast.LENGTH_LONG).show()
                     finishAndReturnToMap()
-                } else {
-                    Toast.makeText(this@OrderProgressActivity, "Помилка: ${response.code()}", Toast.LENGTH_SHORT).show()
                 }
-            } catch (e: Exception) {
-                progressDialog.dismiss()
-                Toast.makeText(this@OrderProgressActivity, "Помилка: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
+            } catch (e: Exception) { progressDialog.dismiss() }
         }
     }
 
     private fun performConfirmation() {
         val orderId = currentOrder?.id ?: return
-        btnAction.isEnabled = false
-        btnAction.text = "ПІДТВЕРДЖЕННЯ..."
+        btnSaveAction.isEnabled = false
+        btnSaveAction.text = "ПІДТВЕРДЖЕННЯ..."
 
         lifecycleScope.launch {
             try {
                 val response = ApiClient.getInstance().getApiService(this@OrderProgressActivity).confirmOrder(orderId)
                 if (response.isSuccessful && response.body() != null) {
-                    // Сервер перевів статус в ACCEPTED
                     currentOrder = response.body()
-                    setupOrderData() // Перемальовуємо UI під новий статус
-                    Toast.makeText(this@OrderProgressActivity, "Підтверджено! Вирушайте до клієнта.", Toast.LENGTH_LONG).show()
+                    setupOrderData()
+                    Toast.makeText(this@OrderProgressActivity, "Підтверджено!", Toast.LENGTH_LONG).show()
                 } else {
-                    Toast.makeText(this@OrderProgressActivity, "Помилка підтвердження", Toast.LENGTH_SHORT).show()
-                    updateScheduledUi() // Повертаємо кнопку назад
+                    updateScheduledUi()
                 }
-            } catch (e: Exception) {
-                Toast.makeText(this@OrderProgressActivity, "Помилка мережі", Toast.LENGTH_SHORT).show()
-                updateScheduledUi()
-            }
+            } catch (e: Exception) { updateScheduledUi() }
         }
+    }
+
+    private fun interpolateLatLng(fraction: Float, start: LatLng, end: LatLng): LatLng {
+        val lat = (end.latitude - start.latitude) * fraction + start.latitude
+        val lng = (end.longitude - start.longitude) * fraction + start.longitude
+        return LatLng(lat, lng)
+    }
+
+    // Умный расчет угла разворота (чтобы машинка не разворачивалась через всю ось)
+    private fun interpolateRotation(fraction: Float, start: Float, end: Float): Float {
+        var diff = end - start
+        while (diff < -180) diff += 360
+        while (diff >= 180) diff -= 360
+        return start + fraction * diff
     }
 
     private fun updateDriverMarker(location: Location) {
         if (!::map.isInitialized) return
-        val currentLatLng = LatLng(location.latitude, location.longitude)
+        val newLatLng = LatLng(location.latitude, location.longitude)
+        val driverIcon = getBitmapDescriptorFromVector(this, R.drawable.ic_driver_icon)
+
+        // Шаг А: Вычисляем угол поворота (системный или расчетный между точками)
+        val targetRotation = if (location.hasBearing()) {
+            location.bearing
+        } else if (previousDriverLocation != null && previousDriverLocation!!.distanceTo(location) > 1.5) {
+            // Рассчитываем курс, только если машинка проехала больше 1.5 метров (защита от микро-дрожания GPS на месте)
+            previousDriverLocation!!.bearingTo(location)
+        } else {
+            // Если стоим на месте, сохраняем текущий разворот машинки
+            driverMarker?.rotation ?: 0f
+        }
+
         if (driverMarker == null) {
+            // Первая инициализация при входе на экран
             driverMarker = map.addMarker(MarkerOptions()
-                .position(currentLatLng)
+                .position(newLatLng)
                 .title("Ви")
                 .anchor(0.5f, 0.5f)
-                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)))
-        } else {
-            driverMarker?.position = currentLatLng
+                .flat(true)
+                .icon(driverIcon ?: BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)))
+            driverMarker?.rotation = targetRotation
+            previousDriverLocation = location
+            return
         }
+
+        // Мгновенно останавливаем запущенные анимации перед началом новых
+        driverPositionAnimator?.cancel()
+        driverRotationAnimator?.cancel()
+
+        val startLatLng = driverMarker?.position ?: newLatLng
+        val startRotation = driverMarker?.rotation ?: 0f
+
+        // Шаг Б: Анимация плавного скольжения позиции маркера
+        driverPositionAnimator = android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = 1100
+            interpolator = android.view.animation.LinearInterpolator()
+            addUpdateListener { animation ->
+                val fraction = animation.animatedValue as Float
+                driverMarker?.position = interpolateLatLng(fraction, startLatLng, newLatLng)
+            }
+            start()
+        }
+
+        // Шаг В: Анимация плавного разворота иконки машинки на целевой угол
+        driverRotationAnimator = android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = 600
+            interpolator = android.view.animation.AccelerateDecelerateInterpolator()
+            addUpdateListener { animation ->
+                val fraction = animation.animatedValue as Float
+                driverMarker?.rotation = interpolateRotation(fraction, startRotation, targetRotation)
+            }
+            start()
+        }
+
+        // Шаг Г: Запоминаем текущую локацию как прошлую для расчета курса на следующем шаге GPS
+        previousDriverLocation = location
     }
 
     private fun determineStateByStatus(status: String) {
@@ -452,7 +503,6 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
-    // --- UI ДЛЯ ЗАПЛАНОВАНОГО ЗАМОВЛЕННЯ ---
     private fun updateScheduledUi() {
         val order = currentOrder ?: return
         val scheduledDate = order.getScheduledDate() ?: return
@@ -464,19 +514,20 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
         tvDestinationLabel.text = "Час подачі: ${order.getFormattedScheduledTime()}"
 
         if (diffMinutes > 35) {
-            // Ще рано (більше 35 хв)
-            btnAction.text = "ЧЕКАЙТЕ ЧАСУ"
-            btnAction.isEnabled = false
-            btnAction.backgroundTintList = ContextCompat.getColorStateList(this, R.color.driver_black_bg)
+            btnSaveAction.text = "ЧЕКАЙТЕ ЧАСУ"
+            btnSaveAction.isEnabled = false
+            btnSaveAction.setTextColor(Color.GRAY)
+            btnContainerLayout.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_black_bg))
         } else {
-            // Час підтверджувати (<= 35 хв)
             if (order.isDriverConfirmed) {
-                btnAction.text = "ОЧІКУВАННЯ ПОЧАТКУ..."
-                btnAction.isEnabled = false
+                btnSaveAction.text = "ОЧІКУВАННЯ ПОЧАТКУ..."
+                btnSaveAction.isEnabled = false
+                btnSaveAction.setTextColor(Color.GRAY)
             } else {
-                btnAction.text = "ПІДТВЕРДИТИ ЗАМОВЛЕННЯ"
-                btnAction.isEnabled = true
-                btnAction.backgroundTintList = ContextCompat.getColorStateList(this, R.color.driver_neon_teal)
+                btnSaveAction.text = "ПІДТВЕРДИТИ ЗАМОВЛЕННЯ"
+                btnSaveAction.isEnabled = true
+                btnSaveAction.setTextColor(ContextCompat.getColor(this, R.color.driver_text_black))
+                btnContainerLayout.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_neon_teal))
             }
         }
     }
@@ -491,9 +542,7 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
 
     @SuppressLint("MissingPermission")
     private fun startLocationUpdates() {
-        val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 3000)
-            .setMinUpdateDistanceMeters(2f)
-            .build()
+        val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 3000).setMinUpdateDistanceMeters(2f).build()
         fusedLocationClient.requestLocationUpdates(request, locationCallback, Looper.getMainLooper())
     }
 
@@ -505,47 +554,43 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
             override fun onLocationResult(locationResult: LocationResult) {
                 val location = locationResult.lastLocation ?: return
                 updateDriverMarker(location)
-
-                // --- ПЕРЕВІРКА ДИСТАНЦІЇ ДЛЯ КНОПКИ "НА МІСЦІ" ---
-                if (currentState == RideState.TO_CLIENT) {
-                    checkDistanceForArrivedButton(location)
-                }
+                if (currentState == RideState.TO_CLIENT) { checkDistanceForArrivedButton(location) }
             }
         }
     }
 
-    // Блокування кнопки "НА МІСЦІ"
     private fun checkDistanceForArrivedButton(driverLoc: Location) {
         val order = currentOrder ?: return
-        val targetLoc = Location("target")
-        targetLoc.latitude = order.originLat ?: 0.0
-        targetLoc.longitude = order.originLng ?: 0.0
-
-        if (targetLoc.latitude == 0.0) return // Захист
-
-        val distance = driverLoc.distanceTo(targetLoc) // В метрах
+        val targetLoc = Location("target").apply {
+            latitude = order.originLat ?: 0.0
+            longitude = order.originLng ?: 0.0
+        }
+        if (targetLoc.latitude == 0.0) return
+        val distance = driverLoc.distanceTo(targetLoc)
 
         if (distance <= 300) {
-            if (!btnAction.isEnabled) {
-                btnAction.isEnabled = true
-                btnAction.text = "НА МІСЦІ"
-                btnAction.backgroundTintList = ContextCompat.getColorStateList(this, R.color.driver_neon_teal)
-            }
+            btnSaveAction.isEnabled = true
+            btnSaveAction.text = "НА МІСЦІ"
+            btnSaveAction.setTextColor(ContextCompat.getColor(this, R.color.driver_text_black))
+            btnContainerLayout.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_neon_teal))
         } else {
-            // Заблоковано
-            if (btnAction.isEnabled) {
-                btnAction.isEnabled = false
-                btnAction.text = "Ще їхати (${distance.toInt()} м)"
-                btnAction.backgroundTintList = ContextCompat.getColorStateList(this, R.color.driver_black_bg)
-            } else {
-                // Оновлюємо текст дистанції
-                btnAction.text = "Ще їхати (${distance.toInt()} м)"
-            }
+            btnSaveAction.isEnabled = false
+            btnSaveAction.text = "Ще їхати (${distance.toInt()} м)"
+            btnSaveAction.setTextColor(Color.GRAY)
+            btnContainerLayout.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_black_bg))
         }
     }
 
     override fun onMapReady(googleMap: GoogleMap) {
         map = googleMap
+
+        // Внедряем динамический стиль карты под тему приложения
+        try {
+            val currentNightMode = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
+            val styleRes = if (currentNightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES) R.raw.map_style_dark else R.raw.map_style_standard
+            map.setMapStyle(MapStyleOptions.loadRawResourceStyle(this, styleRes))
+        } catch (e: Exception) {}
+
         updateMapVisuals()
     }
 
@@ -560,21 +605,52 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
             val driverLoc = if (location != null) LatLng(location.latitude, location.longitude) else LatLng(50.45, 30.52)
             updateDriverMarker(location ?: Location("").apply { latitude = 50.45; longitude = 30.52 })
 
-            // Якщо SCHEDULED або TO_CLIENT -> показуємо шлях до клієнта
+            // Подготавливаем кастомные иконки для точек маршрута
+            val clientIcon = getBitmapDescriptorFromVector(this, R.drawable.ic_client_icon)
+            val waypointIcon = getBitmapDescriptorFromVector(this, R.drawable.ic_marker_waypoint)
+            val destIcon = getBitmapDescriptorFromVector(this, R.drawable.ic_marker_to)
+
             if (currentState == RideState.TO_CLIENT || currentState == RideState.WAITING || currentState == RideState.SCHEDULED) {
                 val originLoc = LatLng(order.originLat ?: 0.0, order.originLng ?: 0.0)
-                map.addMarker(MarkerOptions().position(originLoc).title("Клієнт").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)))
+
+                // Метка Точки А (Клиент)
+                map.addMarker(MarkerOptions()
+                    .position(originLoc)
+                    .title("Клієнт")
+                    .anchor(0.5f, 0.5f)
+                    .icon(clientIcon ?: BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)))
+
                 drawRoadRoute(driverLoc, originLoc, R.color.driver_neon_teal)
+
             } else if (currentState == RideState.TO_DESTINATION) {
                 val builder = LatLngBounds.Builder().include(driverLoc)
+
                 if (!order.polyline.isNullOrEmpty()) {
                     val roadPoints = PolyUtil.decode(order.polyline)
                     map.addPolyline(PolylineOptions().addAll(roadPoints).width(14f).color(ContextCompat.getColor(this, R.color.driver_neon_teal)).jointType(JointType.ROUND).endCap(RoundCap()))
                     roadPoints.forEach { builder.include(it) }
                 }
+
+                // Метка Конечной Точки Б (Финиш)
                 val destLoc = LatLng(order.destLat ?: 0.0, order.destLng ?: 0.0)
-                map.addMarker(MarkerOptions().position(destLoc).title("Фініш").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)))
+                map.addMarker(MarkerOptions()
+                    .position(destLoc)
+                    .title("Фініш")
+                    .anchor(0.5f, 0.5f)
+                    .icon(destIcon ?: BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)))
                 builder.include(destLoc)
+
+                // Метки Промежуточных Точек Остановок (Stops)
+                order.stops?.sortedBy { it.stopOrder }?.forEach { stop ->
+                    val stopLoc = LatLng(stop.lat, stop.lng)
+                    map.addMarker(MarkerOptions()
+                        .position(stopLoc)
+                        .title("Проміжна точка")
+                        .anchor(0.5f, 0.5f)
+                        .icon(waypointIcon ?: BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_YELLOW)))
+                    builder.include(stopLoc)
+                }
+
                 try { map.animateCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 200)) } catch (e: Exception) { map.animateCamera(CameraUpdateFactory.newLatLngZoom(driverLoc, 15f)) }
             }
         }
@@ -603,29 +679,21 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
-    // ВАЖЛИВЕ ОНОВЛЕННЯ ТУТ
     private fun handleActionButton() {
         val orderId = currentOrder?.id ?: return
+        if (currentState == RideState.SCHEDULED) { performConfirmation(); return }
 
-        // --- ОБРОБКА SCHEDULED ---
-        if (currentState == RideState.SCHEDULED) {
-            performConfirmation()
-            return
-        }
-
-        // --- ІНШІ СТАНИ ---
-        btnAction.isEnabled = false
+        btnSaveAction.isEnabled = false
         lifecycleScope.launch {
             try {
                 val api = ApiClient.getInstance().getApiService(this@OrderProgressActivity)
                 when (currentState) {
                     RideState.TO_CLIENT -> {
-                        val response = api.driverArrived(orderId) // <-- Вызываем правильное имя метода
+                        val response = api.driverArrived(orderId)
                         if (response.isSuccessful) {
-                            // Беремо оновлене замовлення від сервера (з полем arrivedAt) або генеруємо час локально як запасний план
                             currentOrder = response.body() ?: currentOrder?.copy(
                                 status = "DRIVER_ARRIVED",
-                                arrivedAt = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
+                                arrivedAt = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.getDefault()).format(Date())
                             )
                             locationService?.setTargetOrder(currentOrder)
                             currentState = RideState.WAITING
@@ -636,7 +704,6 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
                     RideState.WAITING -> {
                         val response = api.startTrip(orderId)
                         if (response.isSuccessful) {
-                            // Беремо оновлене замовлення від сервера (з полем waitingPrice)
                             currentOrder = response.body() ?: currentOrder?.copy(status = "IN_PROGRESS")
                             locationService?.setTargetOrder(currentOrder)
                             currentState = RideState.TO_DESTINATION
@@ -650,38 +717,27 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
                             currentOrder = currentOrder?.copy(status = "COMPLETED")
                             locationService?.setTargetOrder(null)
                             currentState = RideState.COMPLETED
-
-                            // Сбрасываем чат при завершении поездки
                             unreadChatMessages = 0
                             updateChatBadgeUI()
-
                             showRatingDialog()
                         } else if (response.code() == 402) {
-                            // Сервер сообщил, что оплата картой не прошла!
-                            // 1. Меняем локально на наличные
                             currentOrder = currentOrder?.copy(paymentMethod = "CASH")
-                            // 2. Обновляем текст на экране (сменится на "Готівка")
                             setupOrderData()
-                            // 3. Показываем водителю критический диалог
                             showPaymentErrorDialog()
-                        } else {
-                            Toast.makeText(this@OrderProgressActivity, "Помилка сервера: ${response.code()}", Toast.LENGTH_SHORT).show()
                         }
                     }
-                    RideState.COMPLETED -> { }
                     else -> {}
                 }
             } catch (e: Exception) {
                 Toast.makeText(this@OrderProgressActivity, "Помилка: ${e.message}", Toast.LENGTH_SHORT).show()
             } finally {
-                btnAction.isEnabled = true
+                btnSaveAction.isEnabled = true
             }
         }
     }
 
     private fun showRatingDialog() {
         val dialog = Dialog(this)
-        // Надуваем макет диалога (убедись, что в файле dialog_rate_client.xml ты заменил RatingBar на наш LinearLayout со звездами star1..star5)
         dialog.setContentView(R.layout.dialog_rate_client)
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
@@ -690,80 +746,52 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
         val etComment = dialog.findViewById<EditText>(R.id.et_comment)
         val btnSubmit = dialog.findViewById<Button>(R.id.btn_submit_rating)
 
-        // ======================================================================
-        // НАЧАЛО БЛОКА: ЛОГИКА НАШИХ НОВЫХ КРУПНЫХ ЗВЕЗД (48dp)
-        // ======================================================================
-        var selectedRating = 0 // Хранит выбранную водителем оценку (от 1 до 5)
-
-        // Находим все 5 крупных звёздочек внутри контейнера диалога
+        var selectedRating = 0
         val starsList = listOf<ImageView>(
-            dialog.findViewById(R.id.star1),
-            dialog.findViewById(R.id.star2),
-            dialog.findViewById(R.id.star3),
-            dialog.findViewById(R.id.star4),
+            dialog.findViewById(R.id.star1), dialog.findViewById(R.id.star2),
+            dialog.findViewById(R.id.star3), dialog.findViewById(R.id.star4),
             dialog.findViewById(R.id.star5)
         )
 
-        // Внутренняя функция для динамического перекрашивания звезд
         fun renderStars(rating: Int) {
             selectedRating = rating
             starsList.forEachIndexed { index, imageView ->
                 if (index < rating) {
-                    // Активные звёзды плавно загораются фирменным неоново-бирюзовым
-                    imageView.imageTintList = android.content.res.ColorStateList.valueOf(
-                        ContextCompat.getColor(this@OrderProgressActivity, R.color.driver_neon_teal)
-                    )
+                    imageView.imageTintList = ColorStateList.valueOf(ContextCompat.getColor(this@OrderProgressActivity, R.color.driver_neon_teal))
                 } else {
-                    // Неактивные звёзды остаются благородными серыми
-                    imageView.imageTintList = android.content.res.ColorStateList.valueOf(
-                        ContextCompat.getColor(this@OrderProgressActivity, R.color.driver_text_secondary)
-                    )
+                    imageView.imageTintList = ColorStateList.valueOf(ContextCompat.getColor(this@OrderProgressActivity, R.color.driver_text_secondary))
                 }
             }
         }
 
-        // Принудительно вызываем один раз на старте, чтобы все звёзды стали серыми (0 звёзд)
         renderStars(0)
-
-        // Навешиваем обработчики кликов на каждую звёздочку по её порядковому индексу
         starsList.forEachIndexed { index, imageView ->
-            imageView.setOnClickListener {
-                renderStars(index + 1) // Индекс идет от 0, поэтому прибавляем 1 (1-я звезда = 1 балл)
-            }
+            imageView.setOnClickListener { renderStars(index + 1) }
         }
-        // ======================================================================
-        // КОНЕЦ БЛОКА ЗВЕЗД
-        // ======================================================================
 
         btnSubmit.setOnClickListener {
-            if (selectedRating == 0) {
-                Toast.makeText(this, "Поставте оцінку", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-            // Передаем выбранный нами selectedRating вместо старого ratingBar.rating
+            if (selectedRating == 0) { Toast.makeText(this, "Поставте оцінку", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
             sendRating(selectedRating, etComment.text.toString(), dialog)
         }
-
         dialog.show()
     }
 
     private fun sendRating(score: Int, comment: String, dialog: Dialog) {
-        val orderId = currentOrder?.idLong ?: return // <-- Используем idLong вместо строкового id
+        val orderId = currentOrder?.idLong ?: return
         lifecycleScope.launch {
             try {
                 val response = ApiClient.getInstance().getApiService(this@OrderProgressActivity).rateClient(RateClientRequest(orderId, score, comment))
-                if (response.isSuccessful) { dialog.dismiss(); finishAndReturnToMap() } else Toast.makeText(this@OrderProgressActivity, "Помилка сервера", Toast.LENGTH_SHORT).show()
-            } catch (e: Exception) { Toast.makeText(this@OrderProgressActivity, "Помилка мережі", Toast.LENGTH_SHORT).show() }
+                if (response.isSuccessful) { dialog.dismiss(); finishAndReturnToMap() }
+            } catch (e: Exception) {}
         }
     }
+
     private fun showPaymentErrorDialog() {
         androidx.appcompat.app.AlertDialog.Builder(this)
             .setTitle(getString(R.string.payment_failed_title))
             .setMessage(getString(R.string.payment_failed_message))
-            .setCancelable(false) // Запрещаем закрывать кликом мимо диалога
-            .setPositiveButton(getString(R.string.btn_understood)) { dialog, _ ->
-                dialog.dismiss()
-            }
+            .setCancelable(false)
+            .setPositiveButton(getString(R.string.btn_understood)) { dialog, _ -> dialog.dismiss() }
             .show()
     }
 
@@ -806,31 +834,29 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun setupUiForWaiting() {
         tvStatusTitle.text = "Очікування"
         val order = currentOrder
-        if (order != null && order.isScheduled()) {
-            tvDestinationLabel.text = "Клієнт вийде о ${order.getFormattedScheduledTime()}"
-        } else {
-            tvDestinationLabel.text = "Клієнт виходить..."
-        }
-        btnAction.text = "ПОЧАТИ ПОЇЗДКУ"
-        btnAction.isEnabled = true
-        btnAction.backgroundTintList = ContextCompat.getColorStateList(this, R.color.taxi_yellow)
+        tvDestinationLabel.text = if (order != null && order.isScheduled()) "Клієнт вийде о ${order.getFormattedScheduledTime()}" else "Клієнт виходить..."
 
-        // ЗАПУСК ТАЙМЕРА
+        btnSaveAction.text = "ПОЧАТИ ПОЇЗДКУ"
+        btnSaveAction.isEnabled = true
+        btnSaveAction.setTextColor(Color.BLACK)
+        btnContainerLayout.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.taxi_yellow))
+
         currentOrder?.let { startWaitingTimer(it) }
     }
 
     private fun setupUiForInTrip() {
         tvStatusTitle.text = "В дорозі"
         tvDestinationLabel.text = currentOrder?.toAddress ?: "Кінцева точка"
-        btnAction.text = "ЗАВЕРШИТИ"
-        btnAction.isEnabled = true
-        btnAction.backgroundTintList = ContextCompat.getColorStateList(this, R.color.driver_error)
 
-        // ЗУПИНКА ТАЙМЕРА І ВІДОБРАЖЕННЯ НАДБАВКИ
+        btnSaveAction.text = "ЗАВЕРШИТИ"
+        btnSaveAction.isEnabled = true
+        btnSaveAction.setTextColor(Color.WHITE)
+        btnContainerLayout.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_error))
+
         stopWaitingTimer()
         if (currentOrder != null && currentOrder!!.waitingPrice > 0) {
             layoutWaitingInfo.visibility = View.VISIBLE
-            layoutWaitingInfo.backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#FFF4E6"))
+            layoutWaitingInfo.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#FFF4E6"))
             tvWaitingTimer.setTextColor(Color.parseColor("#D9480F"))
             tvWaitingTimer.text = String.format("💰 Додано за очікування: %.2f ₴", currentOrder!!.waitingPrice)
         } else {
@@ -841,12 +867,26 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun setupUiForToClient() {
         tvStatusTitle.text = "Їду до клієнта"
         tvDestinationLabel.text = currentOrder?.fromAddress ?: "Адреса посадки"
-        btnAction.text = "ОЧІКУВАННЯ ПОЗИЦІЇ..."
-        btnAction.isEnabled = false
-        btnAction.backgroundTintList = ContextCompat.getColorStateList(this, R.color.driver_black_bg)
 
-        // ХОВАЄМО ТАЙМЕР (ЯКЩО ВІН БУВ)
+        btnSaveAction.text = "ОЧІКУВАННЯ ПОЗИЦІЇ..."
+        btnSaveAction.isEnabled = false
+        btnSaveAction.setTextColor(Color.GRAY)
+        btnContainerLayout.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_black_bg))
+
         stopWaitingTimer()
         layoutWaitingInfo.visibility = View.GONE
+    }
+
+    private fun getBitmapDescriptorFromVector(context: Context, vectorResId: Int): BitmapDescriptor? {
+        val vectorDrawable = ContextCompat.getDrawable(context, vectorResId) ?: return null
+        val bitmap = Bitmap.createBitmap(
+            vectorDrawable.intrinsicWidth,
+            vectorDrawable.intrinsicHeight,
+            Bitmap.Config.ARGB_8888
+        )
+        val canvas = Canvas(bitmap)
+        vectorDrawable.setBounds(0, 0, canvas.width, canvas.height)
+        vectorDrawable.draw(canvas)
+        return BitmapDescriptorFactory.fromBitmap(bitmap)
     }
 }

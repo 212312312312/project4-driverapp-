@@ -109,5 +109,6 @@ data class OrderClient(
     @SerializedName("id") val id: Long,
     @SerializedName("fullName") val fullName: String?,
     @SerializedName("rating") val rating: Double = 5.0,
-    @SerializedName("tripsCount") val completedRides: Int = 0
+    @SerializedName("tripsCount") val completedRides: Int = 0,
+    @SerializedName("phoneNumber") val phoneNumber: String? = null
 ) : Serializable
