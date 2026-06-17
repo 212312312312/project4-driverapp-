@@ -92,7 +92,18 @@ data class Order(
         val format = SimpleDateFormat("HH:mm", Locale.getDefault())
         return format.format(date)
     }
+
+    // 🎁 Возвращает полную стоимость поездки для водителя с учетом доплаты за скидку
+    fun getTotalFullPrice(): Double {
+        return if (companyDiscountCompensation > 0.0) {
+            clientPayAmount + companyDiscountCompensation
+        } else {
+            price
+        }
+    }
 }
+
+
 
 data class OrderClient(
     @SerializedName("id") val id: Long,

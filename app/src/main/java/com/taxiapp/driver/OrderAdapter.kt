@@ -61,8 +61,9 @@ class OrderAdapter(
         fun bind(order: Order) {
             val context = itemView.context
 
-            // Общая стоимость поездки
-            tvPrice.text = order.getFormattedPrice()
+            // 🎁 ИСПРАВЛЕНО: Выводим полную суммарную стоимость поездки для привлечения водителя
+            val fullPrice = order.getTotalFullPrice()
+            tvPrice.text = "${fullPrice.toInt()} ₴"
 
             // --- ДИНАМИЧЕСКИЙ РАСЧЕТ ЦЕНЫ ЗА КМ С ПРОВЕРКОЙ НА КОРОТКИЙ МАРШРУТ (< 1 КМ) ---
             if (isPricePerKmHidden) {
@@ -73,10 +74,10 @@ class OrderAdapter(
 
                 if (meters >= 1000) {
                     val km = meters / 1000.0
-                    val calculatedPricePerKm = order.price / km
+                    // 🎁 ИСПРАВЛЕНО: Считаем цену за км от полной стоимости, а не от урезанной
+                    val calculatedPricePerKm = fullPrice / km
                     tvPricePerKm.text = String.format(java.util.Locale.US, "%.2f ₴/км", calculatedPricePerKm)
                 } else {
-                    // Если маршрут меньше 1 км, выводим аккуратный прочерк с символом валюты
                     tvPricePerKm.text = "- ₴/км"
                 }
             }

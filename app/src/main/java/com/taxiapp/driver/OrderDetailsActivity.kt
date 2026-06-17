@@ -68,8 +68,10 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
 
         binding.tvTariff.text = order.tariffName ?: "Стандарт"
 
-        // Заменяем текстовое "грн" на символ "₴"
-        binding.tvPrice.text = order.getFormattedPrice().replace("грн", "₴")
+        // 🎁 ИСПРАВЛЕНО: В шапке деталей заказа показываем водителю ПОЛНУЮ сумму его заработка
+        val fullPrice = order.getTotalFullPrice()
+        binding.tvPrice.text = "${fullPrice.toInt()} ₴"
+
         binding.tvTotalDistanceHeader.text = order.getFormattedDistance().replace("грн", "₴")
 
         binding.tvBlockActivityBonus.text = if (order.activityBonus >= 0) "+${order.activityBonus}" else "${order.activityBonus}"
@@ -79,7 +81,9 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
         if (distanceKm < 1.0) {
             binding.tvBlockPricePerKm.text = "— ₴/км"
         } else {
-            binding.tvBlockPricePerKm.text = order.getPricePerKm().replace("грн", "₴")
+            // 🎁 ИСПРАВЛЕНО: Считаем цену за километр на экране деталей от полной стоимости заказа
+            val pricePerKm = fullPrice / distanceKm
+            binding.tvBlockPricePerKm.text = String.format(java.util.Locale.US, "%.0f ₴/км", pricePerKm)
         }
 
         // Вывод секторов чистым текстом без скобок
@@ -262,14 +266,18 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun setupMarketingPaymentSplit() {
         val order = currentOrder ?: return
 
+        // Используем правильный ID: ll_marketing_split_block
         if (order.companyDiscountCompensation > 0.0) {
-            binding.llPaymentSplitBlock.visibility = View.VISIBLE
+            binding.llMarketingSplitBlock.visibility = View.VISIBLE
 
-            val paymentTypeWord = if (order.paymentMethod == "CARD") "на карту" else "готівкою"
-            binding.tvClientPayDetail.text = "${order.clientPayAmount.toInt()} ₴ $paymentTypeWord"
-            binding.tvCompanyCompensationDetail.text = "+${order.companyDiscountCompensation.toInt()} ₴ на баланс"
+            val paymentTypeWord = if (order.paymentMethod == "CARD") "на картку" else "готівкою"
+
+            // Используем правильные ID из твоего XML:
+            binding.tvClientPaymentLabel.text = "Оплата від клієнта ($paymentTypeWord)"
+            binding.tvClientPaymentValue.text = "${order.clientPayAmount.toInt()} ₴"
+            binding.tvCompanyBonusValue.text = "+${order.companyDiscountCompensation.toInt()} ₴ на баланс"
         } else {
-            binding.llPaymentSplitBlock.visibility = View.GONE
+            binding.llMarketingSplitBlock.visibility = View.GONE
         }
     }
 
