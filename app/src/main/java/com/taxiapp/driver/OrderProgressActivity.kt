@@ -261,14 +261,15 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private fun startWaitingTimer(order: Order) {
         stopWaitingTimer()
-        if (order.arrivedAt == null) return
+        // 💡 Берем waitingStartTime от сервера. Если заказ обычный или водитель опоздал — там будет arrivedAt
+        val timeToParse = order.waitingStartTime ?: order.arrivedAt ?: return
         layoutWaitingInfo.visibility = View.VISIBLE
 
-        val cleanArrivedAt = order.arrivedAt.substringBefore(".").substringBefore("Z")
+        val cleanTime = timeToParse.substringBefore(".").substringBefore("Z")
         val format = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.getDefault())
 
         val arrivedTime = try {
-            format.parse(cleanArrivedAt)?.time ?: return
+            format.parse(cleanTime)?.time ?: return
         } catch (e: Exception) {
             e.printStackTrace()
             return
@@ -280,6 +281,15 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
                 val diffMs = now - arrivedTime
 
                 if (diffMs < 0) {
+                    // 💡 Время подачи еще не пришло! Показываем водителю обратный отсчет до старта ожидания
+                    val absDiffMs = Math.abs(diffMs)
+                    val remMin = (absDiffMs / (1000 * 60)).toInt()
+                    val remSec = ((absDiffMs / 1000) % 60).toInt()
+
+                    layoutWaitingInfo.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#EBF5FF")) // Красивый синий фон ожидания времени
+                    tvWaitingTimer.setTextColor(Color.parseColor("#1C7ED6"))
+                    tvWaitingTimer.text = String.format("⏱ До початку очікування: %02d:%02d", remMin, remSec)
+
                     waitingTimerHandler.postDelayed(this, 1000)
                     return
                 }

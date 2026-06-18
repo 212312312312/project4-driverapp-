@@ -38,6 +38,7 @@ data class Order(
     @SerializedName("client") val client: OrderClient? = null,
 
     @SerializedName("arrivedAt") val arrivedAt: String? = null,
+    @SerializedName("waitingStartTime") val waitingStartTime: String? = null, // 💡 Время, когда легально должен включиться 3-минутный таймер
     @SerializedName("carModel") val carModel: String? = null,
     @SerializedName("carPlate") val carPlate: String? = null,
     @SerializedName("carColor") val carColor: String? = null,
