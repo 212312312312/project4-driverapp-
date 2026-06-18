@@ -81,8 +81,10 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var btnOptions: View
     private lateinit var tvStatusTitle: TextView
     private lateinit var tvDestinationLabel: TextView
-    private lateinit var tvClientName: TextView
     private lateinit var tvOrderInfo: TextView
+
+    private lateinit var llPriceBackground: LinearLayout
+    private lateinit var ivPaymentIcon: ImageView
 
     private enum class RideState { SCHEDULED, TO_CLIENT, WAITING, TO_DESTINATION, COMPLETED }
     private var currentState = RideState.TO_CLIENT
@@ -161,12 +163,15 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
         tvWaitingTimer = findViewById(R.id.tv_waiting_timer)
         tvStatusTitle = findViewById(R.id.tv_status_title)
         tvDestinationLabel = findViewById(R.id.tv_destination_label)
-        tvClientName = findViewById(R.id.tv_client_name)
         tvOrderInfo = findViewById(R.id.tv_order_info)
 
         // Связываем новые ID из твоей структуры макета
         btnSaveAction = findViewById(R.id.btn_save_action)
         btnContainerLayout = findViewById(R.id.btn_container_layout)
+
+        llPriceBackground = findViewById(R.id.ll_price_background)
+        ivPaymentIcon = findViewById(R.id.iv_payment_icon)
+        tvOrderInfo = findViewById(R.id.tv_order_info)
 
         btnOptions = findViewById(R.id.btn_options)
         btnChatClient = findViewById(R.id.btn_chat_client)
@@ -534,9 +539,25 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private fun setupOrderData() {
         val order = currentOrder ?: return
-        determineStateByStatus(order.status ?: "")
-        tvClientName.text = "Клієнт"
-        tvOrderInfo.text = "${if(order.paymentMethod == "CASH") "Готівка" else "Картка"} • ${order.price.toInt()} ₴"
+
+        // Выводим только сумму
+        tvOrderInfo.text = "${order.price.toInt()} ₴"
+
+        // Твой оригинальный блок логики (адаптированный под Активити)
+        val method = order.paymentMethod ?: "CASH"
+        if (method == "CASH") {
+            val neonTeal = ContextCompat.getColor(this, R.color.driver_neon_teal)
+            llPriceBackground.backgroundTintList = ColorStateList.valueOf(neonTeal)
+            ivPaymentIcon.setImageResource(R.drawable.ic_payment_cash)
+        } else {
+            llPriceBackground.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#54b1f0"))
+            ivPaymentIcon.setImageResource(R.drawable.ic_payment_card)
+        }
+
+        // Делаем цвет текста и иконки всегда черным, как в комментарии
+        tvOrderInfo.setTextColor(Color.BLACK)
+        ivPaymentIcon.imageTintList = ColorStateList.valueOf(Color.BLACK)
+
         locationService?.setTargetOrder(order)
     }
 
