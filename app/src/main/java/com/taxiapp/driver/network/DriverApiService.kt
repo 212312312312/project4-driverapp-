@@ -270,6 +270,12 @@ interface DriverApiService {
         @Body req: CreateFilterRequest
     ): Response<DriverFilter>
 
+    @POST("api/v1/driver/orders/{id}/waypoint/arrive")
+    suspend fun arriveAtWaypoint(@Path("id") id: String): Response<Order>
+
+    @POST("api/v1/driver/orders/{id}/waypoint/resume")
+    suspend fun resumeTrip(@Path("id") id: String): Response<Order>
+
     @PATCH("api/v1/driver/filters/disable-all")
     suspend fun disableAllFilters(): Response<Void>
 

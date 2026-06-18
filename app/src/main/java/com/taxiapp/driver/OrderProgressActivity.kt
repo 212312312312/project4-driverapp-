@@ -86,7 +86,7 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var llPriceBackground: LinearLayout
     private lateinit var ivPaymentIcon: ImageView
 
-    private enum class RideState { SCHEDULED, TO_CLIENT, WAITING, TO_DESTINATION, COMPLETED }
+    private enum class RideState { SCHEDULED, TO_CLIENT, WAITING, TO_DESTINATION, ARRIVED_AT_WAYPOINT, COMPLETED }
     private var currentState = RideState.TO_CLIENT
 
     private var cancellationReasons: List<CancellationReason> = emptyList()
@@ -519,6 +519,7 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
             "SCHEDULED" -> { currentState = RideState.SCHEDULED; updateScheduledUi() }
             "ACCEPTED" -> { currentState = RideState.TO_CLIENT; setupUiForToClient() }
             "DRIVER_ARRIVED" -> { currentState = RideState.WAITING; setupUiForWaiting() }
+            "ARRIVED_AT_WAYPOINT" -> { currentState = RideState.ARRIVED_AT_WAYPOINT; setupUiForWaypointWaiting() }
             "IN_PROGRESS" -> { currentState = RideState.TO_DESTINATION; setupUiForInTrip() }
             "COMPLETED" -> {
                 currentState = RideState.COMPLETED
@@ -526,6 +527,19 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
             }
             else -> { currentState = RideState.TO_CLIENT; setupUiForToClient() }
         }
+    }
+
+    private fun setupUiForWaiting() {
+        tvStatusTitle.text = "Очікування"
+        val order = currentOrder
+        tvDestinationLabel.text = if (order != null && order.isScheduled()) "Клієнт вийде о ${order.getFormattedScheduledTime()}" else "Клієнт виходить..."
+
+        btnSaveAction.text = "ПОЧАТИ ПОЇЗДКУ"
+        btnSaveAction.isEnabled = true
+        btnSaveAction.setTextColor(Color.BLACK)
+        btnContainerLayout.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.taxi_yellow))
+
+        currentOrder?.let { startWaitingTimer(it) }
     }
 
     private fun createCustomLocationDot(context: Context, color: Int): BitmapDescriptor {
@@ -842,18 +856,41 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
                         }
                     }
                     RideState.TO_DESTINATION -> {
-                        val response = api.completeOrder(orderId)
+                        val order = currentOrder
+                        if (order != null && order.hasRemainingWaypoints()) {
+                            // 🛠️ Логика промежуточной точки: фиксируем прибытие
+                            val response = api.arriveAtWaypoint(orderId)
+                            if (response.isSuccessful) {
+                                currentOrder = response.body()
+                                currentState = RideState.ARRIVED_AT_WAYPOINT
+                                setupUiForWaypointWaiting()
+                                updateMapVisuals()
+                            }
+                        } else {
+                            // Обычное завершение заказа на финальной точке
+                            val response = api.completeOrder(orderId)
+                            if (response.isSuccessful) {
+                                currentOrder = currentOrder?.copy(status = "COMPLETED")
+                                locationService?.setTargetOrder(null)
+                                currentState = RideState.COMPLETED
+                                unreadChatMessages = 0
+                                updateChatBadgeUI()
+                                showRatingDialog()
+                            } else if (response.code() == 402) {
+                                currentOrder = currentOrder?.copy(paymentMethod = "CASH")
+                                setupOrderData()
+                                showPaymentErrorDialog()
+                            }
+                        }
+                    }
+                    RideState.ARRIVED_AT_WAYPOINT -> {
+                        // 🛠️ Продолжение движения после ожидания на промежуточной точке
+                        val response = api.resumeTrip(orderId)
                         if (response.isSuccessful) {
-                            currentOrder = currentOrder?.copy(status = "COMPLETED")
-                            locationService?.setTargetOrder(null)
-                            currentState = RideState.COMPLETED
-                            unreadChatMessages = 0
-                            updateChatBadgeUI()
-                            showRatingDialog()
-                        } else if (response.code() == 402) {
-                            currentOrder = currentOrder?.copy(paymentMethod = "CASH")
-                            setupOrderData()
-                            showPaymentErrorDialog()
+                            currentOrder = response.body()
+                            currentState = RideState.TO_DESTINATION
+                            setupUiForInTrip()
+                            updateMapVisuals()
                         }
                     }
                     else -> {}
@@ -961,12 +998,11 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
         return try { packageManager.getApplicationInfo(packageName, android.content.pm.PackageManager.GET_META_DATA).metaData.getString("com.google.android.geo.API_KEY") ?: "" } catch (e: Exception) { "" }
     }
 
-    private fun setupUiForWaiting() {
-        tvStatusTitle.text = "Очікування"
-        val order = currentOrder
-        tvDestinationLabel.text = if (order != null && order.isScheduled()) "Клієнт вийде о ${order.getFormattedScheduledTime()}" else "Клієнт виходить..."
+    private fun setupUiForWaypointWaiting() {
+        tvStatusTitle.text = "Очікування на точці"
+        tvDestinationLabel.text = currentOrder?.getCurrentWaypointAddress() ?: "Проміжна зупинка"
 
-        btnSaveAction.text = "ПОЧАТИ ПОЇЗДКУ"
+        btnSaveAction.text = "ПРОДОВЖИТИ РУХ"
         btnSaveAction.isEnabled = true
         btnSaveAction.setTextColor(Color.BLACK)
         btnContainerLayout.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.taxi_yellow))
@@ -976,19 +1012,26 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private fun setupUiForInTrip() {
         tvStatusTitle.text = "В дорозі"
-        tvDestinationLabel.text = currentOrder?.toAddress ?: "Кінцева точка"
 
-        btnSaveAction.text = "ЗАВЕРШИТИ"
-        btnSaveAction.isEnabled = true
-        btnSaveAction.setTextColor(Color.WHITE)
-        btnContainerLayout.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_error))
+        val order = currentOrder
+        if (order != null && order.hasRemainingWaypoints()) {
+            tvDestinationLabel.text = "Їду до: ${order.getCurrentWaypointAddress()}"
+            btnSaveAction.text = "НА МІСЦІ (ТОЧКА)"
+            btnSaveAction.setTextColor(Color.BLACK)
+            btnContainerLayout.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_neon_teal))
+        } else {
+            tvDestinationLabel.text = order?.toAddress ?: "Кінцева точка"
+            btnSaveAction.text = "ЗАВЕРШИТИ"
+            btnSaveAction.setTextColor(Color.WHITE)
+            btnContainerLayout.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_error))
+        }
 
         stopWaitingTimer()
-        if (currentOrder != null && currentOrder!!.waitingPrice > 0) {
+        if (order != null && order.waitingPrice > 0) {
             layoutWaitingInfo.visibility = View.VISIBLE
             layoutWaitingInfo.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#FFF4E6"))
             tvWaitingTimer.setTextColor(Color.parseColor("#D9480F"))
-            tvWaitingTimer.text = String.format("💰 Додано за очікування: %.2f ₴", currentOrder!!.waitingPrice)
+            tvWaitingTimer.text = String.format("💰 Додано за очікування: %.2f ₴", order.waitingPrice)
         } else {
             layoutWaitingInfo.visibility = View.GONE
         }

@@ -56,7 +56,9 @@ data class Order(
 
     // 👈 ДОБАВИТЬ ЭТИ ДВА ПОЛЯ ДЛЯ СИНХРОНИЗАЦИИ СКИДОК:
     @SerializedName("clientPayAmount") val clientPayAmount: Double = 0.0,
-    @SerializedName("companyDiscountCompensation") val companyDiscountCompensation: Double = 0.0
+    @SerializedName("companyDiscountCompensation") val companyDiscountCompensation: Double = 0.0,
+    @SerializedName("currentStopOrder") val currentStopOrder: Int = 0,
+    @SerializedName("waypointArrivedAt") val waypointArrivedAt: String? = null
 ) : Serializable {
 
     fun getFormattedPrice(): String = "${price.toInt()} ₴"
@@ -75,6 +77,23 @@ data class Order(
 
     fun isScheduled(): Boolean {
         return status == "SCHEDULED" || !scheduledAt.isNullOrEmpty()
+    }
+
+    // Проверяем, есть ли еще непосещенные промежуточные точки
+    fun hasRemainingWaypoints(): Boolean {
+        val totalStops = stops?.size ?: 0
+        return currentStopOrder < totalStops
+    }
+
+    // Получаем адрес текущей или следующей остановки
+    fun getCurrentWaypointAddress(): String {
+        val sortedStops = stops?.sortedBy { it.stopOrder } ?: return "Проміжна точка"
+        // Так как на сервере currentStopOrder увеличивается при прибытии,
+        // для отображения следующей точки берем индекс currentStopOrder
+        if (currentStopOrder < sortedStops.size) {
+            return sortedStops[currentStopOrder].address
+        }
+        return toAddress ?: "Кінцева точка"
     }
 
     // Парсинг часу подачі
