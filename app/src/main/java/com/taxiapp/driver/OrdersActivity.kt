@@ -143,6 +143,8 @@ class OrdersActivity : AppCompatActivity() {
             } else if (order.status == "SCHEDULED") {
                 val intent = Intent(this, OrderDetailsActivity::class.java)
                 intent.putExtra("EXTRA_ORDER", order)
+                // Передаем точечный флаг: этот заказ открыт из списка НАШИХ принятых заказов
+                intent.putExtra("EXTRA_HIDE_ACCEPT_BUTTON", true)
                 startActivity(intent)
             } else {
                 val intent = Intent(this, OrderProgressActivity::class.java)

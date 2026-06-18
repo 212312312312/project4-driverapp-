@@ -95,6 +95,14 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
             binding.tvClientRating.text = "5.0"
         }
 
+        val shouldHideAccept = intent.getBooleanExtra("EXTRA_HIDE_ACCEPT_BUTTON", false)
+
+        if (shouldHideAccept) {
+            binding.btnContainerLayout.visibility = View.GONE
+        } else {
+            binding.btnContainerLayout.visibility = View.VISIBLE
+        }
+
         setupPaymentMethod()
         buildRouteList()
         setupServices()
@@ -298,6 +306,11 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
 
                     if (updatedOrder.status == "SCHEDULED") {
                         Toast.makeText(this@OrderDetailsActivity, "Замовлення успішно заплановано!", Toast.LENGTH_LONG).show()
+                        // Сразу переводим водителя на экран ведения заказа (OrderProgressActivity)
+                        val intent = Intent(this@OrderDetailsActivity, OrderProgressActivity::class.java)
+                        intent.putExtra("EXTRA_ORDER", updatedOrder)
+                        intent.putExtra("EXTRA_ORDER_ID", orderId)
+                        startActivity(intent)
                         finish()
                     } else {
                         Toast.makeText(this@OrderDetailsActivity, "Замовлення прийнято!", Toast.LENGTH_SHORT).show()

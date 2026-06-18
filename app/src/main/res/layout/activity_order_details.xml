@@ -43,7 +43,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:background="@drawable/bg_price_container"
+                android:background="@drawable/bg_driver_input"
                 android:backgroundTint="@color/driver_neon_teal"
                 android:paddingHorizontal="14dp"
                 android:paddingVertical="6dp"
@@ -74,7 +74,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:background="@drawable/bg_price_container"
+                android:background="@drawable/bg_driver_input"
                 android:backgroundTint="@color/driver_card_bg"
                 android:paddingHorizontal="14dp"
                 android:paddingVertical="6dp">

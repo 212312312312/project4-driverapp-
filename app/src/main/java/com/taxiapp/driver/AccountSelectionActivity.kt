@@ -171,9 +171,10 @@ class AccountSelectionActivity : AppCompatActivity() {
                     binding.btnContinue.isEnabled = true
                 }
             } catch (e: Exception) {
-                // Ошибка сети (например, пропал интернет) — пускаем в MainActivity.
-                // Там сработает локальный кэш и логика оффлайна, водитель не должен застревать на входе.
-                goToMainActivity()
+                // Сервер недоступен или истёк тайм-аут 30 секунд.
+                // Жёстко блокируем вход, выводим уведомление и возвращаем кнопку в активное состояние.
+                Toast.makeText(this@AccountSelectionActivity, "Помилка з'єднання з сервером спробуйте ще раз.", Toast.LENGTH_LONG).show()
+                binding.btnContinue.isEnabled = true
             }
         }
     }

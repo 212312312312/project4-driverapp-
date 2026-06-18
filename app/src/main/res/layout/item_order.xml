@@ -36,8 +36,8 @@
 
                 <ImageView
                     android:id="@+id/iv_payment_icon"
-                    android:layout_width="18dp"
-                    android:layout_height="18dp"
+                    android:layout_width="25dp"
+                    android:layout_height="25dp"
                     android:layout_marginEnd="6dp"
                     tools:src="@drawable/ic_payment_cash" />
 
@@ -48,7 +48,7 @@
                     android:textSize="18sp"
                     android:textStyle="bold"
                     android:fontFamily="@font/app_font_family"
-                    tools:text="250 ₴"
+                    tools:text="250₴"
                     tools:textColor="#000000" />
             </LinearLayout>
 

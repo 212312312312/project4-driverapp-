@@ -133,6 +133,13 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
             loadActiveOrderFromServer()
         }
 
+        if (currentOrder?.id == null) {
+            val backupId = intent.getStringExtra("EXTRA_ORDER_ID")
+            if (backupId != null) {
+                currentOrder = currentOrder?.copy(id = backupId)
+            }
+        }
+
         setupLocationListener()
         fetchCancellationReasons()
 
