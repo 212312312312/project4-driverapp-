@@ -327,6 +327,10 @@ class LoginActivity : AppCompatActivity() {
 
     private fun saveSession(data: com.taxiapp.driver.network.LoginResponse) {
         sessionManager.saveAuthToken(data.token)
+        // --- ДОБАВЛЕНО: Сохраняем рефреш-токен при СМС входе ---
+        if (!data.refreshToken.isNullOrEmpty()) {
+            sessionManager.saveRefreshToken(data.refreshToken)
+        }
         sessionManager.saveDriverId(data.userId)
 
         // ИСПРАВЛЕНО: используем phoneNumber вместо userPhone

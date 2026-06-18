@@ -10,6 +10,10 @@ import okhttp3.Request
 import okhttp3.Response
 import okhttp3.Route
 import okhttp3.logging.HttpLoggingInterceptor
+// --- ДОБАВЛЕНЫ ИМПОРТЫ РАСШИРЕНИЙ ДЛЯ OKHTTP 4+ ---
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.toRequestBody
+// -------------------------------------------------
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
@@ -34,34 +38,72 @@ class ApiClient private constructor() {
                 sessionManager = SessionManager(context.applicationContext)
             }
 
-            // --- АВТОРИЗАТОР ДЛЯ РЕФРЕША ---
+            // --- АВТОРИЗАТОР ДЛЯ РЕФРЕША (ОБНОВЛЕННЫЙ И ИСПРАВЛЕННЫЙ) ---
             val tokenAuthenticator = object : Authenticator {
                 override fun authenticate(route: Route?, response: Response): Request? {
                     if (response.priorResponse?.code == 401) return null
 
                     val sm = sessionManager ?: return null
-                    val refreshToken = sm.fetchRefreshToken() ?: return null
 
-                    try {
-                        val refreshCall = apiService?.refreshTokenSync(TokenRefreshRequestDto(refreshToken))
-                        val refreshResponse = refreshCall?.execute()
+                    // Извлекаем токен, с которым этот конкретный запрос ходил на сервер и получил 401
+                    val requestToken = response.request.header("Authorization")
+                        ?.replace("Bearer", "")?.trim() ?: ""
 
-                        if (refreshResponse != null && refreshResponse.isSuccessful && refreshResponse.body() != null) {
-                            val loginResponse = refreshResponse.body()!!
+                    // Синхронизируем потоки, чтобы только один поток выполнял запрос к серверу
+                    synchronized(this) {
+                        val currentToken = sm.fetchAuthToken() ?: ""
 
-                            sm.saveAuthToken(loginResponse.token)
-                            if (!loginResponse.refreshToken.isNullOrEmpty()) {
-                                sm.saveRefreshToken(loginResponse.refreshToken)
-                            }
-
+                        // DIRTY CHECK: Если токен в SessionManager уже обновился (другой поток успел сделать рефреш),
+                        // то мы просто берем новый токен и повторяем текущий запрос без повторного рефреша!
+                        if (currentToken.isNotEmpty() && currentToken != requestToken) {
                             return response.request.newBuilder()
-                                .header("Authorization", "Bearer ${loginResponse.token}")
+                                .header("Authorization", "Bearer $currentToken")
                                 .build()
-                        } else {
-                            sm.clearSession()
                         }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
+
+                        // Если мы оказались первыми — делаем реальный сетевой запрос рефреша
+                        val refreshToken = sm.fetchRefreshToken() ?: return null
+
+                        try {
+                            // Используем абсолютно чистый OkHttpClient без интерцепторов заголовков!
+                            val cleanClient = OkHttpClient()
+                            val jsonRequestBody = com.google.gson.Gson().toJson(TokenRefreshRequestDto(refreshToken))
+
+                            // ✅ ИСПРАВЛЕНО: MediaType и RequestBody переведены на extension-функции Kotlin
+                            val mediaType = "application/json; charset=utf-8".toMediaTypeOrNull()
+                            val body = jsonRequestBody.toRequestBody(mediaType)
+
+                            // ✅ ИСПРАВЛЕНО: url() изменен на свойство url без скобок
+                            val originalUrl = response.request.url.toString()
+                            val baseUrl = originalUrl.substring(0, originalUrl.indexOf("api/v1/"))
+
+                            val refreshRequest = Request.Builder()
+                                .url(baseUrl + "api/v1/auth/refresh")
+                                .post(body)
+                                .build()
+
+                            val refreshResponse = cleanClient.newCall(refreshRequest).execute()
+
+                            // ✅ ИСПРАВЛЕНО: body() изменен на свойство body без скобок
+                            val responseBody = refreshResponse.body
+                            if (refreshResponse.isSuccessful && responseBody != null) {
+                                val responseBodyString = responseBody.string()
+                                val loginResponse = com.google.gson.Gson().fromJson(responseBodyString, LoginResponse::class.java)
+
+                                // Обновляем сессию свежими данными
+                                sm.saveAuthToken(loginResponse.token)
+                                if (!loginResponse.refreshToken.isNullOrEmpty()) {
+                                    sm.saveRefreshToken(loginResponse.refreshToken)
+                                }
+
+                                // Повторяем исходный запрос уже с абсолютно новым Access-токеном
+                                return response.request.newBuilder()
+                                    .header("Authorization", "Bearer ${loginResponse.token}")
+                                    .build()
+                            }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
                     }
                     return null
                 }
@@ -122,7 +164,7 @@ class ApiClient private constructor() {
     }
 }
 
-// --- ИНТЕРФЕЙС И МОДЕЛИ ДЛЯ КАРТ (КОТОРЫЕ БЫЛИ ПОТЕРЯНЫ) ---
+// --- ИНТЕРФЕЙС И МОДЕЛИ ДЛЯ КАРТ ---
 interface GoogleMapsApi {
     @GET("directions/json")
     suspend fun getDirections(

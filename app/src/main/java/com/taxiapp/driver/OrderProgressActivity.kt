@@ -176,6 +176,7 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
         btnOptions = findViewById(R.id.btn_options)
         btnChatClient = findViewById(R.id.btn_chat_client)
         tvChatBadge = findViewById(R.id.tv_chat_badge)
+        findViewById<View>(R.id.btn_navigation).setOnClickListener { openExternalNavigator() }
 
         btnChatClient.setOnClickListener {
             // Берем idLong (Long) или пробуем распарсить текстовый id в Long для ChatActivity
@@ -215,6 +216,7 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
                 Toast.makeText(this, "Номер телефону клієнта відсутній", Toast.LENGTH_SHORT).show()
             }
         }
+        findViewById<View>(R.id.btn_navigation).setOnClickListener { openExternalNavigator() }
     }
 
     data class SheetOption(
@@ -435,7 +437,8 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun updateDriverMarker(location: Location) {
         if (!::map.isInitialized) return
         val newLatLng = LatLng(location.latitude, location.longitude)
-        val driverIcon = getBitmapDescriptorFromVector(this, R.drawable.ic_driver_icon)
+// --- ОБНОВЛЕНО: Парсим и передаем кастомный HEX-цвет #00bfff ---
+        val driverIcon = getBitmapDescriptorFromVector(this, R.drawable.ic_driver_icon, Color.parseColor("#00bfff"))
 
         // Шаг А: Вычисляем угол поворота (системный или расчетный между точками)
         val targetRotation = if (location.hasBearing()) {
@@ -508,6 +511,31 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
+    private fun createCustomLocationDot(context: Context, color: Int): BitmapDescriptor {
+        val density = context.resources.displayMetrics.density
+
+        // Задаем радиусы с учетом плотности пикселей устройства
+        val baseRadius = 7f * density    // Внутренний цветной круг
+        val strokeRadius = 9.5f * density // Внешний белый контур
+        val totalSize = (24 * density).toInt() // Общий размер холста для маркера
+
+        val bitmap = Bitmap.createBitmap(totalSize, totalSize, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        val center = totalSize / 2f
+
+        val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+
+        // 1. Рисуем внешний белый контур (подложку)
+        paint.color = Color.WHITE
+        canvas.drawCircle(center, center, strokeRadius, paint)
+
+        // 2. Рисуем внутренний лазурный круг (#00bfff)
+        paint.color = color
+        canvas.drawCircle(center, center, baseRadius, paint)
+
+        return BitmapDescriptorFactory.fromBitmap(bitmap)
+    }
+
     private fun updateScheduledUi() {
         val order = currentOrder ?: return
         val scheduledDate = order.getScheduledDate() ?: return
@@ -543,6 +571,9 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
         // Выводим только сумму
         tvOrderInfo.text = "${order.price.toInt()} ₴"
 
+        // --- ДОБАВЛЕНО: Синхронизируем UI экрана с текущим статусом заказа при загрузке ---
+        determineStateByStatus(order.status ?: "")
+
         // Твой оригинальный блок логики (адаптированный под Активити)
         val method = order.paymentMethod ?: "CASH"
         if (method == "CASH") {
@@ -560,7 +591,48 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
 
         locationService?.setTargetOrder(order)
     }
+    private fun openExternalNavigator() {
+        val order = currentOrder ?: return
 
+        // Автоматически определяем целевую точку:
+        // Если мы уже везем клиента (TO_DESTINATION) — строим до Точки Б.
+        // Если мы только едем к нему или ждем — строим до Точки А.
+        val targetLat = if (currentState == RideState.TO_DESTINATION) order.destLat else order.originLat
+        val targetLng = if (currentState == RideState.TO_DESTINATION) order.destLng else order.originLng
+
+        if (targetLat == null || targetLng == null || targetLat == 0.0 || targetLng == 0.0) {
+            Toast.makeText(this, "Координати точки замовлення відсутні", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // Достаем из настроек выбранный водителем навигатор (по умолчанию google_maps)
+        val session = com.taxiapp.driver.utils.SessionManager(this)
+        // Если в приложении уже есть выбор навигатора, замени строку ниже на: session.getChosenNavigator()
+        val chosenNavigator = "google_maps"
+
+        try {
+            if (chosenNavigator == "waze") {
+                // Интенты Waze с флагом navigate=yes мгновенно открывают ведение по маршруту
+                val wazeUri = "waze://?ll=$targetLat,$targetLng&navigate=yes"
+                startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(wazeUri)))
+            } else {
+                // google.navigation:q= принудительно включает пошаговый режим «В путь» вместо обычного просмотра карты
+                val mapsUri = "google.navigation:q=$targetLat,$targetLng&mode=d"
+                val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(mapsUri)).apply {
+                    setPackage("com.google.android.apps.maps") // Гарантируем открытие именно в приложении Google Maps
+                }
+                startActivity(intent)
+            }
+        } catch (e: Exception) {
+            // Запасной вариант: если выбранный навигатор не установлен, открываем стандартный системный диалог выбора карт
+            try {
+                val genericUri = "geo:$targetLat,$targetLng?q=$targetLat,$targetLng"
+                startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(genericUri)))
+            } catch (ex: Exception) {
+                Toast.makeText(this, "Не вдалося знайти встановлений навігатор", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
     @SuppressLint("MissingPermission")
     private fun startLocationUpdates() {
         val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 3000).setMinUpdateDistanceMeters(2f).build()
@@ -605,6 +677,17 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
     override fun onMapReady(googleMap: GoogleMap) {
         map = googleMap
 
+        // --- ДОБАВЛЕНО: Полное отключение элементов управления Google Карты ---
+        map.uiSettings.apply {
+            isZoomControlsEnabled = false
+            isCompassEnabled = false
+            isMyLocationButtonEnabled = false
+            isMapToolbarEnabled = false
+            isIndoorLevelPickerEnabled = false
+        }
+
+        // Внедряем динамический стиль карты под тему приложения
+
         // Внедряем динамический стиль карты под тему приложения
         try {
             val currentNightMode = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
@@ -627,7 +710,16 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
             updateDriverMarker(location ?: Location("").apply { latitude = 50.45; longitude = 30.52 })
 
             // Подготавливаем кастомные иконки для точек маршрута
-            val clientIcon = getBitmapDescriptorFromVector(this, R.drawable.ic_client_icon)
+// --- ОБНОВЛЕНО: Красим иконку клиента в основной цвет ---
+            // Подготавливаем кастомные иконки для точек маршрута
+// --- ОБНОВЛЕНО: Красим в primary и принудительно увеличиваем до 42dp только для карты ---
+            val clientIcon = getBitmapDescriptorFromVector(
+                this,
+                R.drawable.ic_client_icon,
+                ContextCompat.getColor(this, R.color.driver_text_primary),
+                widthDp = 42,
+                heightDp = 42
+            )
             val waypointIcon = getBitmapDescriptorFromVector(this, R.drawable.ic_marker_waypoint)
             val destIcon = getBitmapDescriptorFromVector(this, R.drawable.ic_marker_to)
 
@@ -898,13 +990,23 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
         layoutWaitingInfo.visibility = View.GONE
     }
 
-    private fun getBitmapDescriptorFromVector(context: Context, vectorResId: Int): BitmapDescriptor? {
+    private fun getBitmapDescriptorFromVector(
+        context: Context,
+        vectorResId: Int,
+        tintColor: Int? = null,
+        widthDp: Int? = null,    // <-- Добавили кастомную ширину
+        heightDp: Int? = null    // <-- Добавили кастомную высоту
+    ): BitmapDescriptor? {
         val vectorDrawable = ContextCompat.getDrawable(context, vectorResId) ?: return null
-        val bitmap = Bitmap.createBitmap(
-            vectorDrawable.intrinsicWidth,
-            vectorDrawable.intrinsicHeight,
-            Bitmap.Config.ARGB_8888
-        )
+
+        tintColor?.let { vectorDrawable.setTint(it) }
+
+        // Вычисляем итоговые пиксели: если переданы DP — переводим, если нет — берем дефолт из XML
+        val density = context.resources.displayMetrics.density
+        val width = widthDp?.let { (it * density).toInt() } ?: vectorDrawable.intrinsicWidth
+        val height = heightDp?.let { (it * density).toInt() } ?: vectorDrawable.intrinsicHeight
+
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         vectorDrawable.setBounds(0, 0, canvas.width, canvas.height)
         vectorDrawable.draw(canvas)

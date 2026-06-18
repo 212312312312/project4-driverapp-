@@ -185,7 +185,15 @@ class FiltersActivity : AppCompatActivity() {
             }
         }
     }
-
+    // Добавь в тело класса FiltersActivity
+    private fun checkOnlineAndShowToast(): Boolean {
+        val sessionManager = com.taxiapp.driver.utils.SessionManager(this)
+        if (!sessionManager.isDriverOnline()) {
+            Toast.makeText(this, "Переключіть режим на Онлайн", Toast.LENGTH_SHORT).show()
+            return false
+        }
+        return true
+    }
     // --- АДАПТЕР ---
     inner class FiltersAdapter(
         private val list: List<DriverFilter>,
@@ -265,37 +273,37 @@ class FiltersActivity : AppCompatActivity() {
             holder.switchMain.setOnCheckedChangeListener(null)
             holder.switchMain.isChecked = f.isActive
             holder.switchMain.setOnCheckedChangeListener { _, isChecked ->
+                if (isChecked && !checkOnlineAndShowToast()) {
+                    holder.switchMain.isChecked = false
+                    return@setOnCheckedChangeListener
+                }
+
                 if (!isChecked) {
                     sendUpdate(f, ether = false, auto = false, cycle = false)
                 } else {
+                    // При включении активируем Эфир по умолчанию
                     sendUpdate(f, ether = true, auto = false, cycle = false)
                 }
             }
 
             // --- КЛИКИ С ИГНОРИРОВАНИЕМ СЕРОГО МЕЛЬКАНИЯ ---
             holder.btnEther.setOnClickListener {
+                if (!f.isActive && !checkOnlineAndShowToast()) return@setOnClickListener
                 val nextEther = !f.isEther
-                updateBtnStyle(holder.btnEther, nextEther) // Гасим/включаем мгновенно!
                 sendUpdate(f, ether = nextEther, auto = f.isAuto, cycle = f.isCycle)
             }
 
             holder.btnAuto.setOnClickListener {
+                if (!f.isActive && !checkOnlineAndShowToast()) return@setOnClickListener
                 val newAuto = !f.isAuto
                 val newCycle = if (newAuto) false else f.isCycle
-
-                updateBtnStyle(holder.btnAuto, newAuto)
-                updateBtnStyle(holder.btnCycle, newCycle)
-
                 sendUpdate(f, ether = f.isEther, auto = newAuto, cycle = newCycle)
             }
 
             holder.btnCycle.setOnClickListener {
+                if (!f.isActive && !checkOnlineAndShowToast()) return@setOnClickListener
                 val newCycle = !f.isCycle
                 val newAuto = if (newCycle) false else f.isAuto
-
-                updateBtnStyle(holder.btnCycle, newCycle)
-                updateBtnStyle(holder.btnAuto, newAuto)
-
                 sendUpdate(f, ether = f.isEther, auto = newAuto, cycle = newCycle)
             }
         }

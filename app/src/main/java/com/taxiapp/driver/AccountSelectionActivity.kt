@@ -4,6 +4,9 @@ import android.app.AlertDialog
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+import com.taxiapp.driver.network.ApiClient
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -43,7 +46,7 @@ class AccountSelectionActivity : AppCompatActivity() {
         // Кнопка ВОЙТИ (ПРОДОВЖИТИ) - теперь проверяет доступ к ПОЛНОЭКРАННЫМ УВЕДОМЛЕНИЯМ
         binding.btnContinue.setOnClickListener {
             if (checkFullScreenIntentPermission()) {
-                goToMainActivity()
+                validateTokenAndProceed() // Используем безопасный вход с проверкой токена
             } else {
                 showFullScreenPermissionDialog()
             }
@@ -129,7 +132,7 @@ class AccountSelectionActivity : AppCompatActivity() {
         if (requestCode == FSI_PERMISSION_REQ_CODE) {
             if (checkFullScreenIntentPermission()) {
                 Toast.makeText(this, "Доступ дозволено!", Toast.LENGTH_SHORT).show()
-                goToMainActivity() // Автоматически пускаем дальше
+                validateTokenAndProceed() // Используем безопасный вход с проверкой токена
             } else {
                 Toast.makeText(this, "Для роботи обов'язково увімкніть повноекранні сповіщення!", Toast.LENGTH_LONG).show()
             }
@@ -149,6 +152,31 @@ class AccountSelectionActivity : AppCompatActivity() {
         finish()
     }
 
+    private fun validateTokenAndProceed() {
+        binding.btnContinue.isEnabled = false
+
+        lifecycleScope.launch {
+            try {
+                // Выполняем легкий проверочный запрос профиля.
+                // Если токен протух, наш обновленный сетевой слой сделает чистый рефреш в бэкграунде!
+                val response = ApiClient.getInstance().getApiService(this@AccountSelectionActivity).getDriverProfile()
+
+                if (response.isSuccessful) {
+                    // Токен валиден или успешно обновлен — заходим!
+                    goToMainActivity()
+                } else {
+                    // Сервер вернул ошибку, и рефреш не удался (например, сессия удалена на сервере)
+                    // Архитектурное правило: НЕ пускаем в MainActivity, но и не выкидываем, давая водителю выбор
+                    Toast.makeText(this@AccountSelectionActivity, "Не вдалося оновити сесію. Спробуйте увійти знову або змінити акаунт.", Toast.LENGTH_LONG).show()
+                    binding.btnContinue.isEnabled = true
+                }
+            } catch (e: Exception) {
+                // Ошибка сети (например, пропал интернет) — пускаем в MainActivity.
+                // Там сработает локальный кэш и логика оффлайна, водитель не должен застревать на входе.
+                goToMainActivity()
+            }
+        }
+    }
     override fun onBackPressed() {
         moveTaskToBack(true)
     }

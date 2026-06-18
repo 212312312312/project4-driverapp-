@@ -83,6 +83,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var sessionManager: SessionManager
     private lateinit var btnStatusToggle: View
+    private var driverLocationMarker: Marker? = null
     private lateinit var switchThumbCard: com.google.android.material.card.MaterialCardView
     private lateinit var tvSwitchStatusText: TextView
     private var isDriverOnline = false
@@ -108,6 +109,19 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationCallback: LocationCallback
+    private val serviceConnection = object : android.content.ServiceConnection {
+        override fun onServiceConnected(name: android.content.ComponentName?, service: android.os.IBinder?) {
+            val binder = service as LocationService.LocalBinder
+            val locationService = binder.getService()
+
+            // Подписываемся на нашу лямбду из сервиса и передаем координаты в маркер карты
+            locationService.onLocationUpdated = { lat, lng ->
+                updateCustomDriverMarker(lat, lng)
+            }
+        }
+
+        override fun onServiceDisconnected(name: android.content.ComponentName?) {}
+    }
 
     private var overlayBackPressedCallback: androidx.activity.OnBackPressedCallback? = null
     private var originalContainerElevation: Float = -1f
@@ -238,6 +252,15 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         fusedLocationClient.removeLocationUpdates(locationCallback)
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        try {
+            unbindService(serviceConnection)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     private fun setupLocationCallback() {
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult) {
@@ -329,6 +352,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         btnToggleSearchMode.setOnClickListener { toggleSearchActivation() }
 
         findViewById<View>(R.id.btnSearchSettings).setOnClickListener {
+            // --- ДОБАВЛЕНО: Блокировка настроек радиуса/Домой в оффлайне ---
+            if (!isDriverOnline) {
+                Toast.makeText(this, "Переключіть режим на Онлайн", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
             val bottomSheet = SearchSettingsBottomSheet { updateSearchStatusUI() }
             bottomSheet.show(supportFragmentManager, "SearchSettings")
         }
@@ -343,7 +372,14 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             updateDriverStatus(isDriverOnline)
         }
 
-        findViewById<View>(R.id.btn_nav_ether).setOnClickListener { startActivity(Intent(this, EtherActivity::class.java)) }
+        findViewById<View>(R.id.btn_nav_ether).setOnClickListener {
+            // --- ДОБАВЛЕНО: Офлайн водитель не может войти в Эфир ---
+            if (!isDriverOnline) {
+                Toast.makeText(this, "Переключіть режим на Онлайн", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            startActivity(Intent(this, EtherActivity::class.java))
+        }
         btnNavOrders = findViewById(R.id.btn_nav_orders)
         orderBadgeDot = findViewById(R.id.order_badge_dot)
         btnNavOrders.setOnClickListener { startActivity(Intent(this, OrdersActivity::class.java)) }
@@ -508,6 +544,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun toggleSearchActivation() {
+        // --- ДОБАВЛЕНО: Запрет запуска цепочки заказов в оффлайне ---
+        if (!isDriverOnline) {
+            Toast.makeText(this, "Переключіть режим на Онлайн", Toast.LENGTH_SHORT).show()
+            return
+        }
+
         isSearchActive = !isSearchActive
         updateSearchBlockVisuals(isSearchActive)
         if (isSearchActive) Toast.makeText(this, "Пошук розпочато...", Toast.LENGTH_SHORT).show()
@@ -665,27 +707,45 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 if (manualLocationMarker == null) {
                     manualLocationMarker = map.addMarker(MarkerOptions().position(latLng).title("Фіксована позиція").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN)))
                 } else manualLocationMarker?.position = latLng
-                map.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 17f))
+
+                // --- ИСПРАВЛЕНО: Сделали чуть дальше для фиксированной позиции (было 17f) ---
+                map.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15.5f))
             }
         } else {
-            manualLocationMarker?.remove()
-            manualLocationMarker = null
+            manualLocationMarker?.remove(); manualLocationMarker = null
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-                map.isMyLocationEnabled = true
+                map.isMyLocationEnabled = false
                 map.uiSettings.isMyLocationButtonEnabled = false
                 fusedLocationClient.lastLocation.addOnSuccessListener { location ->
                     location?.let {
                         currentDriverLocation = LatLng(it.latitude, it.longitude)
                         drawSearchRadius()
-                        map.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(it.latitude, it.longitude), 16f))
+                        updateCustomDriverMarker(it.latitude, it.longitude)
+
+                        // --- ИСПРАВЛЕНО: Сделали оптимальное отдаление для реальной локации (было 16f) ---
+                        map.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(it.latitude, it.longitude), 14.5f))
                     }
                 }
             }
         }
     }
 
+    private fun getBitmapDescriptorFromDrawable(context: Context, drawableResId: Int): BitmapDescriptor? {
+        val drawable = ContextCompat.getDrawable(context, drawableResId) ?: return null
+
+        // --- ИСПРАВЛЕНО: Управляем размером точки прямо здесь (в dp) ---
+        val size = (12 * context.resources.displayMetrics.density).toInt()
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+
+        drawable.setBounds(0, 0, canvas.width, canvas.height)
+        drawable.draw(canvas)
+        return BitmapDescriptorFactory.fromBitmap(bitmap)
+    }
+
     override fun onMapReady(googleMap: GoogleMap) {
         map = googleMap
+        map.uiSettings.isMapToolbarEnabled = false
         try {
             val isNightMode = when (androidx.appcompat.app.AppCompatDelegate.getDefaultNightMode()) {
                 androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES -> true
@@ -727,7 +787,25 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         updateMapUI()
         centerMapOnUser()
     }
+    private fun updateCustomDriverMarker(lat: Double, lng: Double) {
+        if (!::map.isInitialized) return
 
+        val latLng = LatLng(lat, lng)
+        val customIcon = getBitmapDescriptorFromDrawable(this, R.drawable.bg_driver_location_dot)
+
+        if (driverLocationMarker == null) {
+            // Если маркер создается впервые
+            driverLocationMarker = map.addMarker(MarkerOptions()
+                .position(latLng)
+                .anchor(0.5f, 0.5f) // Центрируем точку ровно по координате
+                .flat(true)
+                .zIndex(150f) // --- ДОБАВЛЕНО: Гарантируем, что точка будет поверх зон и секторов ---
+                .icon(customIcon))
+        } else {
+            // Если маркер уже есть на карте — просто перемещаем его на новые координаты GPS
+            driverLocationMarker?.position = latLng
+        }
+    }
     private fun resetHotspotsButton() {
         isHeatmapVisible = false
         clearHeatmapFromMap()
@@ -873,7 +951,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             }
         } else {
             manualLocationMarker?.remove(); manualLocationMarker = null
-            if (hasPermission) { map.isMyLocationEnabled = true; map.uiSettings.isMyLocationButtonEnabled = false }
+            // --- ИСПРАВЛЕНО: Всегда держим дефолтную точку выключенной, чтобы работала только наша XML-точка ---
+            if (hasPermission) { map.isMyLocationEnabled = false; map.uiSettings.isMyLocationButtonEnabled = false }
         }
     }
 
@@ -998,9 +1077,14 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 val response = ApiClient.getInstance().getApiService(this@MainActivity).updateStatus(UpdateDriverStatusRequest(isOnline, lat, lng))
                 if (!response.isSuccessful) {
                     setOnlineVisualState(!isOnline, animate = true)
+                    sessionManager.saveDriverOnlineStatus(!isOnline) // Бэкап статуса в сессии
+                } else {
+                    // --- ДОБАВЛЕНО: Успешно синхронизировали статус с сервером ---
+                    sessionManager.saveDriverOnlineStatus(isOnline)
                 }
             } catch (e: Exception) {
                 setOnlineVisualState(!isOnline, animate = true)
+                sessionManager.saveDriverOnlineStatus(!isOnline) // Бэкап статуса в сессии
             } finally {
                 btnStatusToggle.isEnabled = true
             }
@@ -1010,6 +1094,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun startLocationService() {
         val intent = Intent(this, LocationService::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent) else startService(intent)
+
+        // --- ДОБАВЛЕНО: Привязываем MainActivity к сервису для обмена координатами ---
+        try {
+            bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     private fun checkPermissionsAndStart() {

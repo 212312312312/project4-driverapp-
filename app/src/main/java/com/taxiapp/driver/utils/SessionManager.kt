@@ -69,7 +69,13 @@ class SessionManager(context: Context) {
     fun setEtherSectorFirst(isFirst: Boolean) {
         prefs.edit().putBoolean(KEY_ETHER_SECTOR_FIRST, isFirst).apply()
     }
+    fun saveDriverOnlineStatus(isOnline: Boolean) {
+        prefs.edit().putBoolean("KEY_DRIVER_ONLINE_STATUS", isOnline).apply()
+    }
 
+    fun isDriverOnline(): Boolean {
+        return prefs.getBoolean("KEY_DRIVER_ONLINE_STATUS", false)
+    }
     fun isEtherSectorFirst(): Boolean = prefs.getBoolean(KEY_ETHER_SECTOR_FIRST, false)
 
     fun setEtherHidePricePerKm(isHidden: Boolean) {

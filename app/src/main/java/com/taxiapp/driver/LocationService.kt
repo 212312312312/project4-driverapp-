@@ -32,6 +32,7 @@ class LocationService : Service() {
     private lateinit var sessionManager: SessionManager
     private var isServiceRunning = false
 
+    var onLocationUpdated: ((Double, Double) -> Unit)? = null
     // --- ЛОГІКА НАГАДУВАННЯ ---
     private var trackingOrder: Order? = null
     // Прапор, щоб повідомлення не приходило кожну секунду, поки водій в радіусі
@@ -60,6 +61,20 @@ class LocationService : Service() {
 
                     // 2. Перевірка дистанції для сповіщення
                     checkDistanceToTarget(location)
+
+                    // --- ДОБАВЛЕНО: Передаємо актуальні координати в карту MainActivity ---
+                    var latToSend = location.latitude
+                    var lngToSend = location.longitude
+
+                    if (sessionManager.isManualLocationActive()) {
+                        sessionManager.getManualLocation()?.let {
+                            latToSend = it.first
+                            lngToSend = it.second
+                        }
+                    }
+
+                    // Викликаємо лямбду (вона виконається на Головному потоці, бо Looper.getMainLooper())
+                    onLocationUpdated?.invoke(latToSend, lngToSend)
                 }
             }
         }

@@ -87,6 +87,10 @@ class LoginPasswordActivity : AppCompatActivity() {
 
     private fun saveSession(data: com.taxiapp.driver.network.LoginResponse) {
         sessionManager.saveAuthToken(data.token)
+        // --- ДОБАВЛЕНО: Сохраняем рефреш-токен при входе по паролю ---
+        if (!data.refreshToken.isNullOrEmpty()) {
+            sessionManager.saveRefreshToken(data.refreshToken)
+        }
         sessionManager.saveDriverId(data.userId)
 
         // ИСПРАВЛЕНО: phoneNumber вместо userPhone и проверка на null
