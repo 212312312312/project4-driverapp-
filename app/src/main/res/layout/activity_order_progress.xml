@@ -272,8 +272,7 @@
             <androidx.appcompat.widget.AppCompatButton
                 android:id="@+id/btn_save_action"
                 android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:text="Завантаження..."
+                android:layout_height="0dp" android:text="Завантаження..."
                 android:textAllCaps="false"
                 android:textSize="18sp"
                 android:textStyle="bold"

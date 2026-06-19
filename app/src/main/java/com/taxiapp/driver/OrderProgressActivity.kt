@@ -56,12 +56,15 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private lateinit var map: GoogleMap
     private var currentOrder: Order? = null
-
+    private var lastProcessedOrderId: String? = null // Хранит ID текущего активного заказа
     private lateinit var layoutWaitingInfo: LinearLayout
     private lateinit var tvWaitingTimer: TextView
     private var waitingTimerHandler = Handler(Looper.getMainLooper())
     private var waitingTimerRunnable: Runnable? = null
-
+    private var isActionLoading = false
+    private var roadPolyline: Polyline? = null // Ссылка на текущую линию на карте
+    private var cachedDecodedRoute: List<LatLng>? = null // Кэш всех точек полного маршрута
+    private var lastClosestRouteIndex = 0 // Индекс точки, до которой водитель уже доехал
     // ЧАТ ПЕРЕМЕННЫЕ
     private lateinit var btnChatClient: View
     private lateinit var tvChatBadge: TextView
@@ -510,6 +513,37 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
             start()
         }
 
+        // Плавное динамическое удаление пройденного пути в реальном времени строго до текущей точки
+        if (currentState == RideState.TO_DESTINATION) {
+            cachedDecodedRoute?.let { points ->
+                val order = currentOrder
+                if (order != null) {
+                    val targetLat: Double
+                    val targetLng: Double
+
+                    if (order.hasRemainingWaypoints()) {
+                        val currentWaypoint = order.stops?.sortedBy { it.stopOrder }
+                            ?.find { it.stopOrder == (order.currentStopOrder + 1) }
+                        targetLat = currentWaypoint?.lat ?: 0.0
+                        targetLng = currentWaypoint?.lng ?: 0.0
+                    } else {
+                        targetLat = order.destLat ?: 0.0
+                        targetLng = order.destLng ?: 0.0
+                    }
+
+                    val driverLatLng = LatLng(location.latitude, location.longitude)
+                    val targetLatLng = LatLng(targetLat, targetLng)
+
+                    // Получаем обновленный "кусочек" пути
+                    val remaining = getCurrentLegRoutePoints(driverLatLng, targetLatLng, points)
+
+                    runOnUiThread {
+                        roadPolyline?.points = remaining
+                    }
+                }
+            }
+        }
+
         // Шаг Г: Запоминаем текущую локацию как прошлую для расчета курса на следующем шаге GPS
         previousDriverLocation = location
     }
@@ -678,26 +712,72 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
             override fun onLocationResult(locationResult: LocationResult) {
                 val location = locationResult.lastLocation ?: return
                 updateDriverMarker(location)
-                if (currentState == RideState.TO_CLIENT) { checkDistanceForArrivedButton(location) }
+
+                // ИСПРАВЛЕНО: Проверяем геозону и на пути к клиенту, и во время поездки
+                if (currentState == RideState.TO_CLIENT || currentState == RideState.TO_DESTINATION) {
+                    checkDistanceForArrivedButton(location)
+                }
             }
         }
     }
 
     private fun checkDistanceForArrivedButton(driverLoc: Location) {
+        if (isActionLoading) return // Наша защита от гонки сокетов/сетевых запросов
         val order = currentOrder ?: return
-        val targetLoc = Location("target").apply {
-            latitude = order.originLat ?: 0.0
-            longitude = order.originLng ?: 0.0
+
+        // 🎯 Динамически определяем целевые координаты в зависимости от состояния поездки
+        val targetLat: Double
+        val targetLng: Double
+        val targetText: String
+
+        if (currentState == RideState.TO_CLIENT) {
+            targetLat = order.originLat ?: 0.0
+            targetLng = order.originLng ?: 0.0
+            targetText = "НА МІСЦІ"
+        } else if (currentState == RideState.TO_DESTINATION) {
+            if (order.hasRemainingWaypoints()) {
+                // Если есть неперейденные остановки, берем координаты текущей waypoint
+                // Сортируем по stopOrder и находим ту, которая соответствует текущему индексу на сервере
+                val currentWaypoint = order.stops?.sortedBy { it.stopOrder }
+                    ?.find { it.stopOrder == (order.currentStopOrder + 1) }
+
+                targetLat = currentWaypoint?.lat ?: 0.0
+                targetLng = currentWaypoint?.lng ?: 0.0
+                targetText = "НА МІСЦІ (ТОЧКА)"
+            } else {
+                // Если промежуточных остановок нет или они завершены — едем на Финиш (Точка Б)
+                targetLat = order.destLat ?: 0.0
+                targetLng = order.destLng ?: 0.0
+                targetText = "ЗАВЕРШИТИ"
+            }
+        } else {
+            return // В остальных состояниях (ожидание, подтверждение) GPS не должен перезаписывать кнопку
         }
-        if (targetLoc.latitude == 0.0) return
+
+        if (targetLat == 0.0 || targetLng == 0.0) return
+
+        val targetLoc = Location("target").apply {
+            latitude = targetLat
+            longitude = targetLng
+        }
+
         val distance = driverLoc.distanceTo(targetLoc)
 
+        // Проверяем наше системное ограничение в 300 метров
         if (distance <= 300) {
             btnSaveAction.isEnabled = true
-            btnSaveAction.text = "НА МІСЦІ"
+            btnSaveAction.text = targetText
             btnSaveAction.setTextColor(ContextCompat.getColor(this, R.color.driver_text_black))
-            btnContainerLayout.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_neon_teal))
+
+            // Красим контейнер кнопки в правильный цвет в зависимости от действия
+            if (targetText == "ЗАВЕРШИТИ") {
+                btnSaveAction.setTextColor(Color.WHITE)
+                btnContainerLayout.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_error))
+            } else {
+                btnContainerLayout.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_neon_teal))
+            }
         } else {
+            // Если водитель еще далеко — блокируем кнопку и показываем остаток дистанции
             btnSaveAction.isEnabled = false
             btnSaveAction.text = "Ще їхати (${distance.toInt()} м)"
             btnSaveAction.setTextColor(Color.GRAY)
@@ -767,35 +847,85 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
                 drawRoadRoute(driverLoc, originLoc, R.color.driver_neon_teal)
 
             } else if (currentState == RideState.TO_DESTINATION) {
+                // Инициализируем билдер камеры текущим положением водителя
                 val builder = LatLngBounds.Builder().include(driverLoc)
 
+                // 🛡️ ЖЕЛЕЗОБЕТОННЫЙ ПРЕДОХРАНИТЕЛЬ: Сбрасываем кэш геометрии ТОЛЬКО если сменился сам заказ
+                if (lastProcessedOrderId != order.id) {
+                    lastProcessedOrderId = order.id
+                    cachedDecodedRoute = null
+                    lastClosestRouteIndex = 0
+                    roadPolyline?.remove()
+                    roadPolyline = null
+                }
+
+                // 🎯 ТОЧНОЕ ОПРЕДЕЛЕНИЕ ТЕКУЩЕЙ АКТИВНОЙ ПОДЦЕЛИ
+                var targetLatLng: LatLng? = null
+                var targetTitle = ""
+                var targetIconBitmap = destIcon ?: BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)
+
+                if (order.hasRemainingWaypoints()) {
+                    // Если есть невыполненные остановки, строго вычисляем координаты СЛЕДУЮЩЕЙ по очереди (currentStopOrder + 1)
+                    val currentWaypoint = order.stops?.sortedBy { it.stopOrder }
+                        ?.find { it.stopOrder == (order.currentStopOrder + 1) }
+
+                    if (currentWaypoint != null) {
+                        targetLatLng = LatLng(currentWaypoint.lat, currentWaypoint.lng)
+                        targetTitle = "Проміжна точка"
+                        targetIconBitmap = waypointIcon ?: BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_YELLOW)
+                    }
+                } else {
+                    // Промежуточных остановок нет или они все успешно пройдены — ведем машину на конечный Финиш (Точку Б)
+                    targetLatLng = LatLng(order.destLat ?: 0.0, order.destLng ?: 0.0)
+                    targetTitle = "Фініш"
+                    targetIconBitmap = destIcon ?: BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)
+                }
+
+                val finalTarget = targetLatLng ?: LatLng(order.destLat ?: 0.0, order.destLng ?: 0.0)
+
+                // 1. ЛОГИКА ДИНАМИЧЕСКОЙ ЛИНИИ МАРШРУТА
                 if (!order.polyline.isNullOrEmpty()) {
-                    val roadPoints = PolyUtil.decode(order.polyline)
-                    map.addPolyline(PolylineOptions().addAll(roadPoints).width(14f).color(ContextCompat.getColor(this, R.color.driver_neon_teal)).jointType(JointType.ROUND).endCap(RoundCap()))
-                    roadPoints.forEach { builder.include(it) }
+                    // Декодируем глобальный маршрут в кэш один раз за весь заказ
+                    if (cachedDecodedRoute == null) {
+                        cachedDecodedRoute = PolyUtil.decode(order.polyline)
+                        lastClosestRouteIndex = 0
+                    }
+
+                    cachedDecodedRoute?.let { points ->
+                        // Получаем изолированный массив координат от машины ДО НАШЕЙ ТЕКУЩЕЙ ПОДЦЕЛИ
+                        val remainingPoints = getCurrentLegRoutePoints(driverLoc, finalTarget, points)
+
+                        roadPolyline?.remove() // Удаляем предыдущий отрезок перед перерисовкой
+
+                        if (remainingPoints.size >= 2) { // Защита Google Maps: полилайн рисуется минимум по 2 точкам
+                            roadPolyline = map.addPolyline(PolylineOptions()
+                                .addAll(remainingPoints)
+                                .width(14f)
+                                .color(ContextCompat.getColor(this@OrderProgressActivity, R.color.driver_neon_teal))
+                                .jointType(JointType.ROUND)
+                                .endCap(RoundCap()))
+
+                            // Включаем точки только текущей активной линии в просчет зума камеры
+                            remainingPoints.forEach { builder.include(it) }
+                        }
+                    }
                 }
 
-                // Метка Конечной Точки Б (Финиш)
-                val destLoc = LatLng(order.destLat ?: 0.0, order.destLng ?: 0.0)
+                // 2. ОТРИСОВКА МАРКЕРА: На карте будет виден ТОЛЬКО этот флаг текущего этапа! Остальные скрыты.
                 map.addMarker(MarkerOptions()
-                    .position(destLoc)
-                    .title("Фініш")
+                    .position(finalTarget)
+                    .title(targetTitle)
                     .anchor(0.5f, 0.5f)
-                    .icon(destIcon ?: BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)))
-                builder.include(destLoc)
+                    .icon(targetIconBitmap))
 
-                // Метки Промежуточных Точек Остановок (Stops)
-                order.stops?.sortedBy { it.stopOrder }?.forEach { stop ->
-                    val stopLoc = LatLng(stop.lat, stop.lng)
-                    map.addMarker(MarkerOptions()
-                        .position(stopLoc)
-                        .title("Проміжна точка")
-                        .anchor(0.5f, 0.5f)
-                        .icon(waypointIcon ?: BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_YELLOW)))
-                    builder.include(stopLoc)
+                builder.include(finalTarget)
+
+                // 3. УМНАЯ АНИМАЦИЯ КАМЕРЫ: Масштаб сфокусируется строго в радиусе поездки до этой конкретной точки
+                try {
+                    map.animateCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 200))
+                } catch (e: Exception) {
+                    map.animateCamera(CameraUpdateFactory.newLatLngZoom(driverLoc, 15f))
                 }
-
-                try { map.animateCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 200)) } catch (e: Exception) { map.animateCamera(CameraUpdateFactory.newLatLngZoom(driverLoc, 15f)) }
             }
         }
     }
@@ -822,17 +952,70 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
             }
         }
     }
+    private fun getCurrentLegRoutePoints(driverLatLng: LatLng, targetLatLng: LatLng, fullRoute: List<LatLng>): List<LatLng> {
+        if (fullRoute.isEmpty()) return emptyList()
 
+        // 1. Находим индекс точки маршрута, которая ближе всего к МАШИНЕ водителя
+        var minDistanceDriver = Double.MAX_VALUE
+        var closestDriverIndex = lastClosestRouteIndex
+
+        for (i in lastClosestRouteIndex until fullRoute.size) {
+            val results = FloatArray(1)
+            android.location.Location.distanceBetween(
+                driverLatLng.latitude, driverLatLng.longitude,
+                fullRoute[i].latitude, fullRoute[i].longitude,
+                results
+            )
+            val distance = results[0].toDouble()
+            if (distance < minDistanceDriver) {
+                minDistanceDriver = distance
+                closestDriverIndex = i
+            }
+        }
+        // Фиксируем прогресс, чтобы машина не «прыгала» назад
+        lastClosestRouteIndex = closestDriverIndex
+
+        // 2. Находим индекс точки маршрута, которая ближе всего к НАШЕЙ ТЕКУЩЕЙ ЦЕЛИ (Stop или Финиш)
+        // Ищем его строго ВПЕРЕДИ от машины водителя
+        var minDistanceTarget = Double.MAX_VALUE
+        var endIndexForCurrentLeg = closestDriverIndex
+
+        for (i in closestDriverIndex until fullRoute.size) {
+            val results = FloatArray(1)
+            android.location.Location.distanceBetween(
+                targetLatLng.latitude, targetLatLng.longitude,
+                fullRoute[i].latitude, fullRoute[i].longitude,
+                results
+            )
+            val distance = results[0].toDouble()
+            if (distance < minDistanceTarget) {
+                minDistanceTarget = distance
+                endIndexForCurrentLeg = i
+            }
+        }
+
+        // 3. Возвращаем изолированный кусок пути: от водителя до текущей подцели
+        val safeEndIndex = Math.min(endIndexForCurrentLeg + 1, fullRoute.size)
+        if (closestDriverIndex <= endIndexForCurrentLeg) {
+            return fullRoute.subList(closestDriverIndex, safeEndIndex)
+        }
+
+        return fullRoute.subList(closestDriverIndex, fullRoute.size)
+    }
     private fun handleActionButton() {
         val orderId = currentOrder?.id ?: return
         if (currentState == RideState.SCHEDULED) { performConfirmation(); return }
+        if (isActionLoading) return // Защита от повторных кликов
 
+        isActionLoading = true
         btnSaveAction.isEnabled = false
+
         lifecycleScope.launch {
             try {
                 val api = ApiClient.getInstance().getApiService(this@OrderProgressActivity)
                 when (currentState) {
                     RideState.TO_CLIENT -> {
+                        btnSaveAction.text = "ОБРОБКА..."
                         val response = api.driverArrived(orderId)
                         if (response.isSuccessful) {
                             currentOrder = response.body() ?: currentOrder?.copy(
@@ -843,9 +1026,15 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
                             currentState = RideState.WAITING
                             setupUiForWaiting()
                             updateMapVisuals()
+                        } else {
+                            // ИСПРАВЛЕНО: Теперь мы увидим, если сервер отклонил запрос
+                            Toast.makeText(this@OrderProgressActivity, "Помилка сервера: ${response.code()}", Toast.LENGTH_LONG).show()
+                            // Возвращаем кнопку в исходное состояние
+                            fusedLocationClient.lastLocation.addOnSuccessListener { loc -> if (loc != null) checkDistanceForArrivedButton(loc) }
                         }
                     }
                     RideState.WAITING -> {
+                        btnSaveAction.text = "ОБРОБКА..."
                         val response = api.startTrip(orderId)
                         if (response.isSuccessful) {
                             currentOrder = response.body() ?: currentOrder?.copy(status = "IN_PROGRESS")
@@ -853,21 +1042,28 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
                             currentState = RideState.TO_DESTINATION
                             setupUiForInTrip()
                             updateMapVisuals()
+                        } else {
+                            Toast.makeText(this@OrderProgressActivity, "Не вдалося розпочати: ${response.code()}", Toast.LENGTH_LONG).show()
+                            btnSaveAction.isEnabled = true
+                            setupUiForWaiting()
                         }
                     }
                     RideState.TO_DESTINATION -> {
+                        btnSaveAction.text = "ОБРОБКА..."
                         val order = currentOrder
                         if (order != null && order.hasRemainingWaypoints()) {
-                            // 🛠️ Логика промежуточной точки: фиксируем прибытие
                             val response = api.arriveAtWaypoint(orderId)
                             if (response.isSuccessful) {
                                 currentOrder = response.body()
                                 currentState = RideState.ARRIVED_AT_WAYPOINT
                                 setupUiForWaypointWaiting()
                                 updateMapVisuals()
+                            } else {
+                                Toast.makeText(this@OrderProgressActivity, "Помилка зупинки: ${response.code()}", Toast.LENGTH_LONG).show()
+                                btnSaveAction.isEnabled = true
+                                setupUiForInTrip()
                             }
                         } else {
-                            // Обычное завершение заказа на финальной точке
                             val response = api.completeOrder(orderId)
                             if (response.isSuccessful) {
                                 currentOrder = currentOrder?.copy(status = "COMPLETED")
@@ -880,25 +1076,34 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
                                 currentOrder = currentOrder?.copy(paymentMethod = "CASH")
                                 setupOrderData()
                                 showPaymentErrorDialog()
+                            } else {
+                                Toast.makeText(this@OrderProgressActivity, "Помилка завершення: ${response.code()}", Toast.LENGTH_LONG).show()
+                                btnSaveAction.isEnabled = true
+                                setupUiForInTrip()
                             }
                         }
                     }
                     RideState.ARRIVED_AT_WAYPOINT -> {
-                        // 🛠️ Продолжение движения после ожидания на промежуточной точке
+                        btnSaveAction.text = "ОБРОБКА..."
                         val response = api.resumeTrip(orderId)
                         if (response.isSuccessful) {
                             currentOrder = response.body()
                             currentState = RideState.TO_DESTINATION
                             setupUiForInTrip()
                             updateMapVisuals()
+                        } else {
+                            Toast.makeText(this@OrderProgressActivity, "Помилка: ${response.code()}", Toast.LENGTH_LONG).show()
+                            btnSaveAction.isEnabled = true
+                            setupUiForWaypointWaiting()
                         }
                     }
                     else -> {}
                 }
             } catch (e: Exception) {
-                Toast.makeText(this@OrderProgressActivity, "Помилка: ${e.message}", Toast.LENGTH_SHORT).show()
-            } finally {
+                Toast.makeText(this@OrderProgressActivity, "Помилка мережі: ${e.message}", Toast.LENGTH_SHORT).show()
                 btnSaveAction.isEnabled = true
+            } finally {
+                isActionLoading = false
             }
         }
     }
@@ -989,8 +1194,20 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
         lifecycleScope.launch {
             try {
                 val response = ApiClient.getInstance().getApiService(this@OrderProgressActivity).getActiveOrder()
-                if (response.isSuccessful && response.body() != null) { currentOrder = response.body(); setupOrderData(); if (::map.isInitialized) updateMapVisuals() } else finish()
-            } catch (e: Exception) { finish() }
+                if (response.isSuccessful && response.body() != null) {
+                    currentOrder = response.body()
+
+                    // 🔍 ДОБАВЬ ЭТОТ ЛОГ ДЛЯ ПРОВЕРКИ:
+                    android.util.Log.d("TAXI_DEBUG", "При перезапуске прилетело: currentStopOrder = ${currentOrder?.currentStopOrder}")
+
+                    setupOrderData()
+                    if (::map.isInitialized) updateMapVisuals()
+                } else {
+                    finish()
+                }
+            } catch (e: Exception) {
+                finish()
+            }
         }
     }
 
@@ -1016,14 +1233,21 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
         val order = currentOrder
         if (order != null && order.hasRemainingWaypoints()) {
             tvDestinationLabel.text = "Їду до: ${order.getCurrentWaypointAddress()}"
-            btnSaveAction.text = "НА МІСЦІ (ТОЧКА)"
-            btnSaveAction.setTextColor(Color.BLACK)
-            btnContainerLayout.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_neon_teal))
         } else {
             tvDestinationLabel.text = order?.toAddress ?: "Кінцева точка"
-            btnSaveAction.text = "ЗАВЕРШИТИ"
-            btnSaveAction.setTextColor(Color.WHITE)
-            btnContainerLayout.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_error))
+        }
+
+        // ИСПРАВЛЕНО: Запрашиваем последнее известное местоположение, чтобы мгновенно рассчитать валидность кнопки
+        fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+            if (location != null) {
+                checkDistanceForArrivedButton(location)
+            } else {
+                // Если локация временно недоступна, аккуратно инициализируем заглушку ожидания координат
+                btnSaveAction.isEnabled = false
+                btnSaveAction.text = "Оновлення локації..."
+                btnSaveAction.setTextColor(Color.GRAY)
+                btnContainerLayout.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_black_bg))
+            }
         }
 
         stopWaitingTimer()
