@@ -67,8 +67,7 @@
                 android:id="@+id/view_route_line"
                 android:layout_width="2dp"
                 android:layout_height="0dp"
-                android:background="@color/driver_text_secondary"
-                android:alpha="0.25"
+                android:background="#444444"
                 app:layout_constraintTop_toTopOf="@id/iv_icon_from"
                 app:layout_constraintBottom_toBottomOf="@id/iv_icon_to"
                 app:layout_constraintStart_toStartOf="@id/iv_icon_from"
@@ -76,10 +75,11 @@
 
             <ImageView
                 android:id="@+id/iv_icon_from"
-                android:layout_width="14dp"
-                android:layout_height="14dp"
-                android:src="@drawable/ic_circle_green"
-                android:layout_marginTop="4dp"
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:layout_marginStart="14dp"
+                android:layout_marginTop="3dp"
+                android:src="@drawable/ic_marker_from"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="@id/ll_from_text" />
 
@@ -88,9 +88,9 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:layout_marginStart="14dp"
+                android:layout_marginStart="54dp"
                 app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintStart_toEndOf="@id/iv_icon_from"
+                app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent">
 
                 <TextView
@@ -99,13 +99,14 @@
                     android:layout_height="wrap_content"
                     android:textColor="@color/driver_text_primary"
                     android:textSize="15sp"
+                    android:textStyle="bold"
                     android:fontFamily="@font/app_font_family"
                     tools:text="Якуба Коласа Вулиця (Київ), 5" />
             </LinearLayout>
 
             <LinearLayout
                 android:id="@+id/ll_stops_container"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:layout_marginTop="6dp"
@@ -117,10 +118,11 @@
 
             <ImageView
                 android:id="@+id/iv_icon_to"
-                android:layout_width="14dp"
-                android:layout_height="14dp"
-                android:src="@drawable/ic_circle_red"
-                android:layout_marginTop="4dp"
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:layout_marginStart="14dp"
+                android:layout_marginTop="3dp"
+                android:src="@drawable/ic_marker_to"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="@id/ll_to_text" />
 
@@ -129,9 +131,9 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:layout_marginStart="14dp"
+                android:layout_marginStart="54dp"
                 app:layout_constraintTop_toBottomOf="@id/ll_stops_container"
-                app:layout_constraintStart_toEndOf="@id/iv_icon_to"
+                app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent">
 
                 <TextView
@@ -140,6 +142,7 @@
                     android:layout_height="wrap_content"
                     android:textColor="@color/driver_text_primary"
                     android:textSize="15sp"
+                    android:textStyle="bold"
                     android:fontFamily="@font/app_font_family"
                     tools:text="Миколи Руденка Бульвар, 14м" />
             </LinearLayout>

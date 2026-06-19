@@ -37,7 +37,7 @@ class HistoryOrderAdapter(private val onClick: (Order) -> Unit) :
         private val ivPaymentIcon: ImageView = itemView.findViewById(R.id.iv_payment_icon)
         private val tvActivityBonus: TextView = itemView.findViewById(R.id.tv_activity_bonus)
         private val llPriceBackground: View = itemView.findViewById(R.id.ll_price_background)
-
+        private val stopsContainer: android.widget.LinearLayout = itemView.findViewById(R.id.ll_stops_container)
         fun bind(order: Order) {
             val context = itemView.context
 
@@ -76,6 +76,29 @@ class HistoryOrderAdapter(private val onClick: (Order) -> Unit) :
                 }
             } else {
                 tvDate.text = "---"
+            }
+            stopsContainer.removeAllViews()
+            if (!order.stops.isNullOrEmpty()) {
+                val inflater = LayoutInflater.from(context)
+                val sortedStops = order.stops.sortedBy { it.stopOrder }
+                for (stop in sortedStops) {
+                    val stopView = inflater.inflate(R.layout.item_route_point, stopsContainer, false)
+                    val tvAddress = stopView.findViewById<TextView>(R.id.tv_point_address)
+                    val ivIcon = stopView.findViewById<ImageView>(R.id.iv_point_icon)
+
+                    val lineTop = stopView.findViewById<View>(R.id.view_line_top)
+                    val lineBottom = stopView.findViewById<View>(R.id.view_line_bottom)
+
+                    tvAddress.text = stop.address
+                    ivIcon.setImageResource(R.drawable.ic_marker_waypoint)
+                    ivIcon.clearColorFilter()
+
+                    // Скрываем полу-линии, так как сквозная view_route_line в макете истории отрабатывает идеально
+                    lineTop.visibility = View.GONE
+                    lineBottom.visibility = View.GONE
+
+                    stopsContainer.addView(stopView)
+                }
             }
 
             itemView.setOnClickListener { onClick(order) }

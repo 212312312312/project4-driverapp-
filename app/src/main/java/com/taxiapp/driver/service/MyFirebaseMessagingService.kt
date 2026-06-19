@@ -123,7 +123,9 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         }
 
         // Полноэкранный системный интент (Heads-Up баннер + разворот на Lockscreen)
-        showFullScreen(intent, "offer_channel_v3", "Пропозиція замовлення", "Нове замовлення!", order.idLong?.toInt() ?: 0)
+        // Было: showFullScreen(intent, "offer_channel_v3", ...)
+// Стало: передаем новый ID тихого канала
+        showFullScreen(intent, "offer_silent_channel_v4", "Пропозиція замовлення", "Нове замовлення!", order.idLong?.toInt() ?: 0)
     }
 
     private fun showConfirmationNotification(order: Order) {
@@ -152,12 +154,18 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             val channel = NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_HIGH).apply {
                 enableVibration(true)
                 lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
-                setSound(
-                    android.provider.Settings.System.DEFAULT_RINGTONE_URI,
-                    android.media.AudioAttributes.Builder()
-                        .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
-                        .build()
-                )
+
+                // На ладони: если это канал для офферов — вырезаем звук под корень. Для остальных (подтверждения) оставляем дефолт.
+                if (channelId == "offer_silent_channel_v4") {
+                    setSound(null, null)
+                } else {
+                    setSound(
+                        android.provider.Settings.System.DEFAULT_RINGTONE_URI,
+                        android.media.AudioAttributes.Builder()
+                            .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                            .build()
+                    )
+                }
             }
             notificationManager.createNotificationChannel(channel)
         }

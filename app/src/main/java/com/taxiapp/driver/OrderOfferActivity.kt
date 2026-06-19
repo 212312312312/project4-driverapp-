@@ -45,6 +45,8 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
     private var timer: CountDownTimer? = null
     private lateinit var sessionManager: SessionManager
 
+    private var mediaPlayer: android.media.MediaPlayer? = null
+    private var vibrator: android.os.Vibrator? = null
     // UI Elements
     private lateinit var tvTimer: TextView
     private lateinit var btnAcceptContainer: CardView
@@ -94,6 +96,7 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
 
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
+        startOfferSound()
     }
 
     private fun turnScreenOnAndKeyguardOff() {
@@ -366,19 +369,21 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
         }
 
         if (newOrder != null) {
-            // Если пуш прилетел на ТОТ ЖЕ САМЫЙ заказ, который водитель уже видит на экране —
-            // просто молча игнорируем дубликат, не сбрасывая таймер и карту!
+            // На ладони: сначала проверяем на дубликат. Если это он — звук НЕ трогаем, он продолжает играть!
             if (newOrder.id == currentOrder?.id) {
                 android.util.Log.d("FCM_UNIT", "Защита: Сработал дубликат пуша для заказа ${newOrder.id}. Игнорируем.")
                 return
             }
 
-            // ФОЛБЕК СЦЕНАРИЙ: Если вдруг водитель смотрел на один оффер, и сервер мгновенно прислал
-            // СОВЕРШЕННО НОВЫЙ заказ (перебивающий), тогда красиво перерисовываем UI под него
-            timer?.cancel()
+            // ФОЛБЕК СЦЕНАРИЙ: Если пришел действительно НОВЫЙ (перебивающий) заказ:
+            stopOfferSound() // Глушим звук старого заказа
+            timer?.cancel()  // Сбрасываем текущий таймер (используем 'timer' из твоего кода)
+
             currentOrder = newOrder
             setupUI()
             startTimer()
+            startOfferSound() // Запускаем звук для нового заказа заново
+
             if (::map.isInitialized) {
                 onMapReady(map) // Перезапускаем логику карты под новый маршрут
             }
@@ -387,14 +392,18 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun startTimer() {
         timer = object : CountDownTimer(20000, 1000) {
             override fun onTick(millisUntilFinished: Long) {
-                tvTimer.text = (millisUntilFinished / 1000).toString()
+                tvTimer.text = (millisUntilFinished / 1000).toString() // Используем tvTimer
                 if (millisUntilFinished < 5000) tvTimer.setTextColor(Color.RED)
             }
-            override fun onFinish() { rejectOrder() }
+            override fun onFinish() {
+                stopOfferSound() // 👈 Выключаем звук, когда время вышло
+                rejectOrder()
+            }
         }.start()
     }
 
     private fun acceptOrder() {
+        stopOfferSound()
         timer?.cancel()
         val orderId = currentOrder?.id ?: return
         btnAcceptContainer.isEnabled = false
@@ -417,6 +426,7 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun rejectOrder() {
+        stopOfferSound()
         timer?.cancel()
         val orderId = currentOrder?.id ?: return
         lifecycleScope.launch {
@@ -443,9 +453,85 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
         return bitmap
     }
 
+    private fun startOfferSound() {
+        if (mediaPlayer == null) {
+            // Создаем плеер напрямую через конструктор, чтобы иметь возможность накрутить AudioAttributes до вызова prepare/start
+            mediaPlayer = android.media.MediaPlayer().apply {
+                val assetFileDescriptor = resources.openRawResourceFd(R.raw.incoming_offer)
+                setDataSource(assetFileDescriptor.fileDescriptor, assetFileDescriptor.startOffset, assetFileDescriptor.length)
+                assetFileDescriptor.close()
+
+                isLooping = true
+
+                // На ладони: принудительно пускаем звук через поток Будильника (USAGE_ALARM).
+                // Это позволяет пробивать стандартный беззвучный режим на большинстве устройств!
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    setAudioAttributes(
+                        android.media.AudioAttributes.Builder()
+                            .setUsage(android.media.AudioAttributes.USAGE_ALARM)
+                            .setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC)
+                            .build()
+                    )
+                } else {
+                    @Suppress("DEPRECATION")
+                    setAudioStreamType(android.media.AudioManager.STREAM_ALARM)
+                }
+
+                prepare()
+                start()
+            }
+        }
+        startHeavyVibration() // 👈 Запускаем агрессивную тряску
+    }
+
+    private fun startHeavyVibration() {
+        if (vibrator == null) {
+            vibrator = getSystemService(Context.VIBRATOR_SERVICE) as android.os.Vibrator
+        }
+        // Паттерн: 0мс ждем, 600мс трясем, 200мс отдыхаем, 600мс трясем...
+        val pattern = longArrayOf(0, 600, 200, 600, 200)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            // Индекс '1' означает циклически повторять паттерн, начиная с первого элемента (с вибрации)
+            vibrator?.vibrate(android.os.VibrationEffect.createWaveform(pattern, 1))
+        } else {
+            @Suppress("DEPRECATION")
+            vibrator?.vibrate(pattern, 1)
+        }
+    }
+    private fun stopHeavyVibration() {
+        try {
+            vibrator?.cancel()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            vibrator = null
+        }
+    }
+
+    private fun stopOfferSound() {
+        stopHeavyVibration() // 👈 Мгновенно тушим вибрацию при любом исходе
+        try {
+            mediaPlayer?.let {
+                if (it.isPlaying) {
+                    it.stop()
+                }
+                it.release()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            mediaPlayer = null
+        }
+    }
+
     data class RoutePoint(val address: String, val type: PointType)
     enum class PointType { START, WAYPOINT, END }
 
-    override fun onDestroy() { super.onDestroy(); timer?.cancel() }
+    override fun onDestroy() {
+        stopOfferSound() // 👈 Гарантированно глушим плеер
+        timer?.cancel()  // Используем корректное имя 'timer'
+        super.onDestroy()
+    }
     override fun onBackPressed() { Toast.makeText(this, "Тисніть хрестик!", Toast.LENGTH_SHORT).show() }
 }

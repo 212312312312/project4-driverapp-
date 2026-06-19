@@ -717,7 +717,17 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
         fusedLocationClient.requestLocationUpdates(request, locationCallback, Looper.getMainLooper())
     }
 
-    override fun onResume() { super.onResume(); startLocationUpdates() }
+    override fun onResume() {
+        super.onResume()
+        startLocationUpdates()
+
+        // На ладони: если заказ активен и водитель в состоянии ожидания (Точка А или промежуточная) — возвращаем таймер к жизни
+        currentOrder?.let { order ->
+            if (currentState == RideState.WAITING || currentState == RideState.ARRIVED_AT_WAYPOINT) {
+                startWaitingTimer(order)
+            }
+        }
+    }
     override fun onPause() { super.onPause(); fusedLocationClient.removeLocationUpdates(locationCallback) }
 
     private fun setupLocationListener() {
@@ -784,8 +794,8 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
 
             // Красим контейнер кнопки в правильный цвет в зависимости от действия
             if (targetText == "ЗАВЕРШИТИ") {
-                btnSaveAction.setTextColor(Color.WHITE)
-                btnContainerLayout.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_error))
+                btnSaveAction.setTextColor(ContextCompat.getColor(this, R.color.driver_text_black))
+                btnContainerLayout.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_neon_teal))
             } else {
                 btnContainerLayout.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_neon_teal))
             }
