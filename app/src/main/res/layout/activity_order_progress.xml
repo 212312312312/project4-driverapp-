@@ -245,15 +245,15 @@
             android:padding="12dp"
             android:layout_marginBottom="16dp"
             android:background="@drawable/bg_driver_input"
-            android:backgroundTint="#EBFBEE"
+            android:backgroundTint="@color/driver_card_bg"
             android:gravity="center">
 
             <TextView
                 android:id="@+id/tv_waiting_timer"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="⏱ Очікування: 00:00"
-                android:textColor="#2B8A3E"
+                android:text="Безкоштовне очікування: 00:00"
+                android:textColor="@color/driver_text_primary"
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:fontFamily="@font/app_font_family"/>

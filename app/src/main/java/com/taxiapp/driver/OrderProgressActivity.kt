@@ -312,16 +312,17 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
                     val remMin = (remainingMs / (1000 * 60)).toInt()
                     val remSec = ((remainingMs / 1000) % 60).toInt()
 
-                    layoutWaitingInfo.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#EBFBEE"))
-                    tvWaitingTimer.setTextColor(Color.parseColor("#2B8A3E"))
-                    tvWaitingTimer.text = String.format("⏱ Безкоштовне очікування: %02d:%02d", remMin, remSec)
+                    // Устанавливаем фирменный темный фон карточки и primary цвет текста без иконки таймера
+                    layoutWaitingInfo.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this@OrderProgressActivity, R.color.driver_card_bg))
+                    tvWaitingTimer.setTextColor(ContextCompat.getColor(this@OrderProgressActivity, R.color.driver_text_primary))
+                    tvWaitingTimer.text = String.format("Безкоштовне очікування: %02d:%02d", remMin, remSec)
                 } else {
                     val paidMins = Math.floor(diffMinutesFull - freeMins).toInt()
                     val extraCost = paidMins * order.pricePerWaitingMinute
 
                     layoutWaitingInfo.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#FFF5F5"))
                     tvWaitingTimer.setTextColor(Color.parseColor("#C92A2A"))
-                    tvWaitingTimer.text = String.format("⏳ Платне очікування: %d хв (+%.2f ₴)", paidMins, extraCost)
+                    tvWaitingTimer.text = String.format("   Платне очікування: %d хв (+%.2f ₴)", paidMins, extraCost)
                 }
                 waitingTimerHandler.postDelayed(this, 1000)
             }
@@ -458,7 +459,7 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
         if (!::map.isInitialized) return
         val newLatLng = LatLng(location.latitude, location.longitude)
 // --- ОБНОВЛЕНО: Парсим и передаем кастомный HEX-цвет #00bfff ---
-        val driverIcon = getBitmapDescriptorFromVector(this, R.drawable.ic_driver_icon, Color.parseColor("#00bfff"))
+        val driverIcon = getBitmapDescriptorFromVector(this, R.drawable.ic_driver_icon, )
 
         // Шаг А: Вычисляем угол поворота (системный или расчетный между точками)
         val targetRotation = if (location.hasBearing()) {
@@ -633,8 +634,8 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun setupOrderData() {
         val order = currentOrder ?: return
 
-        // Выводим только сумму
-        tvOrderInfo.text = "${order.price.toInt()} ₴"
+        // Выводим полную суммарную стоимость поездки для водителя (с учетом доплат компании)
+        tvOrderInfo.text = "${order.getTotalFullPrice().toInt()} ₴"
 
         // --- ДОБАВЛЕНО: Синхронизируем UI экрана с текущим статусом заказа при загрузке ---
         determineStateByStatus(order.status ?: "")
@@ -659,11 +660,27 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun openExternalNavigator() {
         val order = currentOrder ?: return
 
-        // Автоматически определяем целевую точку:
-        // Если мы уже везем клиента (TO_DESTINATION) — строим до Точки Б.
-        // Если мы только едем к нему или ждем — строим до Точки А.
-        val targetLat = if (currentState == RideState.TO_DESTINATION) order.destLat else order.originLat
-        val targetLng = if (currentState == RideState.TO_DESTINATION) order.destLng else order.originLng
+        // Автоматически определяем целевую точку с учетом промежуточных остановок:
+        val targetLat: Double?
+        val targetLng: Double?
+
+        if (currentState == RideState.TO_DESTINATION) {
+            if (order.hasRemainingWaypoints()) {
+                // Если есть невыполненные остановки, навигатор ведет строго к СЛЕДУЮЩЕЙ по очереди
+                val currentWaypoint = order.stops?.sortedBy { it.stopOrder }
+                    ?.find { it.stopOrder == (order.currentStopOrder + 1) }
+                targetLat = currentWaypoint?.lat
+                targetLng = currentWaypoint?.lng
+            } else {
+                // Промежуточных точек нет или они пройдены — ведем на конечный Финиш (Точка Б)
+                targetLat = order.destLat
+                targetLng = order.destLng
+            }
+        } else {
+            // Если только едем на подачу к клиенту — строим маршрут до Точки А
+            targetLat = order.originLat
+            targetLng = order.originLng
+        }
 
         if (targetLat == null || targetLng == null || targetLat == 0.0 || targetLng == 0.0) {
             Toast.makeText(this, "Координати точки замовлення відсутні", Toast.LENGTH_SHORT).show()
@@ -672,24 +689,20 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
 
         // Достаем из настроек выбранный водителем навигатор (по умолчанию google_maps)
         val session = com.taxiapp.driver.utils.SessionManager(this)
-        // Если в приложении уже есть выбор навигатора, замени строку ниже на: session.getChosenNavigator()
         val chosenNavigator = "google_maps"
 
         try {
             if (chosenNavigator == "waze") {
-                // Интенты Waze с флагом navigate=yes мгновенно открывают ведение по маршруту
                 val wazeUri = "waze://?ll=$targetLat,$targetLng&navigate=yes"
                 startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(wazeUri)))
             } else {
-                // google.navigation:q= принудительно включает пошаговый режим «В путь» вместо обычного просмотра карты
                 val mapsUri = "google.navigation:q=$targetLat,$targetLng&mode=d"
                 val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(mapsUri)).apply {
-                    setPackage("com.google.android.apps.maps") // Гарантируем открытие именно в приложении Google Maps
+                    setPackage("com.google.android.apps.maps")
                 }
                 startActivity(intent)
             }
         } catch (e: Exception) {
-            // Запасной вариант: если выбранный навигатор не установлен, открываем стандартный системный диалог выбора карт
             try {
                 val genericUri = "geo:$targetLat,$targetLng?q=$targetLat,$targetLng"
                 startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(genericUri)))
