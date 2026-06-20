@@ -19,7 +19,7 @@ import kotlinx.coroutines.launch
 
 class ChatActivity : AppCompatActivity() {
 
-    private var orderId: Long = -1L
+    private var orderId: String = "" // 👈 ИСПРАВЛЕНО: Переведено на String для поддержки UUID
     private lateinit var rvChat: RecyclerView
     private lateinit var etMessage: EditText
     private lateinit var btnSend: ImageView
@@ -41,8 +41,8 @@ class ChatActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_chat)
 
-        orderId = intent.getLongExtra("ORDER_ID", -1L)
-        if (orderId == -1L) {
+        orderId = intent.getStringExtra("ORDER_ID") ?: "" // 👈 ИСПРАВЛЕНО: Извлекаем String UUID
+        if (orderId.isEmpty()) {
             finish()
             return
         }
@@ -97,7 +97,6 @@ class ChatActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        // НАЙГОЛОВНІШЕ РІШЕННЯ ДЛЯ ТВОГО ТЕСТУ:
         // Щоразу, коли ми повертаємося в додаток (розгортаємо його),
         // автоматично і тихо підтягуємо свіжі повідомлення.
         loadMessageHistory(silent = true)

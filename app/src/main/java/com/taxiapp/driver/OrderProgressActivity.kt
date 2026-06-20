@@ -1172,7 +1172,8 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun sendRating(score: Int, comment: String, dialog: Dialog) {
-        val orderId = currentOrder?.idLong ?: return
+        // 👈 ИСПРАВЛЕНО: Передаем строковый UUID заказа (currentOrder?.id) вместо idLong
+        val orderId = currentOrder?.id ?: return
         lifecycleScope.launch {
             try {
                 val response = ApiClient.getInstance().getApiService(this@OrderProgressActivity).rateClient(RateClientRequest(orderId, score, comment))

@@ -7,18 +7,16 @@ import retrofit2.Call
 
 // --- DTO КЛАССЫ ---
 
-// <-- НОВЫЙ DTO ДЛЯ ТОЧЕК ГРАФИКА (СИНХРОНИЗАЦИЯ С СЕРВЕРОМ) -->
 data class ChartPointDto(
     @SerializedName("date") val date: String,
     @SerializedName("income") val income: Double
 )
-// <---------------------------------------------------------->
 
 data class TokenRefreshRequestDto(val refreshToken: String)
 
 data class ChatMessageDto(
     val id: Long?,
-    val orderId: String, // 👈 ИСПРАВЛЕНО: теперь String, чтобы успешно парсить UUID от сервера
+    val orderId: String,
     val senderRole: String, // "CLIENT" или "DRIVER"
     val senderId: Long,
     val content: String,
@@ -28,7 +26,9 @@ data class ChatMessageDto(
 data class SendMessageRequest(
     val content: String
 )
+
 enum class NewsTarget { CLIENT, DRIVER, ALL }
+
 data class NewsDto(
     val id: Long,
     val title: String,
@@ -42,8 +42,9 @@ data class CommissionInfoDto(
     val percent: Double,
     val description: String?
 )
+
 data class RateClientRequest(
-    val orderId: Long,
+    val orderId: String, // 👈 ФИКС: Переведено на String для поддержки UUID заказов сервера
     val score: Int,
     val comment: String?
 )
@@ -58,12 +59,11 @@ data class DriverNotificationDto(
     val id: Long,
     val title: String,
     val body: String,
-    val type: String, // "PAYMENT", "ORDER_CANCEL", "SYSTEM"
+    val type: String,
     val date: String,
     val isRead: Boolean
 )
 
-// ОБНОВЛЕНО: Модель теперь полностью соответствует новому ответу Спринга
 data class DriverStatsDto(
     val totalIncome: Double,
     val commission: Double,
@@ -74,7 +74,7 @@ data class DriverStatsDto(
     val totalDistanceKm: Double,
     val avgPricePerKm: Double,
     val totalHours: Double,
-    @SerializedName("chartPoints") val chartPoints: List<ChartPointDto>? = null // Реальные точки
+    @SerializedName("chartPoints") val chartPoints: List<ChartPointDto>? = null
 )
 
 data class SmsRequestDto(
@@ -150,11 +150,11 @@ interface DriverApiService {
 
     // --- CHAT ---
     @GET("api/v1/chat/{orderId}")
-    suspend fun getChatMessages(@Path("orderId") orderId: Long): Response<List<ChatMessageDto>>
+    suspend fun getChatMessages(@Path("orderId") orderId: String): Response<List<ChatMessageDto>> // 👈 ФИКС: String (UUID)
 
     @POST("api/v1/chat/driver/{orderId}")
     suspend fun sendChatMessage(
-        @Path("orderId") orderId: Long,
+        @Path("orderId") orderId: String, // 👈 ФИКС: String (UUID)
         @Body request: SendMessageRequest
     ): Response<ChatMessageDto>
 
@@ -200,9 +200,10 @@ interface DriverApiService {
 
     @POST("api/v1/driver/orders/{id}/complete")
     suspend fun completeOrder(@Path("id") id: String): Response<Order>
+
     @POST("api/v1/driver/orders/{id}/cancel")
     suspend fun cancelOrder(
-        @Path("id") id: String,                                      // <-- ТУТ ТЕЖ String
+        @Path("id") id: String,
         @Query("reasonId") reasonId: Long?
     ): Response<Order>
 
@@ -213,7 +214,7 @@ interface DriverApiService {
     suspend fun getCancellationReasons(): Response<List<CancellationReason>>
 
     @POST("api/v1/driver/orders/{id}/reject")
-    suspend fun rejectOffer(@Path("id") id: String): Response<Void> // <-- Должно быть String
+    suspend fun rejectOffer(@Path("id") id: String): Response<Void>
 
     // --- СТАТУС ---
     @PATCH("api/v1/driver/status")

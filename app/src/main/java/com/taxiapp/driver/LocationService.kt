@@ -33,9 +33,7 @@ class LocationService : Service() {
     private var isServiceRunning = false
 
     var onLocationUpdated: ((Double, Double) -> Unit)? = null
-    // --- ЛОГІКА НАГАДУВАННЯ ---
     private var trackingOrder: Order? = null
-    // Прапор, щоб повідомлення не приходило кожну секунду, поки водій в радіусі
     private var isReminderTriggered = false
 
     inner class LocalBinder : android.os.Binder() {
@@ -49,20 +47,19 @@ class LocationService : Service() {
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         isServiceRunning = true
 
-        // Запускаємо сервіс (щоб система не вбила)
         startForegroundService()
 
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult) {
                 if (!isServiceRunning) return
                 for (location in locationResult.locations) {
-                    // 1. Відправка координат на сервер
-                    sendLocationToServer(location.latitude, location.longitude)
+                    // 1. Отправка координат и угла поворота на сервер
+                    sendLocationToServer(location.latitude, location.longitude, location.bearing)
 
-                    // 2. Перевірка дистанції для сповіщення
+                    // 2. Проверка дистанции до цели
                     checkDistanceToTarget(location)
 
-                    // --- ДОБАВЛЕНО: Передаємо актуальні координати в карту MainActivity ---
+                    // Передаем актуальные координаты в карту MainActivity
                     var latToSend = location.latitude
                     var lngToSend = location.longitude
 
@@ -73,7 +70,6 @@ class LocationService : Service() {
                         }
                     }
 
-                    // Викликаємо лямбду (вона виконається на Головному потоці, бо Looper.getMainLooper())
                     onLocationUpdated?.invoke(latToSend, lngToSend)
                 }
             }
@@ -83,9 +79,7 @@ class LocationService : Service() {
         requestLocationUpdates()
     }
 
-    // Оновлюємо ціль при зміні статусу замовлення
     fun setTargetOrder(order: Order?) {
-        // Якщо ID замовлення змінився або статус змінився -> скидаємо тригер
         if (this.trackingOrder?.id != order?.id || this.trackingOrder?.status != order?.status) {
             this.isReminderTriggered = false
         }
@@ -95,8 +89,6 @@ class LocationService : Service() {
 
     private fun checkDistanceToTarget(currentLoc: Location) {
         val order = trackingOrder ?: return
-
-        // Якщо вже сповістили для цього етапу -> виходимо
         if (isReminderTriggered) return
 
         val targetLoc = Location("target")
@@ -104,13 +96,11 @@ class LocationService : Service() {
 
         when (order.status) {
             "ACCEPTED" -> {
-                // Їдемо до точки А (Origin)
                 targetLoc.latitude = order.originLat ?: 0.0
                 targetLoc.longitude = order.originLng ?: 0.0
                 shouldTrack = true
             }
             "IN_PROGRESS" -> {
-                // Їдемо до точки Б (Destination)
                 targetLoc.latitude = order.destLat ?: 0.0
                 targetLoc.longitude = order.destLng ?: 0.0
                 shouldTrack = true
@@ -122,20 +112,17 @@ class LocationService : Service() {
 
         val distance = currentLoc.distanceTo(targetLoc)
 
-        // Умова: менше 300 метрів
         if (distance < 300) {
-            isReminderTriggered = true // Блокуємо повторні сповіщення для цього етапу
+            isReminderTriggered = true
             sendProximityNotification()
         }
     }
 
     private fun sendProximityNotification() {
         val title = "Статус замовлення"
-        val message = "Майже на місці" // Текст як ти просив
+        val message = "Майже на місці"
 
         val notificationManager = getSystemService(NotificationManager::class.java)
-
-        // Використовуємо канал HIGH, створений в App.kt
         val channelId = "driver_alert_channel"
 
         val openIntent = Intent(this, MainActivity::class.java).apply {
@@ -152,30 +139,29 @@ class LocationService : Service() {
         val notification = NotificationCompat.Builder(this, channelId)
             .setContentTitle(title)
             .setContentText(message)
-            .setSmallIcon(R.drawable.ic_place_small) // Переконайся, що ця іконка існує
+            .setSmallIcon(R.drawable.ic_place_small)
             .setContentIntent(pendingIntent)
-            .setPriority(NotificationCompat.PRIORITY_HIGH) // Важливо для спливаючого вікна
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_NAVIGATION)
-            .setDefaults(Notification.DEFAULT_ALL) // Звук + Вібрація
+            .setDefaults(Notification.DEFAULT_ALL)
             .setAutoCancel(true)
             .build()
 
-        // ID 200, щоб не перекривати основне повідомлення сервісу (ID 1)
         notificationManager.notify(200, notification)
     }
 
     @SuppressLint("MissingPermission")
     private fun sendInitialLocation() {
         fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-            location?.let { sendLocationToServer(it.latitude, it.longitude) }
+            location?.let { sendLocationToServer(it.latitude, it.longitude, it.bearing) }
         }
     }
 
     @SuppressLint("MissingPermission")
     private fun requestLocationUpdates() {
-        // Інтервал 4 секунди для більшої точності при під'їзді
+        // ЛИМИТ ВОЗВРАЩЕН: Родные 10 метров и 4 секунды снова в строю!
         val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 4000)
-            .setMinUpdateDistanceMeters(10f) // Оновлювати, якщо проїхав 10 метрів
+            .setMinUpdateDistanceMeters(10f)
             .build()
 
         fusedLocationClient.requestLocationUpdates(
@@ -185,7 +171,7 @@ class LocationService : Service() {
         )
     }
 
-    private fun sendLocationToServer(realLat: Double, realLng: Double) {
+    private fun sendLocationToServer(realLat: Double, realLng: Double, bearing: Float) {
         var latToSend = realLat
         var lngToSend = realLng
 
@@ -199,14 +185,18 @@ class LocationService : Service() {
 
         if (latToSend == 0.0 && lngToSend == 0.0) return
 
-        val token = sessionManager.fetchAuthToken() ?: run { stopSelf(); return }
+        if (sessionManager.fetchAuthToken() == null) { stopSelf(); return }
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val request = UpdateLocationRequest(latToSend, lngToSend)
-                ApiClient.getInstance().getApiService(applicationContext).updateLocation(request)
+                val request = UpdateLocationRequest(latToSend, lngToSend, bearing)
+                val response = ApiClient.getInstance().getApiService(applicationContext).updateLocation(request)
+
+                if (!response.isSuccessful) {
+                    Log.e("LocationService", "Сервер відхилив локацію: Код=${response.code()}, Текст=${response.errorBody()?.string()}")
+                }
             } catch (e: Exception) {
-                Log.e("LocationService", "Error sending location: ${e.message}")
+                Log.e("LocationService", "Помилка мережі при відправці локації: ${e.message}")
             }
         }
     }
@@ -227,7 +217,6 @@ class LocationService : Service() {
 
     private fun startForegroundService() {
         val channelId = "location_channel"
-        // Канал створюється в App.kt, тут просто використовуємо
         val notification: Notification = NotificationCompat.Builder(this, channelId)
             .setContentTitle("Taxi Driver")
             .setContentText("Ви в системі")
