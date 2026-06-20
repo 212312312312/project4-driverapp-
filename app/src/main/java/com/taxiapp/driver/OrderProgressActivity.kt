@@ -209,7 +209,11 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
         btnOptions = findViewById(R.id.btn_options)
         btnChatClient = findViewById(R.id.btn_chat_client)
         tvChatBadge = findViewById(R.id.tv_chat_badge)
-        findViewById<View>(R.id.btn_navigation).setOnClickListener { openExternalNavigator() }
+        findViewById<View>(R.id.btn_back_progress).setOnClickListener {
+            val session = com.taxiapp.driver.utils.SessionManager(this)
+            session.setOrderMinimized(true)
+            finish()
+        }
 
         btnChatClient.setOnClickListener {
             // Берем idLong (Long) или пробуем распарсить текстовый id в Long для ChatActivity
@@ -230,11 +234,6 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
         // ТОЧЕЧНОЕ ДОБАВЛЕНИЕ: Приемник для отслеживания отмены заказа в реальном времени (FCM/Сервис)
 
 
-        findViewById<View>(R.id.btn_back_progress).setOnClickListener {
-            val session = com.taxiapp.driver.utils.SessionManager(this)
-            session.setOrderMinimized(true)
-            finish()
-        }
 
         btnSaveAction.setOnClickListener { handleActionButton() }
         btnOptions.setOnClickListener { showStylishActions() }
@@ -252,6 +251,13 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
             }
         }
         findViewById<View>(R.id.btn_navigation).setOnClickListener { openExternalNavigator() }
+
+        // Перехватываем системное нажатие "Назад" на смартфоне
+        onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                findViewById<View>(R.id.btn_back_progress).performClick()
+            }
+        })
     }
 
     data class SheetOption(

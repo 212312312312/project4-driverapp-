@@ -221,8 +221,7 @@
                     <ImageView
                         android:layout_width="12dp"
                         android:layout_height="12dp"
-                        android:src="@drawable/ic_arrow_back_black"
-                        android:rotation="135"
+                        android:src="@drawable/ic_menu_graph"
                         app:tint="#00E676" />
 
                     <TextView

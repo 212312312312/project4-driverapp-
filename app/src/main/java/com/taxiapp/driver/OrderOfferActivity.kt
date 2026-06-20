@@ -413,10 +413,23 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
                 val response = ApiClient.getInstance().getApiService(this@OrderOfferActivity).acceptOrder(orderId)
                 if (response.isSuccessful && response.body() != null) {
                     Toast.makeText(this@OrderOfferActivity, "Прийнято!", Toast.LENGTH_SHORT).show()
-                    val intent = Intent(this@OrderOfferActivity, OrderProgressActivity::class.java)
-                    intent.putExtra("EXTRA_ORDER", response.body()!!)
-                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                    startActivity(intent)
+
+                    // Слой 1: Жестко создаем абсолютно чистый таск ОС, закладывая в фундамент главный экран
+                    val mainIntent = Intent(this@OrderOfferActivity, MainActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    }
+                    startActivity(mainIntent)
+
+                    // Слой 2: Накладываем поверх главного экрана список заказов
+                    val ordersIntent = Intent(this@OrderOfferActivity, OrdersActivity::class.java)
+                    startActivity(ordersIntent)
+
+                    // Слой 3: На самый верх кладем экран выполнения, который сейчас увидит водитель
+                    val progressIntent = Intent(this@OrderOfferActivity, OrderProgressActivity::class.java).apply {
+                        putExtra("EXTRA_ORDER", response.body()!!)
+                    }
+                    startActivity(progressIntent)
+
                     finish()
                 } else {
                     finish()
