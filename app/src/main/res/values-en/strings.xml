@@ -18,7 +18,8 @@
     <string name="settings_quick_access_desc">Display over other apps</string>
     <string name="settings_notifications">Notifications</string>
     <string name="settings_notifications_desc">Status change reminders</string>
-
+    <string name="dialog_order_cancelled_title">Order Cancelled!</string>
+    <string name="dialog_order_cancelled_desc">The customer has just cancelled this order.\n\nPlease stop moving along the route immediately. Press the button below to return to the map.</string>
 
     <string name="permission_dialog_title">Permission Required</string>
     <string name="permission_dialog_desc">To run the widget in the background:\n\n1. Tap \"Allow permission\" below.\n2. In the opened menu, enable:\n\"Display pop-up windows\"</string>

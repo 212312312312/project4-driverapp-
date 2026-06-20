@@ -794,17 +794,18 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val customIcon = getBitmapDescriptorFromDrawable(this, R.drawable.bg_driver_location_dot)
 
         if (driverLocationMarker == null) {
-            // Если маркер создается впервые
             driverLocationMarker = map.addMarker(MarkerOptions()
                 .position(latLng)
-                .anchor(0.5f, 0.5f) // Центрируем точку ровно по координате
+                .anchor(0.5f, 0.5f)
                 .flat(true)
-                .zIndex(150f) // --- ДОБАВЛЕНО: Гарантируем, что точка будет поверх зон и секторов ---
+                .zIndex(150f)
                 .icon(customIcon))
         } else {
-            // Если маркер уже есть на карте — просто перемещаем его на новые координаты GPS
             driverLocationMarker?.position = latLng
         }
+
+        // ТОЧЕЧНОЕ ОБНОВЛЕНИЕ: Управляем видимостью реальной точки в зависимости от режима
+        driverLocationMarker?.isVisible = !sessionManager.isManualLocationActive()
     }
     private fun resetHotspotsButton() {
         isHeatmapVisible = false
@@ -939,6 +940,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun updateMapUI() {
         if (!::map.isInitialized) return
         val hasPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+
         if (sessionManager.isManualLocationActive()) {
             try { map.isMyLocationEnabled = false } catch (e: Exception) {}
             val manualLoc = sessionManager.getManualLocation()
@@ -946,13 +948,33 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 val latLng = LatLng(manualLoc.first, manualLoc.second)
                 currentDriverLocation = latLng
                 drawSearchRadius()
-                if (manualLocationMarker == null) manualLocationMarker = map.addMarker(MarkerOptions().position(latLng).title("Фіксована позиція").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN)))
-                else manualLocationMarker?.position = latLng
+
+                // Жестко тушим реальный маркер
+                driverLocationMarker?.isVisible = false
+
+                if (manualLocationMarker == null) {
+                    val customIcon = getBitmapDescriptorFromDrawable(this, R.drawable.bg_driver_location_dot)
+                    manualLocationMarker = map.addMarker(MarkerOptions()
+                        .position(latLng)
+                        .title("Фіксована позиція")
+                        .anchor(0.5f, 0.5f)
+                        .zIndex(150f)
+                        .icon(customIcon))
+                } else {
+                    manualLocationMarker?.position = latLng
+                }
             }
         } else {
-            manualLocationMarker?.remove(); manualLocationMarker = null
-            // --- ИСПРАВЛЕНО: Всегда держим дефолтную точку выключенной, чтобы работала только наша XML-точка ---
-            if (hasPermission) { map.isMyLocationEnabled = false; map.uiSettings.isMyLocationButtonEnabled = false }
+            manualLocationMarker?.remove()
+            manualLocationMarker = null
+
+            // ТОЧЕЧНОЕ ОБНОВЛЕНИЕ: Ручной режим отключен — возвращаем реальный маркер на карту
+            driverLocationMarker?.isVisible = true
+
+            if (hasPermission) {
+                map.isMyLocationEnabled = false
+                map.uiSettings.isMyLocationButtonEnabled = false
+            }
         }
     }
 

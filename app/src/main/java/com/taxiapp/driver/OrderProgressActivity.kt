@@ -116,6 +116,13 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
+    private val orderCancelledReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == "com.taxiapp.driver.ORDER_CANCELLED") {
+                showOrderCancelledDialog()
+            }
+        }
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_order_progress)
@@ -156,6 +163,15 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
             bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
         }
         timeHandler.post(timeRunnable)
+
+        // ТОЧЕЧНОЕ ДОБАВЛЕНИЕ: Регистрируем слушатель отмены заказа
+        val filter = android.content.IntentFilter("com.taxiapp.driver.ORDER_CANCELLED")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(orderCancelledReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            @Suppress("UnspecifiedRegisterReceiverFlag")
+            registerReceiver(orderCancelledReceiver, filter)
+        }
     }
 
     override fun onStop() {
@@ -166,6 +182,13 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
         }
         timeHandler.removeCallbacks(timeRunnable)
         stopWaitingTimer()
+
+        // ТОЧЕЧНОЕ ДОБАВЛЕНИЕ: Отписываемся от ресивера, чтобы избежать утечек памяти
+        try {
+            unregisterReceiver(orderCancelledReceiver)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     private fun initViews() {
@@ -204,6 +227,8 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
                 Toast.makeText(this, "Помилка: невірний ID замовлення", Toast.LENGTH_SHORT).show()
             }
         }
+        // ТОЧЕЧНОЕ ДОБАВЛЕНИЕ: Приемник для отслеживания отмены заказа в реальном времени (FCM/Сервис)
+
 
         findViewById<View>(R.id.btn_back_progress).setOnClickListener {
             val session = com.taxiapp.driver.utils.SessionManager(this)
@@ -631,6 +656,62 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        // Если пуш-сервис передал флаг принудительной отмены
+        if (intent.getBooleanExtra("EXTRA_IS_CANCELLED", false)) {
+            showOrderCancelledDialog()
+        }
+    }
+
+    // ТОЧЕЧНОЕ ДОБАВЛЕНИЕ: Полноэкранный блокирующий кастомный диалог отмены заказа
+    private fun showOrderCancelledDialog() {
+        // Защита: если водитель уже нажал "Завершить" и оценивает клиента, диалог отмены не должен перекрывать логику
+        if (currentState == RideState.COMPLETED) return
+
+        stopWaitingTimer()
+
+        val builder = android.app.AlertDialog.Builder(this)
+        val dialogView = layoutInflater.inflate(R.layout.dialog_permission_overlay, null)
+        builder.setView(dialogView)
+
+        val alertDialog = builder.create()
+        alertDialog.setCancelable(false) // Водитель не сможет закрыть диалог тапом мимо экрана
+
+        // Находим TextView заголовка и описания по индексам элементов в LinearLayout
+        val tvTitle = (dialogView as LinearLayout).getChildAt(0) as TextView
+        val tvDesc = dialogView.getChildAt(1) as TextView
+
+        // Устанавливаем новые кастомные тексты отмены заказа
+        tvTitle.setText(R.string.dialog_order_cancelled_title)
+        tvDesc.setText(R.string.dialog_order_cancelled_desc)
+
+        val btnCancel = dialogView.findViewById<View>(R.id.btnCancelPermission)
+        val btnAllow = dialogView.findViewById<androidx.appcompat.widget.AppCompatButton>(R.id.btnAllowPermission)
+
+        // Прячем левую кнопку "Скасувати"
+        btnCancel.visibility = View.GONE
+
+        // Растягиваем правую кнопку на всю ширину и меняем её текст
+        val params = btnAllow.layoutParams as LinearLayout.LayoutParams
+        params.weight = 2f
+        params.marginStart = 0
+        btnAllow.layoutParams = params
+
+        btnAllow.text = getString(R.string.btn_understood) // "Зрозуміло"
+        btnAllow.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#FF4444")) // Красим в красный (цвет предупреждения)
+        btnAllow.setTextColor(Color.WHITE)
+
+        btnAllow.setOnClickListener {
+            alertDialog.dismiss()
+            finishAndReturnToMap() // Чистое закрытие экрана и сброс на карту
+        }
+
+        alertDialog.show()
+        alertDialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+    }
+
     private fun setupOrderData() {
         val order = currentOrder ?: return
 
@@ -720,6 +801,7 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
     override fun onResume() {
         super.onResume()
         startLocationUpdates()
+        syncOrderStateOnResume()
 
         // На ладони: если заказ активен и водитель в состоянии ожидания (Точка А или промежуточная) — возвращаем таймер к жизни
         currentOrder?.let { order ->
@@ -953,6 +1035,43 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
+    // TOЧЕЧНОЕ ДОБАВЛЕНИЕ: Железобетонная синхронизация заказа при возвращении в приложение
+    private fun syncOrderStateOnResume() {
+        lifecycleScope.launch {
+            try {
+                val response = ApiClient.getInstance().getApiService(this@OrderProgressActivity).getActiveOrder()
+                if (response.isSuccessful) {
+                    val freshOrder = response.body()
+
+                    if (freshOrder == null || freshOrder.status == "CANCELLED") {
+                        // Если на сервере заказа уже нет или он отменен — мгновенно выдаем диалог
+                        showOrderCancelledDialog()
+                    } else {
+                        // Если заказ активен — обновляем кэш и перерисовываем UI (на случай изменения точек)
+                        currentOrder = freshOrder
+                        setupOrderData()
+                        if (::map.isInitialized) updateMapVisuals()
+
+                        // Безопасно возвращаем таймер к жизни, если водитель на точке ожидания
+                        if (currentState == RideState.WAITING || currentState == RideState.ARRIVED_AT_WAYPOINT) {
+                            startWaitingTimer(freshOrder)
+                        }
+                    }
+                } else {
+                    // Если сервер вернул ошибку (например, 404, что тоже означает отсутствие активного заказа)
+                    showOrderCancelledDialog()
+                }
+            } catch (e: Exception) {
+                // Если в момент выхода из фона нет интернета (ошибка сети) — не блокируем водителя,
+                // а просто даем ему продолжить работу по кэшированным данным локально
+                currentOrder?.let { order ->
+                    if (currentState == RideState.WAITING || currentState == RideState.ARRIVED_AT_WAYPOINT) {
+                        startWaitingTimer(order)
+                    }
+                }
+            }
+        }
+    }
     private fun drawRoadRoute(start: LatLng, end: LatLng, colorRes: Int) {
         lifecycleScope.launch(Dispatchers.IO) {
             try {

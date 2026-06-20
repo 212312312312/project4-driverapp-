@@ -57,7 +57,6 @@ class EtherActivity : AppCompatActivity() {
         tabLayout = findViewById(R.id.ether_tabs)
         val btnBack = findViewById<View>(R.id.btn_back)
 
-        // Инициализируем адаптеры через оригинальный конструктор замыкания
         activeAdapter = OrderAdapter { selectedOrder ->
             val intent = Intent(this, OrderDetailsActivity::class.java)
             intent.putExtra("EXTRA_ORDER", selectedOrder)
@@ -70,16 +69,13 @@ class EtherActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
-        // Настройка ViewPager2
         pagerAdapter = EtherPagerAdapter()
         viewPager.adapter = pagerAdapter
 
-        // Связываем TabLayout и ViewPager2 свайпы (название вкладок выставляется тут)
         TabLayoutMediator(tabLayout, viewPager) { tab, position ->
             tab.text = if (position == 0) "Зараз" else "Заплановані"
         }.attach()
 
-        // Отслеживаем смену страниц для обновления переменной индекса
         viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) {
                 currentTabIndex = position
@@ -88,7 +84,7 @@ class EtherActivity : AppCompatActivity() {
 
         btnBack.setOnClickListener { finish() }
 
-        setupWebSocket()
+        // TOЧЕЧНОЕ ОБНОВЛЕНИЕ: Убрали отсюда setupWebSocket()
     }
 
     private fun acceptScheduledOrder(order: Order) {
@@ -134,9 +130,11 @@ class EtherActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+
+        // TOЧЕЧНОЕ ОБНОВЛЕНИЕ: Пересоздаем подписки и включаем сокет при каждом возврате на экран
+        setupWebSocket()
         stompClient.connect()
 
-        // Синхронно обновляем настройки цен и секторов для ОБОИХ списков
         val sectorFirst = sessionManager.isEtherSectorFirst()
         val hidePrice = sessionManager.isEtherPricePerKmHidden()
         activeAdapter.updateDisplaySettings(sectorFirst, hidePrice)
@@ -147,7 +145,9 @@ class EtherActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
+        // TOЧЕЧНОЕ ОБНОВЛЕНИЕ: Жестко отключаем сокет и ОЧИЩАЕМ подписки для предотвращения дублирования
         stompClient.disconnect()
+        compositeDisposable.clear()
     }
 
     override fun onDestroy() {
@@ -180,9 +180,8 @@ class EtherActivity : AppCompatActivity() {
         val url = "ws://192.168.0.104:8080/ws-taxi/websocket"
         stompClient = Stomp.over(Stomp.ConnectionProvider.OKHTTP, url)
 
-        val driverId = sessionManager.getDriverId()
-
-        val topicDisposable = stompClient.topic("/topic/drivers/$driverId/orders")
+        // TOЧЕЧНОЕ ОБНОВЛЕНИЕ: Слушаем общий широковещательный канал Эфира
+        val topicDisposable = stompClient.topic("/topic/ether")
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe({ topicMessage ->
@@ -191,7 +190,6 @@ class EtherActivity : AppCompatActivity() {
                 try {
                     val msgObj = JSONObject(topicMessage.payload)
                     val action = msgObj.optString("action")
-                    // ИСПРАВЛЕНО: Извлекаем orderId как String (UUID) вместо Long
                     val orderId = msgObj.optString("orderId")
 
                     if (action == "REMOVE") {
@@ -243,7 +241,14 @@ class EtherActivity : AppCompatActivity() {
     }
 
     private fun filterAndShowOrders() {
-        // Просим внутренний Pager-адаптер обновить контент на обеих страницах
+        // TOЧЕЧНОЕ ОБНОВЛЕНИЕ: Загружаем отфильтрованные данные в адаптеры напрямую
+        val activeList = allOrdersList.filter { !it.isScheduled() }
+        val scheduledList = allOrdersList.filter { it.isScheduled() }
+
+        activeAdapter.submitList(activeList)
+        scheduledAdapter.submitList(scheduledList)
+
+        // Просим внутренний Pager-адаптер обновить только состояние видимости (Empty State)
         pagerAdapter.updatePage(0)
         pagerAdapter.updatePage(1)
     }
@@ -287,16 +292,11 @@ class EtherActivity : AppCompatActivity() {
         }
 
         private fun updatePageVisibility(position: Int, holder: PageViewHolder) {
+            // TOЧЕЧНОЕ ОБНОВЛЕНИЕ: Управляем только видимостью списков и Empty State карточек
             val filteredList = if (position == 0) {
                 allOrdersList.filter { !it.isScheduled() }
             } else {
                 allOrdersList.filter { it.isScheduled() }
-            }
-
-            if (position == 0) {
-                activeAdapter.submitList(filteredList)
-            } else {
-                scheduledAdapter.submitList(filteredList)
             }
 
             if (filteredList.isNotEmpty()) {

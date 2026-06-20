@@ -12,12 +12,15 @@
     <string name="theme_system">Системна</string>
     <string name="theme_dark">Темна</string>
     <string name="theme_light">Світла</string>
-
+    <string name="dialog_order_cancelled_title">Замовлення скасовано!</string>
+    <string name="dialog_order_cancelled_desc">Клієнт щойно скасував це замовлення.\n\nБудь ласка, негайно припиніть рух за маршрутом. Натисніть кнопку нижче, щоб повернутися на карту.</string>
     <string name="permission_dialog_title">Потрібен дозвіл</string>
     <string name="permission_dialog_desc">Для роботи віджета у фоновому режимі:\n\n1. Натисніть «Надати дозвіл» нижче.\n2. У відкритому меню увімкніть пункт:\n«Відображення спливаючих вікон»</string>
     <string name="permission_dialog_cancel">Скасувати</string>
     <string name="permission_dialog_allow">Надати дозвіл</string>
-
+    <string name="permission_fsi_desc">Для безперебійного отримання замовлень:\n\n1. Натисніть «Надати дозвіл» нижче.\n2. Увімкніть пункт «Повноекранні сповіщення».</string>
+    <string name="permission_overlay_desc_new">Щоб бачити картку замовлення поверх навігатора:\n\n1. Натисніть «Надати дозвіл» нижче.\n2. Увімкніть тумблер «Відображення поверх інших додатків».</string>
+    <string name="permission_xiaomi_bg_desc">Критично для пристроїв Xiaomi / Poco / Redmi:\n\n1. Натисніть «Надати дозвіл» нижче.\n2. Знайдіть та дозвольте пункт:\n«Відображення спливаючих вікон у фоновому режимі».</string>
 
     <string name="payment_failed_title">Помилка оплати карткою!</string>
     <string name="payment_failed_message">На картці клієнта недостатньо коштів або її заблоковано.\n\nСпосіб оплати автоматично змінено на ГОТІВКУ.\nБудь ласка, візьміть гроші з пасажира та натисніть "Завершити" ще раз.</string>
