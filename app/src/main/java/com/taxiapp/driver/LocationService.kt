@@ -31,6 +31,10 @@ class LocationService : Service() {
     private lateinit var locationCallback: LocationCallback
     private lateinit var sessionManager: SessionManager
     private var isServiceRunning = false
+    // --- ДОБАВИТЬ: Поля для умной фильтрации локации ---
+    private var lastSentLat = 0.0
+    private var lastSentLng = 0.0
+    private var lastSentTime = 0L
 
     var onLocationUpdated: ((Double, Double) -> Unit)? = null
     private var trackingOrder: Order? = null
@@ -53,10 +57,18 @@ class LocationService : Service() {
             override fun onLocationResult(locationResult: LocationResult) {
                 if (!isServiceRunning) return
                 for (location in locationResult.locations) {
-                    // 1. Отправка координат и угла поворота на сервер
-                    sendLocationToServer(location.latitude, location.longitude, location.bearing)
 
-                    // 2. Проверка дистанции до цели
+                    // --- МОДИФИЦИРОВАНО: Умный фильтр сетевых запросов ---
+                    if (shouldSendLocation(location)) {
+                        sendLocationToServer(location.latitude, location.longitude, location.bearing)
+
+                        // Запоминаем параметры успешной отправки
+                        lastSentLat = location.latitude
+                        lastSentLng = location.longitude
+                        lastSentTime = System.currentTimeMillis()
+                    }
+
+                    // 2. Проверка дистанции до цели (сохраняем твою логику)
                     checkDistanceToTarget(location)
 
                     // Передаем актуальные координаты в карту MainActivity
@@ -85,6 +97,9 @@ class LocationService : Service() {
         }
         this.trackingOrder = order
         Log.d("LocationService", "Tracking order: ID=${order?.id}, Status=${order?.status}")
+
+        // --- ДОБАВИТЬ: Динамически перестраиваем частоту GPS ---
+        requestLocationUpdates()
     }
 
     private fun checkDistanceToTarget(currentLoc: Location) {
@@ -159,9 +174,21 @@ class LocationService : Service() {
 
     @SuppressLint("MissingPermission")
     private fun requestLocationUpdates() {
-        // ЛИМИТ ВОЗВРАЩЕН: Родные 10 метров и 4 секунды снова в строю!
-        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 4000)
-            .setMinUpdateDistanceMeters(10f)
+        // Удаляем старую подписку, чтобы интервалы не накладывались друг на друга
+        try {
+            fusedLocationClient.removeLocationUpdates(locationCallback)
+        } catch (e: Exception) { e.printStackTrace() }
+
+        // Проверяем, есть ли активный заказ в процессе выполнения
+        val isWithOrder = trackingOrder != null &&
+                (trackingOrder?.status == "ACCEPTED" || trackingOrder?.status == "IN_PROGRESS")
+
+        // 5 секунд на заказе (как ты и просил), 15 секунд если свободен
+        val interval = if (isWithOrder) 5000L else 15000L
+        val minDistance = if (isWithOrder) 5f else 25f // Меньше метров на заказе для точности
+
+        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, interval)
+            .setMinUpdateDistanceMeters(minDistance)
             .build()
 
         fusedLocationClient.requestLocationUpdates(
@@ -169,6 +196,7 @@ class LocationService : Service() {
             locationCallback,
             Looper.getMainLooper()
         )
+        Log.d("LocationService", "GPS интервал изменен: заказ=$isWithOrder, интервал=${interval}мс, шаг=${minDistance}м")
     }
 
     private fun sendLocationToServer(realLat: Double, realLng: Double, bearing: Float) {
@@ -233,6 +261,39 @@ class LocationService : Service() {
         } else {
             startForeground(1, notification)
         }
+    }
+
+    private fun shouldSendLocation(location: Location): Boolean {
+        // Если это самая первая точка при старте — шлем обязательно
+        if (lastSentLat == 0.0 && lastSentLng == 0.0) return true
+
+        val isWithOrder = trackingOrder != null &&
+                (trackingOrder?.status == "ACCEPTED" || trackingOrder?.status == "IN_PROGRESS")
+
+        // Считаем расстояние от прошлой отправленной точки
+        val lastLocation = Location("last").apply {
+            latitude = lastSentLat
+            longitude = lastSentLng
+        }
+        val distance = location.distanceTo(lastLocation)
+        val currentTime = System.currentTimeMillis()
+        val timePassed = currentTime - lastSentTime
+
+        // Проверяем, стоит ли машина (скорость меньше ~3.6 км/ч)
+        val isStanding = location.speed < 1.0f
+
+        if (isWithOrder) {
+            // Если на заказе стоит на светофоре и смещение незначительно — шлем не чаще чем раз в 30 секунд
+            if (isStanding && distance < 10f && timePassed < 30000L) {
+                return false
+            }
+        } else {
+            // Если свободен и стоит на месте — шлем не чаще чем раз в 60 секунд (чисто для Keep-Alive)
+            if (isStanding && distance < 20f && timePassed < 60000L) {
+                return false
+            }
+        }
+        return true
     }
 
     override fun onDestroy() {

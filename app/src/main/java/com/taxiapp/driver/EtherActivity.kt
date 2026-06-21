@@ -177,8 +177,17 @@ class EtherActivity : AppCompatActivity() {
     }
 
     private fun setupWebSocket() {
-        val url = "ws://192.168.0.104:8080/ws-taxi/websocket"
+        // --- УМНОЕ ОБНОВЛЕНИЕ: Динамически переключаем сокет на основе BuildConfig.BASE_URL ---
+        val baseUrl = BuildConfig.BASE_URL // Берем адрес (например, "https://decorous-tempie-nonsubjugable.ngrok-free.dev/" или "http://192.168.0.104:8080/")
+        val wsProtocol = if (baseUrl.startsWith("https")) "wss" else "ws"
+
+        // Очищаем адрес от префиксов и завершающих слешей, чтобы строка склеилась идеально
+        val cleanHost = baseUrl.replace("https://", "").replace("http://", "").removeSuffix("/")
+        val url = "$wsProtocol://$cleanHost/ws-taxi/websocket"
+
         stompClient = Stomp.over(Stomp.ConnectionProvider.OKHTTP, url)
+        Log.d("WS", "Попытка подключения к сокету Эфира: $url")
+        // -------------------------------------------------------------------------------------
 
         // TOЧЕЧНОЕ ОБНОВЛЕНИЕ: Слушаем общий широковещательный канал Эфира
         val topicDisposable = stompClient.topic("/topic/ether")
