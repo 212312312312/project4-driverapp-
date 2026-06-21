@@ -544,16 +544,93 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun toggleSearchActivation() {
-        // --- ДОБАВЛЕНО: Запрет запуска цепочки заказов в оффлайне ---
+        // --- АВТОМАТИКА: Если оффлайн — сначала выводим в онлайн, а сервер сам врубит CHAIN ---
         if (!isDriverOnline) {
-            Toast.makeText(this, "Переключіть режим на Онлайн", Toast.LENGTH_SHORT).show()
+            setOnlineVisualState(true, animate = true)
+            isDriverOnline = true
+            sessionManager.saveDriverOnlineStatus(true)
+
+            btnStatusToggle.isEnabled = false
+            LocationServices.getFusedLocationProviderClient(this).lastLocation.addOnSuccessListener { loc ->
+                lifecycleScope.launch {
+                    try {
+                        val response = ApiClient.getInstance().getApiService(this@MainActivity)
+                            .updateStatus(UpdateDriverStatusRequest(true, loc?.latitude ?: 0.0, loc?.longitude ?: 0.0))
+                        if (response.isSuccessful) {
+                            updateSearchStatusUI() // Подтянет CHAIN с сервера и запустит анимацию!
+                            Toast.makeText(this@MainActivity, "Вийшли в онлайн та розпочали пошук!", Toast.LENGTH_SHORT).show()
+                        } else {
+                            setOnlineVisualState(false, animate = true)
+                            isDriverOnline = false
+                            sessionManager.saveDriverOnlineStatus(false)
+                            Toast.makeText(this@MainActivity, "Помилка активації мережі", Toast.LENGTH_SHORT).show()
+                        }
+                    } catch (e: Exception) {
+                        setOnlineVisualState(false, animate = true)
+                        isDriverOnline = false
+                        sessionManager.saveDriverOnlineStatus(false)
+                    } finally {
+                        btnStatusToggle.isEnabled = true
+                    }
+                }
+            }.addOnFailureListener {
+                lifecycleScope.launch {
+                    try {
+                        val response = ApiClient.getInstance().getApiService(this@MainActivity)
+                            .updateStatus(UpdateDriverStatusRequest(true, 0.0, 0.0))
+                        if (response.isSuccessful) {
+                            updateSearchStatusUI()
+                        } else {
+                            setOnlineVisualState(false, animate = true)
+                            isDriverOnline = false
+                            sessionManager.saveDriverOnlineStatus(false)
+                        }
+                    } catch (e: Exception) {
+                        setOnlineVisualState(false, animate = true)
+                        isDriverOnline = false
+                        sessionManager.saveDriverOnlineStatus(false)
+                    } finally {
+                        btnStatusToggle.isEnabled = true
+                    }
+                }
+            }
             return
         }
 
+        // --- ЕСЛИ ВОДИТЕЛЬ УЖЕ ОНЛАЙН (Штатный клик по кнопке поиска) ---
         isSearchActive = !isSearchActive
         updateSearchBlockVisuals(isSearchActive)
-        if (isSearchActive) Toast.makeText(this, "Пошук розпочато...", Toast.LENGTH_SHORT).show()
-        else Toast.makeText(this, "Пошук зупинено.", Toast.LENGTH_SHORT).show()
+
+        lifecycleScope.launch {
+            try {
+                val targetMode = if (isSearchActive) sessionManager.getSearchMode() else DriverSearchMode.MANUAL
+
+                val currentConfig = ApiClient.getInstance().getApiService(this@MainActivity).getSearchSettings()
+                val radius = currentConfig.body()?.radius ?: 3.0
+                val sectorIds = currentConfig.body()?.homeSectorIds ?: emptyList()
+
+                val req = DriverSearchSettingsDto(
+                    mode = targetMode,
+                    radius = radius,
+                    homeSectorIds = sectorIds
+                )
+
+                val response = ApiClient.getInstance().getApiService(this@MainActivity).updateSearchSettings(req)
+                if (response.isSuccessful) {
+                    updateSearchStatusUI()
+                    if (isSearchActive) Toast.makeText(this@MainActivity, "Пошук розпочато...", Toast.LENGTH_SHORT).show()
+                    else Toast.makeText(this@MainActivity, "Пошук зупинено.", Toast.LENGTH_SHORT).show()
+                } else {
+                    isSearchActive = !isSearchActive
+                    updateSearchBlockVisuals(isSearchActive)
+                    Toast.makeText(this@MainActivity, "Помилка сервера", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                isSearchActive = !isSearchActive
+                updateSearchBlockVisuals(isSearchActive)
+                Toast.makeText(this@MainActivity, "Помилка мережі", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     private fun updateSearchBlockVisuals(isActive: Boolean) {
@@ -598,6 +675,14 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private fun updateSearchStatusUI() {
         lifecycleScope.launch {
+            // --- ТОЧЕЧНОЕ ДОБАВЛЕНИЕ: Предохранитель оффлайна ---
+            if (!isDriverOnline) {
+                isSearchActive = false
+                updateSearchBlockVisuals(false)
+                tvSearchModeSubtitle.text = "Натисніть для активації"
+                return@launch
+            }
+
             try {
                 val response = ApiClient.getInstance().getApiService(this@MainActivity).getSearchSettings()
                 if (response.isSuccessful && response.body() != null) {
@@ -616,12 +701,20 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                         DriverSearchMode.CHAIN -> {
                             tvSearchModeTitle.text = getString(R.string.main_search_chain_title)
                             if (searchRadiusCircle != null) searchRadiusCircle?.isVisible = !sectorOverlay.isShown
+
+                            // --- СИНХРОНИЗАЦИЯ: Включаем флаг активности ---
+                            isSearchActive = true
+
                             sessionManager.saveSearchMode(DriverSearchMode.CHAIN)
                         }
                         DriverSearchMode.HOME -> {
                             val sectorsText = if (state.homeSectorNames.isNullOrEmpty()) "?" else state.homeSectorNames
                             tvSearchModeTitle.text = "Додому ($sectorsText)"
                             if (searchRadiusCircle != null) searchRadiusCircle?.isVisible = !sectorOverlay.isShown
+
+                            // --- СИНХРОНИЗАЦИЯ: Включаем флаг активности ---
+                            isSearchActive = true
+
                             sessionManager.saveSearchMode(DriverSearchMode.HOME)
                         }
                     }
@@ -1099,14 +1192,16 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 val response = ApiClient.getInstance().getApiService(this@MainActivity).updateStatus(UpdateDriverStatusRequest(isOnline, lat, lng))
                 if (!response.isSuccessful) {
                     setOnlineVisualState(!isOnline, animate = true)
-                    sessionManager.saveDriverOnlineStatus(!isOnline) // Бэкап статуса в сессии
+                    sessionManager.saveDriverOnlineStatus(!isOnline)
                 } else {
-                    // --- ДОБАВЛЕНО: Успешно синхронизировали статус с сервером ---
                     sessionManager.saveDriverOnlineStatus(isOnline)
+
+                    // --- ТОЧЕЧНОЕ ДОБАВЛЕНИЕ: Мгновенно тушим или перерасчитываем UI поиска ---
+                    updateSearchStatusUI()
                 }
             } catch (e: Exception) {
                 setOnlineVisualState(!isOnline, animate = true)
-                sessionManager.saveDriverOnlineStatus(!isOnline) // Бэкап статуса в сессии
+                sessionManager.saveDriverOnlineStatus(!isOnline)
             } finally {
                 btnStatusToggle.isEnabled = true
             }

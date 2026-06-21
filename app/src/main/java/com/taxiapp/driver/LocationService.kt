@@ -208,6 +208,10 @@ class LocationService : Service() {
         if (token != null) {
             runBlocking(Dispatchers.IO) {
                 try {
+                    // --- ИСПРАВЛЕНО ТУТ: Передаем параметры позиционно (без неверных имен) ---
+                    val offlineRequest = com.taxiapp.driver.network.UpdateDriverStatusRequest(false, 0.0, 0.0)
+                    ApiClient.getInstance().getApiService(applicationContext).updateStatus(offlineRequest)
+
                     ApiClient.getInstance().getApiService(applicationContext).deleteLocation()
                 } catch (e: Exception) { e.printStackTrace() }
             }
