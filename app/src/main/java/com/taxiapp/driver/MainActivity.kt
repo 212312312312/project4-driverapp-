@@ -126,7 +126,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private var overlayBackPressedCallback: androidx.activity.OnBackPressedCallback? = null
     private var originalContainerElevation: Float = -1f
     private var searchRadiusCircle: Circle? = null
-    private var currentSearchRadiusKm: Double = 3.0
+    // ЗАМЕНИТЬ СТРОКУ ОБЪЯВЛЕНИЯ В МЕСТАХ ИНИЦИАЛИЗАЦИИ ПЕРЕМЕННЫХ КЛАССА:
+
+    private var currentSearchRadiusKm: Double = 0.5 // Поменяли дефолт с 3.0 на 0.5
     private var currentDriverLocation: LatLng? = null
 
     private var isSectorsVisible = false
@@ -177,6 +179,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         setContentView(R.layout.activity_main)
 
         sessionManager = SessionManager(this)
+        currentSearchRadiusKm = sessionManager.getSearchRadius()
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         if (sessionManager.fetchAuthToken() == null) {
@@ -325,7 +328,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         lifecycleScope.launch {
             try {
                 val currentResponse = ApiClient.getInstance().getApiService(this@MainActivity).getSearchSettings()
-                val currentRadius = currentResponse.body()?.radius ?: 3.0
+                // ЗАМЕНИТЬ СТРОКУ В updateHomeSectors():
+
+                val currentRadius = currentResponse.body()?.radius ?: 0.5 // Сменили дефолт на 0.5
                 val req = DriverSearchSettingsDto(DriverSearchMode.HOME, currentRadius, sectorIds)
                 val response = ApiClient.getInstance().getApiService(this@MainActivity).updateSearchSettings(req)
                 if (response.isSuccessful) {
@@ -544,11 +549,15 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun toggleSearchActivation() {
-        // --- АВТОМАТИКА: Если оффлайн — сначала выводим в онлайн, а сервер сам врубит CHAIN ---
+        // --- АВТОМАТИКА: Если оффлайн — сначала выводим в онлайн, а затем явно включаем нужный режим поиска ---
         if (!isDriverOnline) {
             setOnlineVisualState(true, animate = true)
             isDriverOnline = true
             sessionManager.saveDriverOnlineStatus(true)
+
+            // Мгновенно даем визуальный отклик водителю, запускаем анимацию поиска
+            isSearchActive = true
+            updateSearchBlockVisuals(true)
 
             btnStatusToggle.isEnabled = false
             LocationServices.getFusedLocationProviderClient(this).lastLocation.addOnSuccessListener { loc ->
@@ -557,15 +566,31 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                         val response = ApiClient.getInstance().getApiService(this@MainActivity)
                             .updateStatus(UpdateDriverStatusRequest(true, loc?.latitude ?: 0.0, loc?.longitude ?: 0.0))
                         if (response.isSuccessful) {
-                            updateSearchStatusUI() // Подтянет CHAIN с сервера и запустит анимацию!
+                            // Явно заставляем сервер переключить настройки поиска на сохраненный режим (CHAIN/HOME), избегая гонки условий
+                            val targetMode = sessionManager.getSearchMode() ?: DriverSearchMode.CHAIN
+                            val currentConfig = ApiClient.getInstance().getApiService(this@MainActivity).getSearchSettings()
+                            // ЗАМЕНИТЬ СТРОКУ ВНУТРИ БЛОКА toggleSearchActivation (ОФФЛАЙН-УСПЕХ):
+
+                            val radius = currentConfig.body()?.radius ?: 0.5 // Сменили дефолт на 0.5
+                            val sectorIds = currentConfig.body()?.homeSectorIds ?: emptyList()
+
+                            val req = DriverSearchSettingsDto(mode = targetMode, radius = radius, homeSectorIds = sectorIds)
+                            ApiClient.getInstance().getApiService(this@MainActivity).updateSearchSettings(req)
+
+                            updateSearchStatusUI()
                             Toast.makeText(this@MainActivity, "Вийшли в онлайн та розпочали пошук!", Toast.LENGTH_SHORT).show()
                         } else {
+                            // Откат визуального состояния при ошибке сервера
+                            isSearchActive = false
+                            updateSearchBlockVisuals(false)
                             setOnlineVisualState(false, animate = true)
                             isDriverOnline = false
                             sessionManager.saveDriverOnlineStatus(false)
                             Toast.makeText(this@MainActivity, "Помилка активації мережі", Toast.LENGTH_SHORT).show()
                         }
                     } catch (e: Exception) {
+                        isSearchActive = false
+                        updateSearchBlockVisuals(false)
                         setOnlineVisualState(false, animate = true)
                         isDriverOnline = false
                         sessionManager.saveDriverOnlineStatus(false)
@@ -579,13 +604,27 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                         val response = ApiClient.getInstance().getApiService(this@MainActivity)
                             .updateStatus(UpdateDriverStatusRequest(true, 0.0, 0.0))
                         if (response.isSuccessful) {
+                            val targetMode = sessionManager.getSearchMode() ?: DriverSearchMode.CHAIN
+                            val currentConfig = ApiClient.getInstance().getApiService(this@MainActivity).getSearchSettings()
+                            // ЗАМЕНИТЬ СТРОКУ ВНУТРИ БЛОКА ШТАТНОГО КЛИКА (ДЛЯ ОНЛАЙН ВОДИТЕЛЯ):
+
+                            val radius = currentConfig.body()?.radius ?: 0.5 // Сменили дефолт на 0.5
+                            val sectorIds = currentConfig.body()?.homeSectorIds ?: emptyList()
+
+                            val req = DriverSearchSettingsDto(mode = targetMode, radius = radius, homeSectorIds = sectorIds)
+                            ApiClient.getInstance().getApiService(this@MainActivity).updateSearchSettings(req)
+
                             updateSearchStatusUI()
                         } else {
+                            isSearchActive = false
+                            updateSearchBlockVisuals(false)
                             setOnlineVisualState(false, animate = true)
                             isDriverOnline = false
                             sessionManager.saveDriverOnlineStatus(false)
                         }
                     } catch (e: Exception) {
+                        isSearchActive = false
+                        updateSearchBlockVisuals(false)
                         setOnlineVisualState(false, animate = true)
                         isDriverOnline = false
                         sessionManager.saveDriverOnlineStatus(false)
@@ -606,7 +645,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 val targetMode = if (isSearchActive) sessionManager.getSearchMode() else DriverSearchMode.MANUAL
 
                 val currentConfig = ApiClient.getInstance().getApiService(this@MainActivity).getSearchSettings()
-                val radius = currentConfig.body()?.radius ?: 3.0
+                // ЗАМЕНИТЬ СТРОКУ ВНУТРИ БЛОКА toggleSearchActivation (В FAILURE СЛУШАТЕЛЕ ГЕО):
+
+                val radius = currentConfig.body()?.radius ?: 0.5 // Сменили дефолт на 0.5
                 val sectorIds = currentConfig.body()?.homeSectorIds ?: emptyList()
 
                 val req = DriverSearchSettingsDto(
@@ -688,6 +729,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 if (response.isSuccessful && response.body() != null) {
                     val state = response.body()!!
                     currentSearchRadiusKm = state.radius
+                    sessionManager.saveSearchRadius(state.radius)
                     drawSearchRadius()
                     val sessionManager = SessionManager(this@MainActivity)
 

@@ -30,7 +30,9 @@ class SearchSettingsBottomSheet(
     private lateinit var btnSave: AppCompatButton
 
     private var currentMode = DriverSearchMode.CHAIN
-    private var currentRadius = 3.0
+    // ЗАМЕНИТЬ СТРОКУ ОБЪЯВЛЕНИЯ В SearchSettingsBottomSheet.kt:
+
+    private var currentRadius = 0.5 // Сменили базовое значение с 3.0 на 0.5
     private var selectedHomeSectorIds: List<Long>? = null
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -168,7 +170,9 @@ class SearchSettingsBottomSheet(
                 val response = ApiClient.getInstance().getApiService(requireContext()).updateSearchSettings(req)
 
                 if (response.isSuccessful && response.body() != null) {
-                    SessionManager(requireContext()).saveSearchMode(currentMode)
+                    val session = SessionManager(requireContext())
+                    session.saveSearchMode(currentMode)
+                    session.saveSearchRadius(currentRadius) // <- ТОЧЕЧНО ДОБАВЛЕНО: Сохраняем радиус в локальный кэш
                     onSettingsChanged()
                     dismiss()
                 } else {

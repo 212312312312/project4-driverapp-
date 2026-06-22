@@ -3,6 +3,7 @@ package com.taxiapp.driver.service
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import com.taxiapp.driver.MainActivity
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -42,6 +43,14 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
             // 2. Мгновенно собираем объект заказа из пуша без единого сетевого запроса!
             processOrderPushDirectly(data, type)
+        }
+
+        if (type == "ORDER_CANCEL") {
+            // Пробуждаем экран, если заблокирован
+            wakeUpScreen()
+            // Вызываем метод отображения уведомления в шторке/баннере
+            showCancelNotification(data)
+            return
         }
     }
 
@@ -150,22 +159,18 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         // Пересоздаем каналы с суффиксом _v3, чтобы Android жестко выставил наивысший приоритет
+        // ЗАМЕНИТЬ БЛОК СОЗДАНИЯ КАНАЛА В МЕТОДЕ showCancelNotification:
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_HIGH).apply {
+            val channel = NotificationChannel(channelId, "Скасування замовлень", NotificationManager.IMPORTANCE_HIGH).apply {
                 enableVibration(true)
                 lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
-
-                // На ладони: если это канал для офферов — вырезаем звук под корень. Для остальных (подтверждения) оставляем дефолт.
-                if (channelId == "offer_silent_channel_v4") {
-                    setSound(null, null)
-                } else {
-                    setSound(
-                        android.provider.Settings.System.DEFAULT_RINGTONE_URI,
-                        android.media.AudioAttributes.Builder()
-                            .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
-                            .build()
-                    )
-                }
+                setSound(
+                    android.provider.Settings.System.DEFAULT_NOTIFICATION_URI, // Поменяли рингтон на короткое уведомление
+                    android.media.AudioAttributes.Builder()
+                        .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION) // Меняем USAGE_NOTIFICATION_RINGTONE на обычный USAGE_NOTIFICATION
+                        .build()
+                )
             }
             notificationManager.createNotificationChannel(channel)
         }
@@ -190,6 +195,57 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
         notificationManager.notify(notifId, builder.build())
         Log.d("FCM_UNIT", "🔔 Системное FullScreen-уведомление отправлено в менеджер. ID: $notifId")
+    }
+
+    // ДОБАВИТЬ КАК НОВЫЙ МЕТОД В КЛАСС MyFirebaseMessagingService:
+
+    private fun showCancelNotification(data: Map<String, String>) {
+        val title = data["title"] ?: "Замовлення скасовано"
+        val body = data["body"] ?: "Клієнт скасував замовлення"
+        val orderUuid = data["orderId"]
+
+        // ЗАМЕНИТЬ КУСОК В НАЧАЛЕ МЕТОДА showCancelNotification НА ЭТОТ:
+
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val channelId = "cancel_channel_v2" // Обязательно сменили ID на v2, чтобы сбросить кэш старого рингтона в телефоне
+
+// Создаем чистый канал высокой важности без принудительных URI звуков
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(channelId, "Скасування замовлень", NotificationManager.IMPORTANCE_HIGH).apply {
+                enableVibration(true)
+                lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
+                // Никаких setSound! Система сама выдаст дефолтный короткий писк шторки
+            }
+            notificationManager.createNotificationChannel(channel)
+        }
+
+        // При клике на уведомление плавно переводим на MainActivity и чистим стек старых экранов
+        val intent = Intent(this, MainActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            putExtra("CANCELLED_ORDER_UUID", orderUuid)
+        }
+
+        // Генерируем уникальный ID на основе хэша UUID, чтобы уведомления не затирали друг друга
+        val notifId = orderUuid?.hashCode() ?: System.currentTimeMillis().toInt()
+
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            notifId,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val builder = NotificationCompat.Builder(this, channelId)
+            .setSmallIcon(R.mipmap.ic_launcher) // Твоя иконка приложения
+            .setContentTitle(title)
+            .setContentText(body)
+            .setPriority(NotificationCompat.PRIORITY_HIGH) // Пробивает фоновый режим
+            .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+
+        notificationManager.notify(notifId, builder.build())
+        Log.d("FCM_UNIT", "🔔 Системное уведомление об отмене успешно выведено! ID: $notifId")
     }
 
     override fun onNewToken(token: String) {

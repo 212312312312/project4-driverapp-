@@ -12,6 +12,8 @@ class SessionManager(context: Context) {
         const val USER_TOKEN = "user_token"
         const val REFRESH_TOKEN = "refresh_token"
         const val KEY_DRIVER_ID = "driver_id"
+
+        const val KEY_SEARCH_RADIUS = "search_radius"
         const val KEY_PENDING_DELETION = "pending_deletion"
         const val KEY_DRIVER_NAME = "driver_name"
         const val KEY_DRIVER_PHONE = "driver_phone"
@@ -44,6 +46,16 @@ class SessionManager(context: Context) {
 
     fun setQuickAccessEnabled(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_QUICK_ACCESS_ENABLED, enabled).apply()
+    }
+
+    fun saveSearchRadius(radius: Double) {
+        prefs.edit().putFloat(KEY_SEARCH_RADIUS, radius.toFloat()).apply()
+    }
+
+    // ЗАМЕНИТЬ МЕТОД getSearchRadius В SessionManager.kt НА ЭТОТ:
+
+    fun getSearchRadius(): Double {
+        return prefs.getFloat(KEY_SEARCH_RADIUS, 0.5f).toDouble() // Сменили дефолт с 3.0f на 0.5f
     }
 
     fun isQuickAccessEnabled(): Boolean = prefs.getBoolean(KEY_QUICK_ACCESS_ENABLED, false)
