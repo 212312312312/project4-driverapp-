@@ -11,6 +11,8 @@ data class DriverActivityDto(
 
     @SerializedName("history")
     val history: List<ActivityHistoryItemDto>
+
+
 )
 
 data class ActivityHistoryItemDto(
@@ -21,5 +23,8 @@ data class ActivityHistoryItemDto(
     val reason: String,
 
     @SerializedName("date")
-    val date: String
+    val date: String,
+
+    @SerializedName("orderUuid")
+    val orderUuid: String? = null
 )

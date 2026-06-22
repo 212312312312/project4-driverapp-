@@ -16,11 +16,12 @@
         android:layout_weight="1"
         android:orientation="vertical">
 
+        <!-- НАЙДИ И ЗАМЕНИ ЭТОТ БЛОК ВНУТРИ tvReason -->
         <TextView
             android:id="@+id/tvReason"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Замовлення #123"
+            android:text="Замовлення"
             android:textSize="16sp"
             android:fontFamily="@font/app_font_family"
             android:textColor="@color/driver_text_primary"

@@ -23,10 +23,37 @@ class PendingFundsActivity : AppCompatActivity() {
 
         rvPending = findViewById(R.id.rv_pending_transactions)
         rvPending.layoutManager = LinearLayoutManager(this)
-        adapter = WalletAdapter()
+        adapter = WalletAdapter { orderId ->
+            loadOrderDetailsAndOpen(orderId) // 👈 Передаем обработчик клика по аналогии с основным кошельком
+        }
         rvPending.adapter = adapter
 
         loadPendingTransactions()
+    }
+
+    private fun loadOrderDetailsAndOpen(orderId: Long) {
+        lifecycleScope.launch {
+            try {
+                Toast.makeText(this@PendingFundsActivity, "Завантаження деталей замовлення...", Toast.LENGTH_SHORT).show()
+
+                val response = ApiClient.getInstance()
+                    .getApiService(this@PendingFundsActivity)
+                    .getOrderByInternalId(orderId)
+
+                if (response.isSuccessful && response.body() != null) {
+                    val order = response.body()!!
+
+                    val intent = android.content.Intent(this@PendingFundsActivity, HistoryDetailsActivity::class.java).apply {
+                        putExtra("EXTRA_ORDER", order)
+                    }
+                    startActivity(intent)
+                } else {
+                    Toast.makeText(this@PendingFundsActivity, "Не вдалося завантажити деталі замовлення", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@PendingFundsActivity, "Помилка мережі при завантаженні замовлення", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     private fun loadPendingTransactions() {

@@ -264,7 +264,9 @@ interface DriverApiService {
         @Path("id") id: Long,
         @Body req: UpdateFilterModeRequest
     ): Response<DriverFilter>
-
+    // НАЙДИ МЕТОД getOrderById И СРАЗУ ПОСЛЕ НЕГО ДОБАВЬ:
+    @GET("api/v1/driver/orders/by-internal-id/{id}")
+    suspend fun getOrderByInternalId(@Path("id") id: Long): Response<Order>
     @PUT("api/v1/driver/filters/{id}")
     suspend fun updateFilter(
         @Path("id") id: Long,

@@ -80,9 +80,38 @@ class WalletActivity : AppCompatActivity() {
     }
 
     private fun setupRecyclerView() {
-        adapter = WalletAdapter()
+        adapter = WalletAdapter { orderId ->
+            loadOrderDetailsAndOpen(orderId) // 👈 Передаем клик в фоновый загрузчик
+        }
         rvTransactions.layoutManager = LinearLayoutManager(this)
         rvTransactions.adapter = adapter
+    }
+
+    private fun loadOrderDetailsAndOpen(orderId: Long) {
+        lifecycleScope.launch {
+            try {
+                Toast.makeText(this@WalletActivity, "Завантаження деталей замовлення...", Toast.LENGTH_SHORT).show()
+
+                // Делаем сетевой запрос к Спрингу по Long ID транзакции
+                val response = ApiClient.getInstance()
+                    .getApiService(this@WalletActivity)
+                    .getOrderByInternalId(orderId)
+
+                if (response.isSuccessful && response.body() != null) {
+                    val order = response.body()!!
+
+                    // Бесшовно и красиво открываем экран деталей архивного заказа
+                    val intent = Intent(this@WalletActivity, HistoryDetailsActivity::class.java).apply {
+                        putExtra("EXTRA_ORDER", order) // Упаковываем полный объект, как ожидает этот экран
+                    }
+                    startActivity(intent)
+                } else {
+                    Toast.makeText(this@WalletActivity, "Не вдалося завантажити деталі замовлення", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@WalletActivity, "Помилка мережі при завантаженні замовлення", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     override fun onResume() {

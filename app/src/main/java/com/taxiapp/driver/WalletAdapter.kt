@@ -13,7 +13,9 @@ import com.taxiapp.driver.network.WalletTransactionDto
 import java.text.SimpleDateFormat
 import java.util.Locale
 
-class WalletAdapter : ListAdapter<WalletTransactionDto, WalletAdapter.WalletViewHolder>(DiffCallback()) {
+class WalletAdapter(
+    private val onItemClick: (Long) -> Unit // 👈 Добавлено для проброса клика в Активити
+) : ListAdapter<WalletTransactionDto, WalletAdapter.WalletViewHolder>(DiffCallback()) {
 
     class WalletViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val tvType: TextView = itemView.findViewById(R.id.tv_tx_type)
@@ -29,6 +31,7 @@ class WalletAdapter : ListAdapter<WalletTransactionDto, WalletAdapter.WalletView
         return WalletViewHolder(view)
     }
 
+    // ПОЛНОСТЬЮ ЗАМЕНИ ЭТОТ МЕТОД В WalletAdapter.kt
     override fun onBindViewHolder(holder: WalletViewHolder, position: Int) {
         val item = getItem(position)
         val context = holder.itemView.context
@@ -39,16 +42,6 @@ class WalletAdapter : ListAdapter<WalletTransactionDto, WalletAdapter.WalletView
         // Выводим остаток (залишок) после транзакции
         holder.tvBalanceAfter.text = "Залишок: %.2f ₴".format(item.balanceAfter)
         holder.tvBalanceAfter.visibility = View.VISIBLE
-
-        // Обработка клика: открываем детали, если транзакция привязана к заказу
-        holder.itemView.setOnClickListener {
-            if (item.orderId != null && item.orderId > 0) {
-                val intent = android.content.Intent(context, HistoryDetailsActivity::class.java).apply {
-                    putExtra("ORDER_ID", item.orderId)
-                }
-                context.startActivity(intent)
-            }
-        }
 
         // 2. Дата (парсинг ISO 8601)
         try {
@@ -62,8 +55,6 @@ class WalletAdapter : ListAdapter<WalletTransactionDto, WalletAdapter.WalletView
         }
 
         // 3. Динамические цвета из colors.xml и Иконки
-        // DEPOSIT (Пополнение) или BONUS -> Зеленый
-        // DEPOSIT (Пополнение) или BONUS -> Наш фирменный бирюзовый неон
         if (item.operationType == "DEPOSIT" || item.operationType == "BONUS") {
             val neonTealColor = ContextCompat.getColor(context, R.color.driver_neon_teal)
 
@@ -74,9 +65,7 @@ class WalletAdapter : ListAdapter<WalletTransactionDto, WalletAdapter.WalletView
             holder.imgIcon.setColorFilter(neonTealColor)
 
             holder.tvType.text = if (item.operationType == "DEPOSIT") "Поповнення" else "Бонус"
-        }
-        // COMMISSION / PENALTY / WITHDRAWAL -> Наш фирменный красный
-        else {
+        } else {
             val errorRedColor = ContextCompat.getColor(context, R.color.driver_error_red)
 
             holder.tvAmount.text = "%.2f ₴".format(item.amount)
@@ -90,6 +79,20 @@ class WalletAdapter : ListAdapter<WalletTransactionDto, WalletAdapter.WalletView
                 "PENALTY" -> "Штраф"
                 "WITHDRAWAL" -> "Виведення"
                 else -> item.operationType
+            }
+        }
+
+        // 4. ПУЛЕНЕПРОБИВАЕМАЯ ОБРАБОТКА КЛИКА (Перенесена вниз для стабильности)
+        holder.itemView.setOnClickListener {
+            // Резервный парсинг: если orderId null, вытаскиваем число после знака '#' из описания строки
+            val finalOrderId = item.orderId ?: item.description?.let { desc ->
+                Regex("#(\\d+)").find(desc)?.groupValues?.get(1)?.toLongOrNull()
+            }
+
+            if (finalOrderId != null && finalOrderId > 0) {
+                onItemClick(finalOrderId) // 👈 Железно отправляем запрос на сервер Спринга
+            } else {
+                android.widget.Toast.makeText(context, "Ця операція не пов'язана з конкретним замовленням", android.widget.Toast.LENGTH_SHORT).show()
             }
         }
     }

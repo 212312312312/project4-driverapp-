@@ -29,8 +29,33 @@ class DriverActivityHistoryActivity : AppCompatActivity() {
 
     private fun setupRecyclerView() {
         recyclerHistory.layoutManager = LinearLayoutManager(this)
-        adapter = HistoryActivityAdapter(emptyList())
+        adapter = HistoryActivityAdapter(emptyList()) { uuid ->
+            loadOrderDetailsAndOpen(uuid) // 👈 Вызов метода загрузки заказа
+        }
         recyclerHistory.adapter = adapter
+    }
+    private fun loadOrderDetailsAndOpen(uuid: String) {
+        lifecycleScope.launch {
+            try {
+                // Делаем сетевой запрос к твоему API для получения полного объекта заказа
+                val response = ApiClient.getInstance()
+                    .getApiService(this@DriverActivityHistoryActivity)
+                    .getOrderById(uuid)
+
+                if (response.isSuccessful && response.body() != null) {
+                    val order = response.body()!!
+                    // Бесшовно открываем экран деталей архивного заказа
+                    val intent = android.content.Intent(this@DriverActivityHistoryActivity, HistoryDetailsActivity::class.java).apply {
+                        putExtra("EXTRA_ORDER", order)
+                    }
+                    startActivity(intent)
+                } else {
+                    Toast.makeText(this@DriverActivityHistoryActivity, "Не вдалося завантажити деталі замовлення", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@DriverActivityHistoryActivity, "Помилка мережі при завантаженні замовлення", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     private fun loadHistory() {
