@@ -135,7 +135,29 @@ class WalletActivity : AppCompatActivity() {
     }
 
     private fun renderBalance(amount: Double) {
-        tvBalance.text = "%.2f ₴".format(amount)
+        // Форматируем строку (выдаст например "150.50 ₴" или "150,50 ₴" в зависимости от языка)
+        val balanceText = "%.2f ₴".format(amount)
+        val spannable = android.text.SpannableString(balanceText)
+
+        // Ищем разделитель: либо точку, либо запятую
+        val dotIndex = balanceText.indexOf(".")
+        val commaIndex = balanceText.indexOf(",")
+        val separatorIndex = if (dotIndex != -1) dotIndex else commaIndex
+
+        if (separatorIndex != -1) {
+            // Уменьшаем копейки и значок грн до 0.65 от начального размера
+            spannable.setSpan(
+                android.text.style.RelativeSizeSpan(0.65f),
+                separatorIndex,
+                balanceText.length,
+                android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+        }
+
+        // Сетапим готовый текст в TextView
+        tvBalance.text = spannable
+
+        // Твоя логика цвета при минусовом балансе
         if (amount < 0) {
             tvBalance.setTextColor(getColor(R.color.driver_error_red))
         } else {

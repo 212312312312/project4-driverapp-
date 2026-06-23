@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <!-- Используем твой цвет из ресурсов -->
+    <solid android:color="@color/driver_card_bg" />
+    <!-- Радиус скругления углов под кредитку -->
+    <corners android:radius="36dp" />
+</shape>

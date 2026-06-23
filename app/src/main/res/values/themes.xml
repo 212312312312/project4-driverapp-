@@ -8,7 +8,7 @@
         <item name="android:navigationBarColor">@color/driver_black_bg</item>
 
         <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">false</item>
-
+        <item name="elevationOverlayEnabled">false</item>
         <item name="colorSurface">@color/driver_card_bg</item>
         <item name="android:colorBackground">@color/driver_black_bg</item>
         <item name="android:windowBackground">@color/driver_black_bg</item>
