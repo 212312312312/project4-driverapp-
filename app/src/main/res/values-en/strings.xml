@@ -26,7 +26,7 @@
     <string name="permission_dialog_cancel">Cancel</string>
     <string name="permission_dialog_allow">Allow permission</string>
 
-
+    <string name="error_too_many_requests">Too many requests. Please try again later.</string>
 
     <string name="payment_failed_title">Card Payment Failed!</string>
     <string name="payment_failed_message">The client\'s card has insufficient funds or is blocked.\n\nThe payment method has been automatically changed to CASH.\nPlease collect cash from the passenger and press "Complete" again.</string>

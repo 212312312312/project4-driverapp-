@@ -284,7 +284,11 @@ class LoginActivity : AppCompatActivity() {
                         showSmsVerifyStep(phone)
                     }
                 } else {
-                    val errorMsg = if (response.code() == 404) "Водія не знайдено" else "Помилка: ${response.code()}"
+                    val errorMsg = when (response.code()) {
+                        429 -> getString(R.string.error_too_many_requests)
+                        404 -> "Водія не знайдено"
+                        else -> "Помилка: ${response.code()}"
+                    }
                     Toast.makeText(this@LoginActivity, errorMsg, Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
@@ -313,7 +317,8 @@ class LoginActivity : AppCompatActivity() {
                     saveSession(loginData)
                 } else {
                     // --- КІНЕЦЬ ЗМІН ---
-                    Toast.makeText(this@LoginActivity, "Невірний код", Toast.LENGTH_SHORT).show()
+                    val errorMsg = if (response.code() == 429) getString(R.string.error_too_many_requests) else "Невірний код"
+                    Toast.makeText(this@LoginActivity, errorMsg, Toast.LENGTH_SHORT).show()
                     setLoading(false)
                     binding.etCodeHidden.text.clear()
                 }

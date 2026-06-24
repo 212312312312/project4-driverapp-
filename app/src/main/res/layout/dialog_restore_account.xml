@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="@drawable/bg_bottom_nav_floating"
+    android:backgroundTint="@color/driver_black_bg"
     android:orientation="vertical"
     android:padding="24dp">
 
@@ -11,9 +13,10 @@
         android:layout_height="wrap_content"
         android:gravity="center"
         android:text="Відновлення акаунту"
-        android:textColor="@color/white"
+        android:textColor="@color/driver_text_primary"
         android:textSize="22sp"
-        android:textStyle="bold" />
+        android:textStyle="bold"
+        android:fontFamily="@font/app_font_family" />
 
     <TextView
         android:layout_width="match_parent"
@@ -23,7 +26,9 @@
         android:gravity="center"
         android:text="Цей акаунт знаходиться в черзі на видалення.\n\nВи точно бажаєте продовжити роботу та скасувати видалення?"
         android:textColor="@color/driver_text_secondary"
-        android:textSize="16sp" />
+        android:textSize="15sp"
+        android:lineSpacingExtra="4dp"
+        android:fontFamily="@font/app_font_family" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -38,9 +43,15 @@
             android:layout_marginEnd="8dp"
             android:layout_weight="1"
             android:background="@drawable/bg_round_button_gray"
+            android:backgroundTint="@color/driver_card_bg"
             android:text="Скасувати"
-            android:textColor="@color/white"
-            android:textStyle="bold" />
+            android:textAllCaps="false"
+            android:textColor="@color/driver_text_primary"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:elevation="0dp"
+            android:stateListAnimator="@null"
+            android:fontFamily="@font/app_font_family" />
 
         <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/btnConfirmRestore"
@@ -48,10 +59,16 @@
             android:layout_height="50dp"
             android:layout_marginStart="8dp"
             android:layout_weight="1"
-            android:background="@drawable/bg_round_button"
+            android:background="@drawable/bg_round_button_gray"
+            android:backgroundTint="@color/driver_neon_teal"
             android:text="Відновити"
-            android:textColor="@color/white"
-            android:textStyle="bold" />
+            android:textAllCaps="false"
+            android:textColor="@color/driver_text_black"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:elevation="0dp"
+            android:stateListAnimator="@null"
+            android:fontFamily="@font/app_font_family" />
     </LinearLayout>
 
 </LinearLayout>
