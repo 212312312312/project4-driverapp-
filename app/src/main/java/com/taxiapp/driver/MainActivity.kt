@@ -129,6 +129,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     // ЗАМЕНИТЬ СТРОКУ ОБЪЯВЛЕНИЯ В МЕСТАХ ИНИЦИАЛИЗАЦИИ ПЕРЕМЕННЫХ КЛАССА:
 
     private var currentSearchRadiusKm: Double = 0.5 // Поменяли дефолт с 3.0 на 0.5
+    private var currentHomeSectorIds: List<Long> = emptyList()
     private var currentDriverLocation: LatLng? = null
 
     private var isSectorsVisible = false
@@ -140,7 +141,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private var manualLocationMarker: Marker? = null
 
-    private var isSearchActive = false
+    internal var isSearchActive = false // 👈 Должна быть доступна для шторки из того же пакета
     private var restoreDialog: android.app.Dialog? = null
 
     companion object {
@@ -180,6 +181,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         sessionManager = SessionManager(this)
         currentSearchRadiusKm = sessionManager.getSearchRadius()
+        currentHomeSectorIds = sessionManager.getHomeSectorIds() // 🚀 ИСПРАВЛЕНО: Подгружаем домашние сектора сразу при старте
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         if (sessionManager.fetchAuthToken() == null) {
@@ -327,15 +329,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun updateHomeSectors(sectorIds: List<Long>) {
         lifecycleScope.launch {
             try {
-                val currentResponse = ApiClient.getInstance().getApiService(this@MainActivity).getSearchSettings()
-                // ЗАМЕНИТЬ СТРОКУ В updateHomeSectors():
-
-                val currentRadius = currentResponse.body()?.radius ?: 0.5 // Сменили дефолт на 0.5
-                val req = DriverSearchSettingsDto(DriverSearchMode.HOME, currentRadius, sectorIds)
+                // 🚀 ОПТИМИЗАЦИЯ: Используем сохраненный в памяти currentSearchRadiusKm вместо GET запроса
+                val req = DriverSearchSettingsDto(DriverSearchMode.HOME, currentSearchRadiusKm, sectorIds)
                 val response = ApiClient.getInstance().getApiService(this@MainActivity).updateSearchSettings(req)
-                if (response.isSuccessful) {
+                if (response.isSuccessful && response.body() != null) {
+                    displaySearchState(response.body()!!)
                     Toast.makeText(this@MainActivity, "Сектори 'Додому' збережено!", Toast.LENGTH_SHORT).show()
-                    updateSearchStatusUI()
                 }
             } catch (e: Exception) { e.printStackTrace() }
         }
@@ -555,7 +554,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             isDriverOnline = true
             sessionManager.saveDriverOnlineStatus(true)
 
-            // Мгновенно даем визуальный отклик водителю, запускаем анимацию поиска
             isSearchActive = true
             updateSearchBlockVisuals(true)
 
@@ -566,34 +564,23 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                         val response = ApiClient.getInstance().getApiService(this@MainActivity)
                             .updateStatus(UpdateDriverStatusRequest(true, loc?.latitude ?: 0.0, loc?.longitude ?: 0.0))
                         if (response.isSuccessful) {
-                            // Явно заставляем сервер переключить настройки поиска на сохраненный режим (CHAIN/HOME), избегая гонки условий
                             val targetMode = sessionManager.getSearchMode() ?: DriverSearchMode.CHAIN
-                            val currentConfig = ApiClient.getInstance().getApiService(this@MainActivity).getSearchSettings()
-                            // ЗАМЕНИТЬ СТРОКУ ВНУТРИ БЛОКА toggleSearchActivation (ОФФЛАЙН-УСПЕХ):
 
-                            val radius = currentConfig.body()?.radius ?: 0.5 // Сменили дефолт на 0.5
-                            val sectorIds = currentConfig.body()?.homeSectorIds ?: emptyList()
+                            // 🚀 ОПТИМИЗАЦИЯ: Берем радиус и серилы прямо из памяти класса (SharedPrefs),
+                            // полностью предотвращая баг 400 Bad Request из-за пустых массивов [] при старте!
+                            val req = DriverSearchSettingsDto(mode = targetMode, radius = currentSearchRadiusKm, homeSectorIds = currentHomeSectorIds)
+                            val settingsResponse = ApiClient.getInstance().getApiService(this@MainActivity).updateSearchSettings(req)
 
-                            val req = DriverSearchSettingsDto(mode = targetMode, radius = radius, homeSectorIds = sectorIds)
-                            ApiClient.getInstance().getApiService(this@MainActivity).updateSearchSettings(req)
-
-                            updateSearchStatusUI()
-                            Toast.makeText(this@MainActivity, "Вийшли в онлайн та розпочали пошук!", Toast.LENGTH_SHORT).show()
+                            if (settingsResponse.isSuccessful && settingsResponse.body() != null) {
+                                displaySearchState(settingsResponse.body()!!)
+                                Toast.makeText(this@MainActivity, "Вийшли в онлайн та розпочали пошук!", Toast.LENGTH_SHORT).show()
+                            }
                         } else {
-                            // Откат визуального состояния при ошибке сервера
-                            isSearchActive = false
-                            updateSearchBlockVisuals(false)
-                            setOnlineVisualState(false, animate = true)
-                            isDriverOnline = false
-                            sessionManager.saveDriverOnlineStatus(false)
+                            revertOfflineState()
                             Toast.makeText(this@MainActivity, "Помилка активації мережі", Toast.LENGTH_SHORT).show()
                         }
                     } catch (e: Exception) {
-                        isSearchActive = false
-                        updateSearchBlockVisuals(false)
-                        setOnlineVisualState(false, animate = true)
-                        isDriverOnline = false
-                        sessionManager.saveDriverOnlineStatus(false)
+                        revertOfflineState()
                     } finally {
                         btnStatusToggle.isEnabled = true
                     }
@@ -605,29 +592,19 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                             .updateStatus(UpdateDriverStatusRequest(true, 0.0, 0.0))
                         if (response.isSuccessful) {
                             val targetMode = sessionManager.getSearchMode() ?: DriverSearchMode.CHAIN
-                            val currentConfig = ApiClient.getInstance().getApiService(this@MainActivity).getSearchSettings()
-                            // ЗАМЕНИТЬ СТРОКУ ВНУТРИ БЛОКА ШТАТНОГО КЛИКА (ДЛЯ ОНЛАЙН ВОДИТЕЛЯ):
 
-                            val radius = currentConfig.body()?.radius ?: 0.5 // Сменили дефолт на 0.5
-                            val sectorIds = currentConfig.body()?.homeSectorIds ?: emptyList()
+                            // 🚀 ОПТИМИЗАЦИЯ: И здесь страхуемся данными из памяти
+                            val req = DriverSearchSettingsDto(mode = targetMode, radius = currentSearchRadiusKm, homeSectorIds = currentHomeSectorIds)
+                            val settingsResponse = ApiClient.getInstance().getApiService(this@MainActivity).updateSearchSettings(req)
 
-                            val req = DriverSearchSettingsDto(mode = targetMode, radius = radius, homeSectorIds = sectorIds)
-                            ApiClient.getInstance().getApiService(this@MainActivity).updateSearchSettings(req)
-
-                            updateSearchStatusUI()
+                            if (settingsResponse.isSuccessful && settingsResponse.body() != null) {
+                                displaySearchState(settingsResponse.body()!!)
+                            }
                         } else {
-                            isSearchActive = false
-                            updateSearchBlockVisuals(false)
-                            setOnlineVisualState(false, animate = true)
-                            isDriverOnline = false
-                            sessionManager.saveDriverOnlineStatus(false)
+                            revertOfflineState()
                         }
                     } catch (e: Exception) {
-                        isSearchActive = false
-                        updateSearchBlockVisuals(false)
-                        setOnlineVisualState(false, animate = true)
-                        isDriverOnline = false
-                        sessionManager.saveDriverOnlineStatus(false)
+                        revertOfflineState()
                     } finally {
                         btnStatusToggle.isEnabled = true
                     }
@@ -644,21 +621,16 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             try {
                 val targetMode = if (isSearchActive) sessionManager.getSearchMode() else DriverSearchMode.MANUAL
 
-                val currentConfig = ApiClient.getInstance().getApiService(this@MainActivity).getSearchSettings()
-                // ЗАМЕНИТЬ СТРОКУ ВНУТРИ БЛОКА toggleSearchActivation (В FAILURE СЛУШАТЕЛЕ ГЕО):
-
-                val radius = currentConfig.body()?.radius ?: 0.5 // Сменили дефолт на 0.5
-                val sectorIds = currentConfig.body()?.homeSectorIds ?: emptyList()
-
+                // 🚀 ОПТИМИЗАЦИЯ: Никаких лишних сетевых GET-запросов перед отправкой!
                 val req = DriverSearchSettingsDto(
                     mode = targetMode,
-                    radius = radius,
-                    homeSectorIds = sectorIds
+                    radius = currentSearchRadiusKm,
+                    homeSectorIds = currentHomeSectorIds
                 )
 
                 val response = ApiClient.getInstance().getApiService(this@MainActivity).updateSearchSettings(req)
-                if (response.isSuccessful) {
-                    updateSearchStatusUI()
+                if (response.isSuccessful && response.body() != null) {
+                    displaySearchState(response.body()!!)
                     if (isSearchActive) Toast.makeText(this@MainActivity, "Пошук розпочато...", Toast.LENGTH_SHORT).show()
                     else Toast.makeText(this@MainActivity, "Пошук зупинено.", Toast.LENGTH_SHORT).show()
                 } else {
@@ -672,6 +644,56 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 Toast.makeText(this@MainActivity, "Помилка мережі", Toast.LENGTH_SHORT).show()
             }
         }
+    }
+
+    // 🔥 ЕДИНЫЙ МЕТОД ОБНОВЛЕНИЯ СОСТОЯНИЯ И UI ИЗ ЛЮБОГО ИСТОЧНИКА
+    private fun displaySearchState(state: com.taxiapp.driver.network.DriverSearchStateDto) {
+        currentSearchRadiusKm = state.radius
+        currentHomeSectorIds = state.homeSectorIds ?: emptyList()
+        sessionManager.saveSearchRadius(state.radius)
+        sessionManager.saveHomeSectorIds(currentHomeSectorIds)
+        drawSearchRadius()
+
+        val displayedMode = if (state.mode == DriverSearchMode.MANUAL) {
+            isSearchActive = false
+            sessionManager.getSearchMode() ?: DriverSearchMode.CHAIN
+        } else {
+            isSearchActive = true
+            state.mode
+        }
+
+        when (displayedMode) {
+            DriverSearchMode.MANUAL,
+            DriverSearchMode.CHAIN -> {
+                tvSearchModeTitle.text = getString(R.string.main_search_chain_title)
+                if (searchRadiusCircle != null) searchRadiusCircle?.isVisible = !sectorOverlay.isShown
+
+                // Для Ланцюжка в выключенном состоянии пишем радиус
+                if (!isSearchActive) {
+                    tvSearchModeSubtitle.text = "Радіус: ${state.radius} км • Натисніть для старту"
+                }
+            }
+            DriverSearchMode.HOME -> {
+                val sectorsText = if (state.homeSectorNames.isNullOrEmpty()) "не обрано" else state.homeSectorNames
+                tvSearchModeTitle.text = "Додому ($sectorsText)"
+                if (searchRadiusCircle != null) searchRadiusCircle?.isVisible = !sectorOverlay.isShown
+
+                // 🚀 ИСПРАВЛЕНО: Для Додому в выключенном состоянии всегда пишем чистый текст активации
+                if (!isSearchActive) {
+                    tvSearchModeSubtitle.text = "Натисніть для активації"
+                }
+            }
+        }
+
+        // Если поиск активен — пишем статус поиска для всех режимов
+        if (isSearchActive) {
+            tvSearchModeSubtitle.text = "Пошук замовлень..."
+            tvSearchModeTitle.setTextColor(ContextCompat.getColor(this, R.color.driver_text_primary)) // или твой цвет активного режима
+        } else {
+            tvSearchModeTitle.setTextColor(ContextCompat.getColor(this, R.color.driver_neon_teal))
+        }
+
+        updateSearchBlockVisuals(isSearchActive)
     }
 
     private fun updateSearchBlockVisuals(isActive: Boolean) {
@@ -716,65 +738,71 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private fun updateSearchStatusUI() {
         lifecycleScope.launch {
-            // --- ТОЧЕЧНОЕ ДОБАВЛЕНИЕ: Предохранитель оффлайна ---
+            // --- Если водитель ОФЛАЙН: подтягиваем данные из кэша и сервера, но не запускаем поиск ---
             if (!isDriverOnline) {
                 isSearchActive = false
                 updateSearchBlockVisuals(false)
-                tvSearchModeSubtitle.text = "Натисніть для активації"
+
+                val cachedMode = sessionManager.getSearchMode() ?: DriverSearchMode.CHAIN
+                currentHomeSectorIds = sessionManager.getHomeSectorIds()
+
+                try {
+                    // Делаем легкий запрос настроек, чтобы узнать имена секторов, сохраненные на сервере
+                    val response = ApiClient.getInstance().getApiService(this@MainActivity).getSearchSettings()
+                    if (response.isSuccessful && response.body() != null) {
+                        val state = response.body()!!
+                        currentSearchRadiusKm = state.radius
+                        currentHomeSectorIds = state.homeSectorIds ?: emptyList()
+
+                        if (cachedMode == DriverSearchMode.HOME) {
+                            val sectorsText = if (state.homeSectorNames.isNullOrEmpty()) "не обрано" else state.homeSectorNames
+                            tvSearchModeTitle.text = "Додому ($sectorsText)"
+                            tvSearchModeSubtitle.text = "Натисніть для активації" // 🚀 Спокойный текст без бликания радиуса
+                        } else {
+                            tvSearchModeTitle.text = getString(R.string.main_search_chain_title)
+                            tvSearchModeSubtitle.text = "Радіус: ${state.radius} км • Натисніть для старту"
+                        }
+                    } else {
+                        // Резервный откат на чистый кэш, если интернета совсем нет
+                        if (cachedMode == DriverSearchMode.HOME) {
+                            tvSearchModeTitle.text = "Додому"
+                            tvSearchModeSubtitle.text = "Натисніть для активації"
+                        } else {
+                            tvSearchModeTitle.text = getString(R.string.main_search_chain_title)
+                            tvSearchModeSubtitle.text = "Радіус: ${currentSearchRadiusKm} км • Натисніть для старту"
+                        }
+                    }
+                } catch (e: Exception) {
+                    // Если упали по сети — показываем базовый кэш
+                    if (cachedMode == DriverSearchMode.HOME) {
+                        tvSearchModeTitle.text = "Додому"
+                        tvSearchModeSubtitle.text = "Натисніть для активації"
+                    } else {
+                        tvSearchModeTitle.text = getString(R.string.main_search_chain_title)
+                        tvSearchModeSubtitle.text = "Радіус: ${currentSearchRadiusKm} км • Натисніть для старту"
+                    }
+                }
+
+                tvSearchModeTitle.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.driver_neon_teal))
                 return@launch
             }
 
+            // --- Если водитель ОНЛАЙН: штатный режим работы ---
             try {
                 val response = ApiClient.getInstance().getApiService(this@MainActivity).getSearchSettings()
                 if (response.isSuccessful && response.body() != null) {
-                    val state = response.body()!!
-                    currentSearchRadiusKm = state.radius
-                    sessionManager.saveSearchRadius(state.radius)
-                    drawSearchRadius()
-                    val sessionManager = SessionManager(this@MainActivity)
-
-                    when (state.mode) {
-                        DriverSearchMode.MANUAL -> {
-                            tvSearchModeTitle.text = getString(R.string.main_search_chain_title)
-                            if (searchRadiusCircle != null) searchRadiusCircle?.isVisible = !sectorOverlay.isShown
-                            isSearchActive = false
-                            sessionManager.saveSearchMode(DriverSearchMode.CHAIN)
-                        }
-                        DriverSearchMode.CHAIN -> {
-                            tvSearchModeTitle.text = getString(R.string.main_search_chain_title)
-                            if (searchRadiusCircle != null) searchRadiusCircle?.isVisible = !sectorOverlay.isShown
-
-                            // --- СИНХРОНИЗАЦИЯ: Включаем флаг активности ---
-                            isSearchActive = true
-
-                            sessionManager.saveSearchMode(DriverSearchMode.CHAIN)
-                        }
-                        DriverSearchMode.HOME -> {
-                            val sectorsText = if (state.homeSectorNames.isNullOrEmpty()) "?" else state.homeSectorNames
-                            tvSearchModeTitle.text = "Додому ($sectorsText)"
-                            if (searchRadiusCircle != null) searchRadiusCircle?.isVisible = !sectorOverlay.isShown
-
-                            // --- СИНХРОНИЗАЦИЯ: Включаем флаг активности ---
-                            isSearchActive = true
-
-                            sessionManager.saveSearchMode(DriverSearchMode.HOME)
-                        }
-                    }
-
-                    if (!isSearchActive && state.mode == DriverSearchMode.MANUAL) {
-                        tvSearchModeSubtitle.text = "Радіус: ${state.radius} км • Натисніть для старту"
-                        tvSearchModeTitle.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.driver_neon_teal))
-                    } else if (!isSearchActive) {
-                        tvSearchModeSubtitle.text = "Натисніть для активації"
-                    } else {
-                        tvSearchModeSubtitle.text = "Пошук замовлень..."
-                    }
-
-                    if (isSearchActive) updateSearchBlockVisuals(true)
-                    else updateSearchBlockVisuals(false)
+                    displaySearchState(response.body()!!)
                 }
             } catch (e: Exception) { e.printStackTrace() }
         }
+    }
+
+    private fun revertOfflineState() {
+        setOnlineVisualState(false, animate = true)
+        isDriverOnline = false
+        sessionManager.saveDriverOnlineStatus(false)
+        isSearchActive = false
+        updateSearchBlockVisuals(false)
     }
 
     private fun loadUserProfile() {

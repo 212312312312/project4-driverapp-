@@ -153,6 +153,16 @@ class SessionManager(context: Context) {
         prefs.edit().putString(KEY_SEARCH_MODE, mode.name).apply()
     }
 
+    fun saveHomeSectorIds(ids: List<Long>) {
+        prefs.edit().putString("key_home_sector_ids", ids.joinToString(",")).apply()
+    }
+
+    // 🔥 ДОБАВЛЕНО: Чтение списка ID домашних секторов из локального кэша устройства
+    fun getHomeSectorIds(): List<Long> {
+        val str = prefs.getString("key_home_sector_ids", null) ?: return emptyList()
+        if (str.isBlank()) return emptyList()
+        return str.split(",").mapNotNull { it.toLongOrNull() }
+    }
     fun getSearchMode(): DriverSearchMode {
         val modeStr = prefs.getString(KEY_SEARCH_MODE, DriverSearchMode.CHAIN.name)
         return try {

@@ -30,9 +30,7 @@ class SearchSettingsBottomSheet(
     private lateinit var btnSave: AppCompatButton
 
     private var currentMode = DriverSearchMode.CHAIN
-    // ЗАМЕНИТЬ СТРОКУ ОБЪЯВЛЕНИЯ В SearchSettingsBottomSheet.kt:
-
-    private var currentRadius = 0.5 // Сменили базовое значение с 3.0 на 0.5
+    private var currentRadius = 0.5
     private var selectedHomeSectorIds: List<Long>? = null
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -65,7 +63,6 @@ class SearchSettingsBottomSheet(
         btnModeHome.setOnClickListener { selectMode(DriverSearchMode.HOME) }
         btnModeChain.setOnClickListener { selectMode(DriverSearchMode.CHAIN) }
 
-        // --- ИСПРАВЛЕНО ТУТ: Перенаправляем выбор секторов в оверлей MainActivity ---
         btnEditHomeSector.setOnClickListener {
             dismiss()
             (requireActivity() as MainActivity).startHomeSectorSelection(selectedHomeSectorIds)
@@ -111,14 +108,17 @@ class SearchSettingsBottomSheet(
                 if (response.isSuccessful && response.body() != null) {
                     val state = response.body()!!
 
-                    currentMode = if (state.mode == DriverSearchMode.HOME) {
-                        DriverSearchMode.HOME
-                    } else {
-                        DriverSearchMode.CHAIN
-                    }
-
                     currentRadius = state.radius
                     selectedHomeSectorIds = state.homeSectorIds
+
+                    // 🚀 ОПТИМИЗАЦИЯ: Если поиск выключен (MANUAL), берем заготовленный режим из памяти устройства,
+                    // чтобы галочка не перепрыгивала самовольно на Ланцюг!
+                    val session = SessionManager(requireContext())
+                    currentMode = if (state.mode == DriverSearchMode.MANUAL) {
+                        session.getSearchMode()
+                    } else {
+                        state.mode
+                    }
 
                     updateUI(state)
                 }
@@ -162,8 +162,19 @@ class SearchSettingsBottomSheet(
 
         lifecycleScope.launch {
             try {
+                // 🚀 АРХИТЕКТУРНОЕ РЕШЕНИЕ: Узнаем у MainActivity, запущен ли поиск прямо сейчас
+                val mainActivity = requireActivity() as MainActivity
+
+                // Если на главном экране поиск не запущен, шлем на сервер MANUAL,
+                // чтобы просто сохранить радиус и сектора, но не активировать автоподбор замовлень.
+                val modeToSend = if (mainActivity.isSearchActive) {
+                    currentMode
+                } else {
+                    DriverSearchMode.MANUAL
+                }
+
                 val req = DriverSearchSettingsDto(
-                    mode = currentMode,
+                    mode = modeToSend,
                     radius = currentRadius,
                     homeSectorIds = selectedHomeSectorIds
                 )
@@ -171,8 +182,10 @@ class SearchSettingsBottomSheet(
 
                 if (response.isSuccessful && response.body() != null) {
                     val session = SessionManager(requireContext())
+                    // В локальные префсы ВСЕГДА сохраняем CHAIN или HOME, чтобы кнопка Старт знала что включать
                     session.saveSearchMode(currentMode)
-                    session.saveSearchRadius(currentRadius) // <- ТОЧЕЧНО ДОБАВЛЕНО: Сохраняем радиус в локальный кэш
+                    session.saveSearchRadius(currentRadius)
+
                     onSettingsChanged()
                     dismiss()
                 } else {
