@@ -28,7 +28,12 @@ class ApiClient private constructor() {
     fun getApiService(context: Context): DriverApiService {
         if (apiService == null) {
             val logging = HttpLoggingInterceptor().apply {
-                level = HttpLoggingInterceptor.Level.BODY
+                // ✅ ЗАЩИТА: Логируем BODY только в отладочных (DEBUG) сборках, чтобы не светить JWT в релизе
+                level = if (BuildConfig.DEBUG) {
+                    HttpLoggingInterceptor.Level.BODY
+                } else {
+                    HttpLoggingInterceptor.Level.NONE
+                }
             }
 
             val authInterceptor = AuthInterceptor(context.applicationContext)
@@ -69,12 +74,16 @@ class ApiClient private constructor() {
                             val cleanClient = OkHttpClient()
                             val jsonRequestBody = com.google.gson.Gson().toJson(TokenRefreshRequestDto(refreshToken))
 
-                            // ✅ ИСПРАВЛЕНО: MediaType и RequestBody переведены на extension-функции Kotlin
                             val mediaType = "application/json; charset=utf-8".toMediaTypeOrNull()
                             val body = jsonRequestBody.toRequestBody(mediaType)
 
-                            // ✅ ИСПРАВЛЕНО: url() изменен на свойство url без скобок
                             val originalUrl = response.request.url.toString()
+
+                            // ✅ ЗАЩИТА: Предотвращаем StringIndexOutOfBoundsException, если 401 пришел от Google Maps API
+                            if (!originalUrl.contains("api/v1/")) {
+                                return null
+                            }
+
                             val baseUrl = originalUrl.substring(0, originalUrl.indexOf("api/v1/"))
 
                             val refreshRequest = Request.Builder()
@@ -84,7 +93,6 @@ class ApiClient private constructor() {
 
                             val refreshResponse = cleanClient.newCall(refreshRequest).execute()
 
-                            // ✅ ИСПРАВЛЕНО: body() изменен на свойство body без скобок
                             val responseBody = refreshResponse.body
                             if (refreshResponse.isSuccessful && responseBody != null) {
                                 val responseBodyString = responseBody.string()
