@@ -200,28 +200,20 @@ class LocationService : Service() {
     }
 
     private fun sendLocationToServer(realLat: Double, realLng: Double, bearing: Float) {
-        var latToSend = realLat
-        var lngToSend = realLng
+        // --- ЗАЩИТА: Бэкдор ручной локации полностью вырезан ---
 
-        if (sessionManager.isManualLocationActive()) {
-            val manualLoc = sessionManager.getManualLocation()
-            if (manualLoc != null) {
-                latToSend = manualLoc.first
-                lngToSend = manualLoc.second
-            }
-        }
-
-        if (latToSend == 0.0 && lngToSend == 0.0) return
+        if (realLat == 0.0 && realLng == 0.0) return
 
         if (sessionManager.fetchAuthToken() == null) { stopSelf(); return }
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val request = UpdateLocationRequest(latToSend, lngToSend, bearing)
+                // Отправляем только реальные GPS координаты
+                val request = UpdateLocationRequest(realLat, realLng, bearing)
                 val response = ApiClient.getInstance().getApiService(applicationContext).updateLocation(request)
 
                 if (!response.isSuccessful) {
-                    Log.e("LocationService", "Сервер відхилив локацію: Код=${response.code()}, Текст=${response.errorBody()?.string()}")
+                    Log.e("LocationService", "Сервер відхилив локацію: Код=${response.code()}")
                 }
             } catch (e: Exception) {
                 Log.e("LocationService", "Помилка мережі при відправці локації: ${e.message}")
@@ -264,6 +256,12 @@ class LocationService : Service() {
     }
 
     private fun shouldSendLocation(location: Location): Boolean {
+        // --- ЗАЩИТА: Блокировка Fake GPS (Mock Locations) ---
+        if (location.isFromMockProvider) {
+            Log.w("LocationService", "🚨 Обнаружена поддельная локация! Игнорируем.")
+            return false
+        }
+
         // Если это самая первая точка при старте — шлем обязательно
         if (lastSentLat == 0.0 && lastSentLng == 0.0) return true
 

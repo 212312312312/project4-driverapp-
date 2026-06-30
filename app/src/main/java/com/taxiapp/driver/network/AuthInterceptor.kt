@@ -29,7 +29,6 @@ class AuthInterceptor(context: Context) : Interceptor {
         val token = sessionManager.fetchAuthToken()
 
         if (!token.isNullOrBlank()) {
-            // Защита: если в SessionManager уже сохранен "Bearer ...", не добавляем второй раз.
             val finalHeader = if (token.startsWith("Bearer ")) {
                 token
             } else {
@@ -38,8 +37,8 @@ class AuthInterceptor(context: Context) : Interceptor {
 
             requestBuilder.header("Authorization", finalHeader)
 
-            // --- ЛОГ ДЛЯ ПРОВЕРКИ (Дивись в Logcat) ---
-            Log.d("AuthInterceptor", "✅ Adding Authorization header: ${finalHeader.take(15)}...")
+            // --- ЗАЩИТА: Убрали вывод самого токена в лог ---
+            Log.d("AuthInterceptor", "✅ Adding Authorization header: [SECURE_TOKEN]")
         } else {
             // --- ЛОГ ПОМИЛКИ ---
             Log.e("AuthInterceptor", "⛔ TOKEN IS MISSING! Request sent without auth to: $url")

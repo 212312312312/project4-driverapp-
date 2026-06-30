@@ -3,11 +3,24 @@ package com.taxiapp.driver.utils
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
 import com.taxiapp.driver.network.DriverSearchMode
 
 class SessionManager(context: Context) {
     private var prefs: SharedPreferences = context.getSharedPreferences("DriverPrefs", Context.MODE_PRIVATE)
 
+    private val masterKey = MasterKey.Builder(context)
+        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+        .build()
+
+    private val securePrefs: SharedPreferences = EncryptedSharedPreferences.create(
+        context,
+        "SecureTokens",
+        masterKey,
+        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+    )
     companion object {
         const val USER_TOKEN = "user_token"
         const val REFRESH_TOKEN = "refresh_token"
@@ -37,11 +50,11 @@ class SessionManager(context: Context) {
     }
 
     fun saveRefreshToken(token: String) {
-        prefs.edit().putString(REFRESH_TOKEN, token).apply()
+        securePrefs.edit().putString(REFRESH_TOKEN, token).apply() // Изменено на securePrefs
     }
 
     fun fetchRefreshToken(): String? {
-        return prefs.getString(REFRESH_TOKEN, null)
+        return securePrefs.getString(REFRESH_TOKEN, null) // Изменено на securePrefs
     }
 
     fun setQuickAccessEnabled(enabled: Boolean) {
@@ -120,10 +133,10 @@ class SessionManager(context: Context) {
 
     fun saveAuthToken(token: String) {
         val cleanToken = token.replace("Bearer", "").trim()
-        prefs.edit().putString(USER_TOKEN, cleanToken).apply()
+        securePrefs.edit().putString(USER_TOKEN, cleanToken).apply() // Изменено на securePrefs
     }
 
-    fun fetchAuthToken(): String? = prefs.getString(USER_TOKEN, null)
+    fun fetchAuthToken(): String? = securePrefs.getString(USER_TOKEN, null) // Изменено на securePrefs
 
     fun saveDriverId(id: Long) {
         prefs.edit().putLong(KEY_DRIVER_ID, id).apply()
@@ -190,7 +203,7 @@ class SessionManager(context: Context) {
         val hidePrice = isEtherPricePerKmHidden()
 
         prefs.edit().clear().apply()
-
+        securePrefs.edit().clear().apply()
         if (fcmToken != null) saveFcmToken(fcmToken)
         saveLanguage(language)
         saveTheme(theme)
@@ -198,25 +211,11 @@ class SessionManager(context: Context) {
         setEtherHidePricePerKm(hidePrice)
     }
 
-    fun setManualLocation(lat: Double, lng: Double) {
-        val editor = prefs.edit()
-        editor.putFloat(KEY_MANUAL_LAT, lat.toFloat())
-        editor.putFloat(KEY_MANUAL_LNG, lng.toFloat())
-        editor.putBoolean(KEY_IS_MANUAL_LOC, true)
-        editor.apply()
-    }
+    fun setManualLocation(lat: Double, lng: Double) { }
 
-    fun clearManualLocation() {
-        prefs.edit().putBoolean(KEY_IS_MANUAL_LOC, false).apply()
-    }
+    fun clearManualLocation() { }
 
-    fun isManualLocationActive(): Boolean = prefs.getBoolean(KEY_IS_MANUAL_LOC, false)
+    fun isManualLocationActive(): Boolean = false
 
-    fun getManualLocation(): Pair<Double, Double>? {
-        if (!isManualLocationActive()) return null
-        return Pair(
-            prefs.getFloat(KEY_MANUAL_LAT, 0f).toDouble(),
-            prefs.getFloat(KEY_MANUAL_LNG, 0f).toDouble()
-        )
-    }
+    fun getManualLocation(): Pair<Double, Double>? = null
 }
