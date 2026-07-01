@@ -1414,11 +1414,23 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
         tvStatusTitle.text = "Їду до клієнта"
         tvDestinationLabel.text = currentOrder?.fromAddress ?: "Адреса посадки"
 
-        btnSaveAction.text = "ОЧІКУВАННЯ ПОЗИЦІЇ..."
-        btnSaveAction.isEnabled = false
-        btnSaveAction.setTextColor(Color.GRAY)
-        btnContainerLayout.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_black_bg))
+        // 👈 ФИКС: Мгновенно запрашиваем последнюю точку, чтобы не ждать "первого тика" GPS
+        fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+            if (location != null) {
+                // Если координата есть — сразу считаем расстояние и разблокируем кнопку
+                checkDistanceForArrivedButton(location)
+            } else {
+                // Если GPS еще "холодный", оставляем кнопку заблокированной, но без лишнего текста
+                btnSaveAction.text = "ОЧІКУВАННЯ ПОЗИЦІЇ..."
+                btnSaveAction.isEnabled = false
+            }
+        }.addOnFailureListener {
+            // На случай ошибки GPS — даем возможность водителю нажать кнопку принудительно (если логика позволяет)
+            btnSaveAction.text = "НА МІСЦІ"
+            btnSaveAction.isEnabled = true
+        }
 
+        btnContainerLayout.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_black_bg))
         stopWaitingTimer()
         layoutWaitingInfo.visibility = View.GONE
     }

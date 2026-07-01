@@ -168,7 +168,22 @@ class LocationService : Service() {
     @SuppressLint("MissingPermission")
     private fun sendInitialLocation() {
         fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-            location?.let { sendLocationToServer(it.latitude, it.longitude, it.bearing) }
+            location?.let {
+                sendLocationToServer(it.latitude, it.longitude, it.bearing)
+
+                // 👈 ФИКС: Мгновенно передаем стартовую позицию в UI, чтобы убрать надпись "Очікування позиції"
+                var latToSend = it.latitude
+                var lngToSend = it.longitude
+
+                if (sessionManager.isManualLocationActive()) {
+                    sessionManager.getManualLocation()?.let { manual ->
+                        latToSend = manual.first
+                        lngToSend = manual.second
+                    }
+                }
+
+                onLocationUpdated?.invoke(latToSend, lngToSend)
+            }
         }
     }
 
