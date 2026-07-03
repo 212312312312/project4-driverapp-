@@ -196,7 +196,10 @@ class LocationService : Service() {
 
         // Проверяем, есть ли активный заказ в процессе выполнения
         val isWithOrder = trackingOrder != null &&
-                (trackingOrder?.status == "ACCEPTED" || trackingOrder?.status == "IN_PROGRESS")
+                (trackingOrder?.status == "ACCEPTED" ||
+                        trackingOrder?.status == "IN_PROGRESS" ||
+                        trackingOrder?.status == "DRIVER_ARRIVED" ||
+                        trackingOrder?.status == "ARRIVED")
 
         // 5 секунд на заказе (как ты и просил), 15 секунд если свободен
         val interval = if (isWithOrder) 5000L else 15000L
@@ -281,7 +284,10 @@ class LocationService : Service() {
         if (lastSentLat == 0.0 && lastSentLng == 0.0) return true
 
         val isWithOrder = trackingOrder != null &&
-                (trackingOrder?.status == "ACCEPTED" || trackingOrder?.status == "IN_PROGRESS")
+                (trackingOrder?.status == "ACCEPTED" ||
+                        trackingOrder?.status == "IN_PROGRESS" ||
+                        trackingOrder?.status == "DRIVER_ARRIVED" ||
+                        trackingOrder?.status == "ARRIVED")
 
         // Считаем расстояние от прошлой отправленной точки
         val lastLocation = Location("last").apply {
