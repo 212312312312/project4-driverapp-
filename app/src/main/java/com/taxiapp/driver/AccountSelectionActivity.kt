@@ -34,9 +34,21 @@ class AccountSelectionActivity : AppCompatActivity() {
 
     // Перечисление для отслеживания текущего проверяемого разрешения
     private enum class PermissionType {
-        FULL_SCREEN, OVERLAY, XIAOMI_BG
+        LOCATION, FULL_SCREEN, OVERLAY, XIAOMI_BG
     }
+    private val requestLocationPermissionLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val fineGranted = permissions[android.Manifest.permission.ACCESS_FINE_LOCATION] ?: false
+        val coarseGranted = permissions[android.Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
 
+        if (fineGranted || coarseGranted) {
+            // Если водитель разрешил GPS — перезапускаем каскад проверок дальше
+            handlePermissionsAndProceed()
+        } else {
+            Toast.makeText(this, "Для роботи програми обов'язково потрібен доступ до геолокації!", Toast.LENGTH_LONG).show()
+        }
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityAccountSelectionBinding.inflate(layoutInflater)
@@ -71,6 +83,17 @@ class AccountSelectionActivity : AppCompatActivity() {
 
     // Каскадный менеджер проверки: если что-то выключено, прерываем цепочку и требуем включения
     private fun handlePermissionsAndProceed() {
+        // Чек №0: Проверка стандартных Runtime-разрешений на геолокацию
+        if (!checkLocationPermission()) {
+            requestLocationPermissionLauncher.launch(
+                arrayOf(
+                    android.Manifest.permission.ACCESS_FINE_LOCATION,
+                    android.Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
+            return
+        }
+
         // 1. Проверка Полноэкранных уведомлений (Android 14+)
         if (!checkFullScreenIntentPermission()) {
             showRequiredPermissionDialog(PermissionType.FULL_SCREEN)
@@ -166,6 +189,7 @@ class AccountSelectionActivity : AppCompatActivity() {
 
         // Настраиваем текст инструкции динамически под конкретное отсутствующее разрешение
         when (type) {
+            PermissionType.LOCATION -> {} // Нативная локация не использует этот диалог
             PermissionType.FULL_SCREEN -> tvDesc.setText(R.string.permission_fsi_desc)
             PermissionType.OVERLAY -> tvDesc.setText(R.string.permission_overlay_desc_new)
             PermissionType.XIAOMI_BG -> tvDesc.setText(R.string.permission_xiaomi_bg_desc)
@@ -192,6 +216,7 @@ class AccountSelectionActivity : AppCompatActivity() {
     // Менеджер переходов в системные настройки телефона (Оптимизированный под UX)
     private fun openSystemPermissionSettings(type: PermissionType) {
         when (type) {
+            PermissionType.LOCATION -> {} // Обрабатывается через requestLocationPermissionLauncher
             PermissionType.FULL_SCREEN -> {
                 if (Build.VERSION.SDK_INT >= 34) {
                     try {
@@ -242,7 +267,12 @@ class AccountSelectionActivity : AppCompatActivity() {
             }
         }
     }
-
+    private fun checkLocationPermission(): Boolean {
+        val fineLocation = ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION)
+        val coarseLocation = ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION)
+        return fineLocation == android.content.pm.PackageManager.PERMISSION_GRANTED ||
+                coarseLocation == android.content.pm.PackageManager.PERMISSION_GRANTED
+    }
     // Вспомогательный метод для мгновенного открытия персональных разрешений конкретно нашего приложения на Xiaomi
     private fun openXiaomiPermissionEditor(requestCode: Int): Boolean {
         return try {

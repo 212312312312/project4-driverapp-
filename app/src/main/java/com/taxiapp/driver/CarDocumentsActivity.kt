@@ -12,6 +12,16 @@ import kotlinx.coroutines.launch
 
 class CarDocumentsActivity : AppCompatActivity() {
 
+    private var currentImageId: Int? = null
+
+    private val pickMedia = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null && currentImageId != null) {
+            // Отображаем выбранное фото локально
+            findViewById<ImageView>(currentImageId!!).setImageURI(uri)
+
+            // TODO: Здесь будет твоя Coroutine-логика отправки файла `uri` на сервер через ApiClient
+        }
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_car_documents)
@@ -77,6 +87,16 @@ class CarDocumentsActivity : AppCompatActivity() {
             imageView.setImageResource(R.drawable.ic_driver_placeholder)
             imageView.setColorFilter(Color.parseColor("#444444"))
             imageView.setPadding(50, 50, 50, 50) // Чтобы иконка была меньше
+
+            // ТОЧЕЧНОЕ ИСПРАВЛЕНИЕ ТУТ: Исправили путь к PickVisualMediaRequest.Builder()
+            imageView.setOnClickListener {
+                currentImageId = imageViewId
+                pickMedia.launch(
+                    androidx.activity.result.PickVisualMediaRequest.Builder()
+                        .setMediaType(androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly)
+                        .build()
+                )
+            }
         }
     }
 }
