@@ -50,6 +50,14 @@ class EtherActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_ether)
 
+        // 🛠️ ДОБАВЛЕНО: Безопасный отступ для сохранения Edge-to-Edge фона на Android 15
+        val rootView = findViewById<android.view.ViewGroup>(android.R.id.content).getChildAt(0)
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(rootView) { v, insets ->
+            val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            insets
+        }
+
         sessionManager = SessionManager(this)
 
         viewPager = findViewById(R.id.ether_view_pager)
@@ -83,8 +91,6 @@ class EtherActivity : AppCompatActivity() {
         })
 
         btnBack.setOnClickListener { finish() }
-
-        // TOЧЕЧНОЕ ОБНОВЛЕНИЕ: Убрали отсюда setupWebSocket()
     }
 
     private fun acceptScheduledOrder(order: Order) {

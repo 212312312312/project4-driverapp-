@@ -41,7 +41,14 @@ class ChatActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_chat)
 
-        orderId = intent.getStringExtra("ORDER_ID") ?: "" // 👈 ИСПРАВЛЕНО: Извлекаем String UUID
+        // 🛠️ ДОБАВЛЕНО: Автоматический отступ контента от системных панелей для Android 15
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { v, insets ->
+            val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            insets
+        }
+
+        orderId = intent.getStringExtra("ORDER_ID") ?: ""
         if (orderId.isEmpty()) {
             finish()
             return

@@ -26,10 +26,17 @@ class CarDocumentsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_car_documents)
 
-        // ИСПРАВЛЕНИЕ: Изменили тип на ImageView, чтобы соответствовать новой разметке хедера
+        // 🛠️ ДОБАВЛЕНО: Автоматический отступ контента от системных панелей для Android 15[cite: 13]
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { v, insets ->
+            val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            insets
+        }
+
+        // Изменили тип на ImageView, чтобы соответствовать новой разметке хедера[cite: 13]
         findViewById<ImageView>(R.id.btn_back).setOnClickListener { finish() }
 
-        loadDocuments()
+        loadDocuments() //[cite: 13]
     }
 
     private fun loadDocuments() {

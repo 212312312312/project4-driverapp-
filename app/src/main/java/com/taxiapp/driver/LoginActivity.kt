@@ -2,6 +2,8 @@ package com.taxiapp.driver
 
 import android.content.Intent
 import android.os.Bundle
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import android.os.CountDownTimer
 import android.text.Editable
 import android.text.TextWatcher
@@ -50,6 +52,12 @@ class LoginActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            // Просто мягко зажимаем весь контент экрана безопасными отступами со всех сторон
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            insets
+        }
         sessionManager = SessionManager(this)
 
         setupListeners()

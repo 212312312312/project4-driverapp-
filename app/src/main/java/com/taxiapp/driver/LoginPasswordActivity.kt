@@ -21,9 +21,17 @@ class LoginPasswordActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityLoginPasswordBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // 🛠️ ДОБАВЛЕНО: Автоматический отступ контента от системных панелей для Android 15[cite: 26]
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.root) { v, insets ->
+            val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            insets
+        }
+
         sessionManager = SessionManager(this)
 
-        // Получаем номер, если он был введен на прошлом экране
+        // Получаем номер, если он был введен на прошлом экране[cite: 26]
         val preFilledPhone = intent.getStringExtra("phone_input")
         if (!preFilledPhone.isNullOrEmpty()) {
             binding.etPhone.setText(preFilledPhone)

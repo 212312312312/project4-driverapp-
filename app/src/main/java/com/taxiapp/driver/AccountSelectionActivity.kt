@@ -54,6 +54,13 @@ class AccountSelectionActivity : AppCompatActivity() {
         binding = ActivityAccountSelectionBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // 🛠️ ДОБАВЛЕНО: Автоматический отступ контента от статус-бара и панели навигации Android 15
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.root) { v, insets ->
+            val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            insets
+        }
+
         sessionManager = SessionManager(this)
 
         setupUI()

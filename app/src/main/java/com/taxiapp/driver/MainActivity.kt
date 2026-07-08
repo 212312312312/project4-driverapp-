@@ -11,6 +11,8 @@ import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import android.graphics.Color
 import android.graphics.Typeface
 import android.location.Location
@@ -194,6 +196,55 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         mapFragment.getMapAsync(this)
 
         setupUI()
+
+        // 🛠️ ДОБАВЛЕНО: Корректная обработка безопасных зон для Android 15 (API 35+)
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.root_container)) { _, insets ->
+            val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            val density = resources.displayMetrics.density
+
+            // Сдвигаем гамбургер-меню и плашку статуса "Онлайн/Офлайн" под статус-бар
+            findViewById<View>(R.id.btn_menu_container)?.let { view ->
+                val params = view.layoutParams as android.view.ViewGroup.MarginLayoutParams
+                params.topMargin = systemBars.top + (16 * density).toInt()
+                view.layoutParams = params
+            }
+            findViewById<View>(R.id.btn_status_toggle)?.let { view ->
+                val params = view.layoutParams as android.view.ViewGroup.MarginLayoutParams
+                params.topMargin = systemBars.top + (16 * density).toInt()
+                view.layoutParams = params
+            }
+
+            // Приподнимаем нижнее меню навигации над панелью системных жестов/кнопок
+            findViewById<View>(R.id.bottom_nav_container)?.let { view ->
+                val params = view.layoutParams as android.view.ViewGroup.MarginLayoutParams
+                params.bottomMargin = systemBars.bottom + (12 * density).toInt()
+                view.layoutParams = params
+            }
+
+            // Адаптируем под статус-бар шапку оверлея при выборе домашних секторов
+            findViewById<View>(R.id.header_selection)?.let { view ->
+                view.setPadding(view.paddingLeft, systemBars.top + (16 * density).toInt(), view.paddingRight, view.paddingBottom)
+            }
+
+            // 🌟 НОВОЕ: Безопасные отступы для бокового меню (layout_drawer_content)
+            findViewById<android.widget.LinearLayout>(R.id.ll_menu_scroll_content)?.let { menuScrollContent ->
+                menuScrollContent.setPadding(
+                    menuScrollContent.paddingLeft,
+                    systemBars.top, // Защищаем карточку водителя от наезда статус-бара
+                    menuScrollContent.paddingRight,
+                    menuScrollContent.paddingBottom
+                )
+            }
+
+            findViewById<android.view.View>(R.id.btn_logout)?.let { btnLogout ->
+                val logoutParams = btnLogout.layoutParams as android.view.ViewGroup.MarginLayoutParams
+                logoutParams.bottomMargin = systemBars.bottom // Поднимаем кнопку "Выход" над полосой жестов
+                btnLogout.layoutParams = logoutParams
+            }
+
+            insets
+        }
+
         loadUserProfile()
         setupLocationCallback()
 

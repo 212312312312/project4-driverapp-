@@ -29,6 +29,13 @@ class ChangePhoneActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_change_phone)
 
+        // 🛠️ ДОБАВЛЕНО: Автоматический отступ контента от системных панелей для Android 15
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { v, insets ->
+            val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            insets
+        }
+
         sessionManager = SessionManager(this)
 
         viewFlipper = findViewById(R.id.view_flipper)

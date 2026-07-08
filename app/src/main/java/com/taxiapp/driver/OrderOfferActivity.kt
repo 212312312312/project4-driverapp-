@@ -76,6 +76,15 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
         turnScreenOnAndKeyguardOff()
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_order_offer)
+
+        // 🛠️ ДОБАВЛЕНО: Безопасный отступ для сохранения Edge-to-Edge фона на Android 15
+        val rootView = findViewById<android.view.ViewGroup>(android.R.id.content).getChildAt(0)
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(rootView) { v, insets ->
+            val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            insets
+        }
+
         sessionManager = SessionManager(this)
 
         currentOrder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -98,7 +107,6 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
         mapFragment.getMapAsync(this)
         startOfferSound()
     }
-
     private fun turnScreenOnAndKeyguardOff() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true)

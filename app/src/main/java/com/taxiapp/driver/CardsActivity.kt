@@ -36,6 +36,13 @@ class CardsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_cards)
 
+        // 🛠️ ДОБАВЛЕНО: Автоматический отступ контента от системных панелей для Android 15
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { v, insets ->
+            val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            insets
+        }
+
         findViewById<View>(R.id.btn_back_cards).setOnClickListener { finish() }
         findViewById<View>(R.id.btn_add_card).setOnClickListener { initCardBinding() }
 

@@ -39,6 +39,14 @@ class DisabilityStatusActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_disability_status)
 
+        // 🛠️ ИСПРАВЛЕНО: Находим реальный корень твоей XML-разметки для сохранения Edge-to-Edge фона
+        val rootView = findViewById<android.view.ViewGroup>(android.R.id.content).getChildAt(0)
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(rootView) { v, insets ->
+            val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            insets
+        }
+
         setupUI()
         loadCurrentStatus()
     }

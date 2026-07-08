@@ -40,6 +40,13 @@ class SettingsActivity : AppCompatActivity() {
 
         setContentView(R.layout.activity_settings)
 
+        // 🛠️ ДОБАВЛЕНО: Безопасный отступ контента от системных панелей для Android 15 во избежание Type mismatch
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { v, insets ->
+            val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            insets
+        }
+
         findViewById<View>(R.id.btn_back).setOnClickListener { finish() }
 
         setupSimpleButton(R.id.btn_language, R.string.settings_language)

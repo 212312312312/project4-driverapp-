@@ -19,12 +19,19 @@ class PendingFundsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_pending_funds)
 
+        // 🛠️ ИСПРАВЛЕНО: Безопасный и прямолинейный отступ через корневой контейнер контента
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { v, insets ->
+            val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            insets
+        }
+
         findViewById<View>(R.id.btn_back_pending).setOnClickListener { finish() }
 
         rvPending = findViewById(R.id.rv_pending_transactions)
         rvPending.layoutManager = LinearLayoutManager(this)
         adapter = WalletAdapter { orderId ->
-            loadOrderDetailsAndOpen(orderId) // 👈 Передаем обработчик клика по аналогии с основным кошельком
+            loadOrderDetailsAndOpen(orderId)
         }
         rvPending.adapter = adapter
 
