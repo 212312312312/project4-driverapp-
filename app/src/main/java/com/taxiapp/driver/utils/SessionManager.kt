@@ -211,11 +211,28 @@ class SessionManager(context: Context) {
         setEtherHidePricePerKm(hidePrice)
     }
 
-    fun setManualLocation(lat: Double, lng: Double) { }
+    fun setManualLocation(lat: Double, lng: Double) {
+        prefs.edit().apply {
+            putFloat(KEY_MANUAL_LAT, lat.toFloat())
+            putFloat(KEY_MANUAL_LNG, lng.toFloat())
+            putBoolean(KEY_IS_MANUAL_LOC, true)
+        }.apply()
+    }
 
-    fun clearManualLocation() { }
+    fun clearManualLocation() {
+        prefs.edit().apply {
+            remove(KEY_MANUAL_LAT)
+            remove(KEY_MANUAL_LNG)
+            putBoolean(KEY_IS_MANUAL_LOC, false)
+        }.apply()
+    }
 
-    fun isManualLocationActive(): Boolean = false
+    fun isManualLocationActive(): Boolean = prefs.getBoolean(KEY_IS_MANUAL_LOC, false)
 
-    fun getManualLocation(): Pair<Double, Double>? = null
+    fun getManualLocation(): Pair<Double, Double>? {
+        if (!isManualLocationActive()) return null
+        val lat = prefs.getFloat(KEY_MANUAL_LAT, 0f).toDouble()
+        val lng = prefs.getFloat(KEY_MANUAL_LNG, 0f).toDouble()
+        return Pair(lat, lng)
+    }
 }

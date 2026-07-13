@@ -62,9 +62,16 @@ class LocationService : Service() {
                     if (shouldSendLocation(location)) {
                         sendLocationToServer(location.latitude, location.longitude, location.bearing)
 
-                        // Запоминаем параметры успешной отправки
-                        lastSentLat = location.latitude
-                        lastSentLng = location.longitude
+                        // Запоминаем параметры успешной отправки с учетом фиксации
+                        if (sessionManager.isManualLocationActive()) {
+                            sessionManager.getManualLocation()?.let { manual ->
+                                lastSentLat = manual.first
+                                lastSentLng = manual.second
+                            }
+                        } else {
+                            lastSentLat = location.latitude
+                            lastSentLng = location.longitude
+                        }
                         lastSentTime = System.currentTimeMillis()
                     }
 
@@ -218,16 +225,25 @@ class LocationService : Service() {
     }
 
     private fun sendLocationToServer(realLat: Double, realLng: Double, bearing: Float) {
-        // --- ЗАЩИТА: Бэкдор ручной локации полностью вырезан ---
+        var latToSend = realLat
+        var lngToSend = realLng
 
-        if (realLat == 0.0 && realLng == 0.0) return
+        // Если включен режим фиксации — подменяем координаты для сервера
+        if (sessionManager.isManualLocationActive()) {
+            sessionManager.getManualLocation()?.let { manual ->
+                latToSend = manual.first
+                lngToSend = manual.second
+            }
+        }
+
+        if (latToSend == 0.0 && lngToSend == 0.0) return
 
         if (sessionManager.fetchAuthToken() == null) { stopSelf(); return }
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                // Отправляем только реальные GPS координаты
-                val request = UpdateLocationRequest(realLat, realLng, bearing)
+                // Улетают либо реальные координаты, либо закрепленные водителем
+                val request = UpdateLocationRequest(latToSend, lngToSend, bearing)
                 val response = ApiClient.getInstance().getApiService(applicationContext).updateLocation(request)
 
                 if (!response.isSuccessful) {
@@ -274,13 +290,23 @@ class LocationService : Service() {
     }
 
     private fun shouldSendLocation(location: Location): Boolean {
-        // --- ЗАЩИТА: Блокировка Fake GPS (Mock Locations) ---
+        // --- ЗАЩИТА: Блокировка Fake GPS (Mock Locations) ---[cite: 3]
         if (location.isFromMockProvider) {
             Log.w("LocationService", "🚨 Обнаружена поддельная локация! Игнорируем.")
             return false
         }
 
-        // Если это самая первая точка при старте — шлем обязательно
+        // 🔥 ДОБАВЛЕНО: Обход фильтра при закрепленной локации (Heartbeat для сервера)[cite: 3]
+        if (sessionManager.isManualLocationActive()) {
+            val currentTime = System.currentTimeMillis()
+            // Шлем keep-alive пакеты каждые 15 секунд, игнорируя то, что телефон неподвижен[cite: 3]
+            if (currentTime - lastSentTime >= 15000L) {
+                return true
+            }
+            return false
+        }
+
+        // Если это самая первая точка при старте — шлем обязательно[cite: 3]
         if (lastSentLat == 0.0 && lastSentLng == 0.0) return true
 
         val isWithOrder = trackingOrder != null &&
