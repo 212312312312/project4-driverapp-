@@ -20,6 +20,7 @@ data class DriverProfileDto(
 
     @SerializedName("car") val car: CarDto?,
     @SerializedName("allowedTariffs") val allowedTariffs: List<CarTariffDto>?,
+    @SerializedName("selectedTariffIds") val selectedTariffIds: List<Long>?,
 
     @SerializedName("rating") val rating: Double = 5.0,
 

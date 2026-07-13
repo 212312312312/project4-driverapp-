@@ -176,6 +176,8 @@ interface DriverApiService {
     @PATCH("api/v1/driver/profile/medical")
     suspend fun updateDisabilityStatus(@Body request: UpdateDisabilityRequest): Response<MessageResponse>
 
+    @PUT("api/v1/driver/profile/tariffs")
+    suspend fun updateSelectedTariffs(@Body selectedIds: Set<Long>): Response<DriverProfileDto>
     // --- ЗАКАЗЫ ---
     @GET("api/v1/driver/orders/available")
     suspend fun getAvailableOrders(): Response<List<Order>>

@@ -34,6 +34,8 @@ class CarActivity : AppCompatActivity() {
     private lateinit var carAdapter: CarAdapter
     private var activeCarId: Long? = null
 
+    private val currentSelectedTariffIds = mutableSetOf<Long>()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_car)
@@ -131,7 +133,7 @@ class CarActivity : AppCompatActivity() {
                         imgCar.setImageResource(R.drawable.ic_car)
                         imgCar.setColorFilter(Color.parseColor("#444444"))
                     }
-                    setupTariffs(profile.allowedTariffs)
+                    setupTariffs(profile.allowedTariffs, profile.selectedTariffIds)
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -230,16 +232,19 @@ class CarActivity : AppCompatActivity() {
         startActivity(intent)
     }
 
-    private fun setupTariffs(tariffs: List<CarTariffDto>?) {
+    private fun setupTariffs(tariffs: List<CarTariffDto>?, selectedIds: List<Long>?) {
         val container = findViewById<LinearLayout>(R.id.layout_tariffs_container)
         container.removeAllViews()
         if (tariffs.isNullOrEmpty()) return
 
+        // Синхронизируем локальное состояние с сервером
+        currentSelectedTariffIds.clear()
+        if (selectedIds != null) {
+            currentSelectedTariffIds.addAll(selectedIds)
+        }
+
         val thumbStates = android.content.res.ColorStateList(
-            arrayOf(
-                intArrayOf(android.R.attr.state_checked),
-                intArrayOf(-android.R.attr.state_checked)
-            ),
+            arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf(-android.R.attr.state_checked)),
             intArrayOf(
                 androidx.core.content.ContextCompat.getColor(this, R.color.driver_neon_teal),
                 androidx.core.content.ContextCompat.getColor(this, R.color.driver_text_secondary)
@@ -247,28 +252,53 @@ class CarActivity : AppCompatActivity() {
         )
 
         val trackStates = android.content.res.ColorStateList(
-            arrayOf(
-                intArrayOf(android.R.attr.state_checked),
-                intArrayOf(-android.R.attr.state_checked)
-            ),
-            intArrayOf(
-                Color.parseColor("#4D00E5FF"),
-                Color.parseColor("#33FFFFFF")
-            )
+            arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf(-android.R.attr.state_checked)),
+            intArrayOf(Color.parseColor("#4D00E5FF"), Color.parseColor("#33FFFFFF"))
         )
 
         for (tariff in tariffs) {
             val tariffView = LayoutInflater.from(this).inflate(R.layout.item_car_tariff, container, false)
-
             val tvName = tariffView.findViewById<TextView>(R.id.tv_tariff_name)
             val switchToggle = tariffView.findViewById<SwitchMaterial>(R.id.switch_tariff_toggle)
 
             tvName.text = tariff.name
-
             switchToggle.thumbTintList = thumbStates
             switchToggle.trackTintList = trackStates
 
-            switchToggle.isChecked = true
+            // Выставляем сохраненный статус тумблера
+            switchToggle.isChecked = currentSelectedTariffIds.contains(tariff.id)
+
+            // Слушатель изменения состояния тумблера водительской корутиной
+            switchToggle.setOnCheckedChangeListener { _, isChecked ->
+                val targetIds = if (isChecked) {
+                    currentSelectedTariffIds + tariff.id
+                } else {
+                    currentSelectedTariffIds - tariff.id
+                }
+
+                lifecycleScope.launch {
+                    try {
+                        val response = ApiClient.getInstance().getApiService(this@CarActivity)
+                            .updateSelectedTariffs(targetIds.toSet())
+
+                        if (response.isSuccessful && response.body() != null) {
+                            currentSelectedTariffIds.clear()
+                            response.body()!!.selectedTariffIds?.let { currentSelectedTariffIds.addAll(it) }
+                        } else {
+                            // Откат тумблера назад без зацикливания слушателя
+                            switchToggle.setOnCheckedChangeListener(null)
+                            switchToggle.isChecked = !isChecked
+                            setupTariffs(tariffs, currentSelectedTariffIds.toList())
+                            Toast.makeText(this@CarActivity, "Не вдалося зберегти тариф", Toast.LENGTH_SHORT).show()
+                        }
+                    } catch (e: Exception) {
+                        switchToggle.setOnCheckedChangeListener(null)
+                        switchToggle.isChecked = !isChecked
+                        setupTariffs(tariffs, currentSelectedTariffIds.toList())
+                        Toast.makeText(this@CarActivity, "Помилка мережі", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
 
             container.addView(tariffView)
         }
