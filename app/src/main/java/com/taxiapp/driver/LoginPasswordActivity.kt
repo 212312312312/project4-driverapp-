@@ -23,9 +23,18 @@ class LoginPasswordActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         // 🛠️ ДОБАВЛЕНО: Автоматический отступ контента от системных панелей для Android 15[cite: 26]
+        val density = resources.displayMetrics.density
+        val basePaddingHorizontal = (16 * density).toInt()
+        val basePaddingVertical = (24 * density).toInt()
+
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.root) { v, insets ->
             val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            v.setPadding(
+                systemBars.left + basePaddingHorizontal,
+                systemBars.top + basePaddingVertical,
+                systemBars.right + basePaddingHorizontal,
+                systemBars.bottom + basePaddingVertical
+            )
             insets
         }
 

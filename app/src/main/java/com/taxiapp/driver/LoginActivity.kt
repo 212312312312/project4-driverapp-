@@ -52,10 +52,18 @@ class LoginActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        val density = resources.displayMetrics.density
+        val basePaddingHorizontal = (16 * density).toInt()
+        val basePaddingVertical = (24 * density).toInt()
+
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            // Просто мягко зажимаем весь контент экрана безопасными отступами со всех сторон
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            v.setPadding(
+                systemBars.left + basePaddingHorizontal,
+                systemBars.top + basePaddingVertical,
+                systemBars.right + basePaddingHorizontal,
+                systemBars.bottom + basePaddingVertical
+            )
             insets
         }
         sessionManager = SessionManager(this)

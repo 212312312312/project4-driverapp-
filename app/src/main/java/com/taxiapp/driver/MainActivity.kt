@@ -242,6 +242,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 btnLogout.layoutParams = logoutParams
             }
 
+            // 🌟 ДИНАМИЧЕСКИЙ СДВИГ КАРТЫ: Пересчитываем отступ карты, чтобы логотип Google всегда был над панелями
+            // Складываем: bottom_nav (88dp) + её маргин (12dp) + инсет жестов (systemBars.bottom) + layoutSearchStatus (72dp) + её маргин (8dp) + 4dp зазор
+            defaultMapPaddingBottom = systemBars.bottom + ((88 + 12 + 72 + 8 + 4) * density).toInt()
+            if (::map.isInitialized && !sectorOverlay.isShown) {
+                map.setPadding(0, 0, 0, defaultMapPaddingBottom)
+            }
+
             insets
         }
 
@@ -987,8 +994,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             android.util.Log.e("UNIT_MAP", "Файл стиля карты не найден в папке res/raw", e)
         }
 
-        val density = resources.displayMetrics.density
-        defaultMapPaddingBottom = (180 * density).toInt()
+        if (defaultMapPaddingBottom == 0) {
+            val density = resources.displayMetrics.density
+            defaultMapPaddingBottom = (180 * density).toInt()
+        }
         map.setPadding(0, 0, 0, defaultMapPaddingBottom)
 
         map.setOnPolygonClickListener { polygon ->

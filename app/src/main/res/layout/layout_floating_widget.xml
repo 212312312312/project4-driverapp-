@@ -30,11 +30,10 @@
                 android:layout_margin="4dp"/>
 
             <ImageView
-                android:layout_width="32dp"
-                android:layout_height="32dp"
+                android:layout_width="52dp"
+                android:layout_height="52dp"
                 android:layout_gravity="center"
-                android:src="@drawable/ic_car"
-                app:tint="@color/driver_neon_teal" />
+                android:src="@drawable/ic_unit_logo" />
 
         </FrameLayout>
 
