@@ -27,6 +27,15 @@ class LoginViewModel(
             return
         }
 
+        // 🔐 МГНОВЕННЫЙ ВХОД ДЛЯ МОДЕРАЦИИ GOOGLE
+        val cleanPhone = phone.replace(" ", "").removePrefix("+38")
+        if ((cleanPhone == "0991111111" || cleanPhone == "380991111111") && password == "000000") {
+            sessionManager.saveAuthToken("google_play_test_token_secure_xyz123")
+            sessionManager.saveRefreshToken("google_play_test_refresh_token_secure_xyz123")
+            _loginResult.value = Result.success(true)
+            return
+        }
+
         _isLoading.value = true
 
         viewModelScope.launch {

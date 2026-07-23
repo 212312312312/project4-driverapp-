@@ -168,8 +168,27 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             startLocationService()
             startUILocationUpdates()
             if (::map.isInitialized) centerMapOnUser()
+
+            // 🛠️ ДОБАВЛЕНО: Запуск проверки фоновой геолокации
+            checkBackgroundLocationPermission()
         } else {
-            Toast.makeText(this, "Потрібен доступ до геолокації!", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Потрібен доступ до геолокації!", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private val requestBackgroundPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            Toast.makeText(this, "Фоновий пошук замовлень активовано!", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(this, "Доступ обмежено. Без фонової геолокації робота неможлива.", Toast.LENGTH_LONG).show()
+
+            // 🔄 Возвращаем на экран выбора аккаунта и очищаем стек
+            val intent = Intent(this, AccountSelectionActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            startActivity(intent)
+            finish()
         }
     }
 
@@ -1357,6 +1376,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         if (allGranted) {
             startLocationService()
             startUILocationUpdates()
+
+            // 🛠️ ДОБАВЛЕНО: Проверка фоновой геолокации, если обычная уже есть
+            checkBackgroundLocationPermission()
         } else requestPermissionLauncher.launch(permissionsToRequest.toTypedArray())
     }
 
@@ -1447,6 +1469,51 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 showRestoreDialog()
             }
         }
+    }
+
+    // 🛠️ ДОБАВЛЕНО: Проверка условий для Android 10+ и вызов диалога
+    private fun checkBackgroundLocationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val hasBackgroundPermission = ContextCompat.checkSelfPermission(
+                this, Manifest.permission.ACCESS_BACKGROUND_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+
+            if (!hasBackgroundPermission) {
+                showLocationDisclosureDialog()
+            }
+        }
+    }
+
+    // 🛠️ ДОБАВЛЕНО: Официальное диалоговое окно Prominent Disclosure для прохождения модерации Google
+    private fun showLocationDisclosureDialog() {
+        val dialog = android.app.Dialog(this)
+        dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
+        dialog.setContentView(R.layout.dialog_location_disclosure)
+
+        // Делаем стандартный фон окна прозрачным, чтобы углы из bg_bottom_nav_floating не обрезались
+        dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
+        dialog.window?.setLayout(
+            android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+            android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+        dialog.setCancelable(false) // Защита от закрытия диалога кликом мимо экрана
+
+        val btnCancel = dialog.findViewById<androidx.appcompat.widget.AppCompatButton>(R.id.btnCancelPermission)
+        val btnAllow = dialog.findViewById<androidx.appcompat.widget.AppCompatButton>(R.id.btnAllowPermission)
+
+        // Обработка кнопки "Ні, дякую"
+        btnCancel.setOnClickListener {
+            dialog.dismiss()
+            Toast.makeText(this@MainActivity, "Для роботи додатка обов'язково потрібен доступ до фонової геолокації!", Toast.LENGTH_LONG).show()
+
+            // 🔄 Возвращаем на экран выбора аккаунта и очищаем стек
+            val intent = Intent(this@MainActivity, AccountSelectionActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            startActivity(intent)
+            finish()
+        }
+
+        dialog.show()
     }
 
     fun startHomeSectorSelection(preSelectedIds: List<Long>?) {

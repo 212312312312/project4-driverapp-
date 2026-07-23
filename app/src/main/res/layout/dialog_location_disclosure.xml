@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_bottom_nav_floating"
+    android:backgroundTint="@color/driver_black_bg"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="Доступ до геопозиції у фоновому режимі"
+        android:textColor="@color/driver_text_primary"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:fontFamily="@font/app_font_family" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="32dp"
+        android:gravity="center"
+        android:text="Unit Driver збирає дані про ваше місцезнаходження, навіть коли додаток закрито або не використовується. Це необхідно для того, щоб ви могли стабільно отримувати найближчі замовлення від пасажирів, коректно розраховувати маршрут поїздки та фіксувати фінальну вартість в реальному часі."
+        android:textColor="@color/driver_text_secondary"
+        android:textSize="15sp"
+        android:lineSpacingExtra="4dp"
+        android:fontFamily="@font/app_font_family" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:weightSum="2">
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btnCancelPermission"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_marginEnd="8dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_round_button_gray"
+            android:backgroundTint="@color/driver_card_bg"
+            android:text="Ні, дякую"
+            android:textAllCaps="false"
+            android:textColor="@color/driver_text_primary"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:elevation="0dp"
+            android:stateListAnimator="@null"
+            android:fontFamily="@font/app_font_family" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btnAllowPermission"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_round_button_gray"
+            android:backgroundTint="@color/driver_neon_teal"
+            android:text="Прийняти"
+            android:textAllCaps="false"
+            android:textColor="@color/driver_text_black"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:elevation="0dp"
+            android:stateListAnimator="@null"
+            android:fontFamily="@font/app_font_family" />
+    </LinearLayout>
+
+</LinearLayout>

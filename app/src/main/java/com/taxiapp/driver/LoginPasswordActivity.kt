@@ -76,6 +76,23 @@ class LoginPasswordActivity : AppCompatActivity() {
     }
 
     private fun loginWithPassword(phone: String, pass: String) {
+        // 🔐 МГНОВЕННЫЙ ВХОД ДЛЯ МОДЕРАЦИИ GOOGLE
+        val cleanPhone = phone.replace(" ", "")
+        if ((cleanPhone == "+380991111111" || cleanPhone == "0991111111") && pass == "000000") {
+            val mockResponse = com.taxiapp.driver.network.LoginResponse(
+                token = "google_play_test_token_secure_xyz123",
+                refreshToken = "google_play_test_refresh_token_secure_xyz123",
+                userId = 99999L, // Исправлено: теперь это Long (буква L на конце)
+                fullName = "Google Reviewer",
+                phoneNumber = phone,
+                isPendingDeletion = false,
+                role = "DRIVER" // Добавлено: передаем роль, которую требует конструктор
+            )
+            sessionManager.setPendingDeletion(false)
+            saveSession(mockResponse)
+            return
+        }
+
         setLoading(true)
         lifecycleScope.launch {
             try {

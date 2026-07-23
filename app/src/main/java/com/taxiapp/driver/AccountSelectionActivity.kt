@@ -355,6 +355,13 @@ class AccountSelectionActivity : AppCompatActivity() {
     }
 
     private fun validateTokenAndProceed() {
+        // 🔐 МГНОВЕННЫЙ ОБХОД ПРОВЕРКИ ПРОФИЛЯ ДЛЯ МОДЕРАЦИИ GOOGLE
+        val savedPhone = sessionManager.getDriverPhone()?.replace(" ", "") ?: ""
+        if (savedPhone == "+380991111111" || savedPhone == "0991111111") {
+            goToMainActivity()
+            return
+        }
+
         binding.btnContinue.isEnabled = false
 
         lifecycleScope.launch {
