@@ -2,6 +2,7 @@ package com.taxiapp.driver
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.taxiapp.driver.databinding.ActivityWelcomeBinding
 import com.taxiapp.driver.utils.SessionManager
@@ -38,9 +39,15 @@ class WelcomeActivity : AppCompatActivity() {
         }
 
         binding.btnRegisterNav.setOnClickListener {
+            val rawUrl = BuildConfig.BASE_URL.replace("api/v1/", "")
+            // ✅ ЗАЩИТА: Если в релизе случайно остался IP локальной сети, не даем открывать мертвую страницу
+            if (rawUrl.contains("192.168.") || rawUrl.contains("localhost")) {
+                Toast.makeText(this, "Реєстрація тимчасово доступна через диспетчера", Toast.LENGTH_LONG).show()
+                return@setOnClickListener
+            }
+
             val intent = Intent(this, WebViewActivity::class.java)
-            // Убираем api/v1/ для веб-ссылок, если они не через API
-            intent.putExtra("url", "${BuildConfig.BASE_URL.replace("api/v1/", "")}driver-register")
+            intent.putExtra("url", "${rawUrl}driver-register")
             startActivity(intent)
         }
     }

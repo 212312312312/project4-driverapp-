@@ -259,27 +259,68 @@ class LocationService : Service() {
         super.onTaskRemoved(rootIntent)
         isServiceRunning = false
         val token = sessionManager.fetchAuthToken()
+
         if (token != null) {
-            runBlocking(Dispatchers.IO) {
+            // ✅ ИСПРАВЛЕНО: Выполняем фоновую отписку без блокировки главного потока (убираем ANR)
+            CoroutineScope(Dispatchers.IO).launch {
                 try {
-                    // --- ИСПРАВЛЕНО ТУТ: Передаем параметры позиционно (без неверных имен) ---
                     val offlineRequest = com.taxiapp.driver.network.UpdateDriverStatusRequest(false, 0.0, 0.0)
                     ApiClient.getInstance().getApiService(applicationContext).updateStatus(offlineRequest)
-
                     ApiClient.getInstance().getApiService(applicationContext).deleteLocation()
-                } catch (e: Exception) { e.printStackTrace() }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                } finally {
+                    stopSelf()
+                }
             }
+        } else {
+            stopSelf()
         }
-        stopSelf()
+    }
+
+    // --- ИСПРАВЛЕНИЕ В LocationService.kt ---
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        startForegroundService()
+        return START_STICKY
     }
 
     private fun startForegroundService() {
-        val channelId = "location_channel"
+        // 🔴 Меняем ID на v2, чтобы сбросить старый низкий приоритет в настройках телефона
+        val channelId = "location_channel_v2"
+        val channelName = "Фонова геолокація"
+
+        val notificationManager = getSystemService(android.content.Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = android.app.NotificationChannel(
+                channelId,
+                channelName,
+                android.app.NotificationManager.IMPORTANCE_DEFAULT // 🟢 Повысили с LOW до DEFAULT
+            ).apply {
+                description = "Канал для відстеження геопозиції водія під час роботи"
+            }
+            notificationManager.createNotificationChannel(channel)
+        }
+
+        val openIntent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
+
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            0,
+            openIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
         val notification: Notification = NotificationCompat.Builder(this, channelId)
-            .setContentTitle("Taxi Driver")
-            .setContentText("Ви в системі")
+            .setContentTitle("Unit Driver")
+            .setContentText("Трансляція геолокації у фоновому режимі")
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setContentIntent(pendingIntent)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT) // 🟢 Повысили приоритет
+            .setOngoing(true)
             .build()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

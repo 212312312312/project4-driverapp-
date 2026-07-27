@@ -181,10 +181,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     ) { isGranted ->
         if (isGranted) {
             Toast.makeText(this, "Фоновий пошук замовлень активовано!", Toast.LENGTH_SHORT).show()
+            // 🟢 ЗАПУСКАЕМ СЕРВИС СРАЗУ ПОСЛЕ ВОЗВРАТА ИЗ НАСТРОЕК СИСТЕМЫ
+            startLocationService()
         } else {
             Toast.makeText(this, "Доступ обмежено. Без фонової геолокації робота неможлива.", Toast.LENGTH_LONG).show()
-
-            // 🔄 Возвращаем на экран выбора аккаунта и очищаем стек
             val intent = Intent(this, AccountSelectionActivity::class.java)
             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             startActivity(intent)
@@ -1502,11 +1502,30 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val btnAllow = dialog.findViewById<androidx.appcompat.widget.AppCompatButton>(R.id.btnAllowPermission)
 
         // Обработка кнопки "Ні, дякую"
-        btnCancel.setOnClickListener {
+        btnAllow?.setOnClickListener {
+            dialog.dismiss()
+
+            // 1. Запрашиваем доступ к уведомлениям для Android 13+ (чтобы плашка в шторке обязательно показалась)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                if (ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                    requestPermissionLauncher.launch(arrayOf(Manifest.permission.POST_NOTIFICATIONS))
+                }
+            }
+
+            // 2. Запрашиваем фоновую геолокацию
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                requestBackgroundPermissionLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+            }
+
+            // 3. Запускаем сервис локации
+            startLocationService()
+        }
+
+        // Обработка кнопки "Ні, дякую"
+        btnCancel?.setOnClickListener {
             dialog.dismiss()
             Toast.makeText(this@MainActivity, "Для роботи додатка обов'язково потрібен доступ до фонової геолокації!", Toast.LENGTH_LONG).show()
 
-            // 🔄 Возвращаем на экран выбора аккаунта и очищаем стек
             val intent = Intent(this@MainActivity, AccountSelectionActivity::class.java)
             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             startActivity(intent)
