@@ -7,7 +7,10 @@
     <string name="menu_activity">Активність</string>
     <string name="menu_stats">Статистика</string>
     <string name="menu_logout">Завершити роботу</string>
-
+    <string name="location_disclosure_title">Доступ до геопозиції у фоновому режимі</string>
+    <string name="location_disclosure_desc">Unit Driver збирає дані про ваше місцезнаходження, навіть коли додаток закрито або не використовується. Це необхідно для того, щоб ви могли стабільно отримувати найближчі замовлення від пасажирів, коректно розраховувати маршрут поїздки та фіксувати фінальну вартість в реальному часі.</string>
+    <string name="location_disclosure_btn_cancel">Ні, дякую</string>
+    <string name="location_disclosure_btn_allow">Прийняти</string>
     <string name="settings_theme_title">Тема оформлення</string>
     <string name="theme_system">Системна</string>
     <string name="theme_dark">Темна</string>

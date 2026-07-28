@@ -30,6 +30,8 @@ class LocationService : Service() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationCallback: LocationCallback
     private lateinit var sessionManager: SessionManager
+
+    private var isForegroundStarted = false
     private var isServiceRunning = false
     // --- ДОБАВИТЬ: Поля для умной фильтрации локации ---
     private var lastSentLat = 0.0
@@ -281,13 +283,19 @@ class LocationService : Service() {
     // --- ИСПРАВЛЕНИЕ В LocationService.kt ---
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        startForegroundService()
+        // 🛠️ ФИКС: Запускаем плашку только 1 раз при старте сервиса, без повторов при onResume
+        if (!isForegroundStarted) {
+            startForegroundService()
+        }
         return START_STICKY
     }
 
     private fun startForegroundService() {
-        // 🔴 Меняем ID на v2, чтобы сбросить старый низкий приоритет в настройках телефона
-        val channelId = "location_channel_v2"
+        if (isForegroundStarted) return
+        isForegroundStarted = true
+
+        // Меняем ID канала на v3, чтобы скинуть старые настройки звука в телефоне
+        val channelId = "location_channel_v3"
         val channelName = "Фонова геолокація"
 
         val notificationManager = getSystemService(android.content.Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
@@ -296,9 +304,10 @@ class LocationService : Service() {
             val channel = android.app.NotificationChannel(
                 channelId,
                 channelName,
-                android.app.NotificationManager.IMPORTANCE_DEFAULT // 🟢 Повысили с LOW до DEFAULT
+                android.app.NotificationManager.IMPORTANCE_LOW // 🟢 LOW — тихий режим без звука и вибрации
             ).apply {
                 description = "Канал для відстеження геопозиції водія під час роботи"
+                setSound(null, null) // 🟢 Выключаем звук
             }
             notificationManager.createNotificationChannel(channel)
         }
@@ -319,7 +328,8 @@ class LocationService : Service() {
             .setContentText("Трансляція геолокації у фоновому режимі")
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentIntent(pendingIntent)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT) // 🟢 Повысили приоритет
+            .setPriority(NotificationCompat.PRIORITY_LOW) // 🟢 LOW приоритет
+            .setOnlyAlertOnce(true) // 🟢 Сигналить только 1 раз, при повторах — тишина
             .setOngoing(true)
             .build()
 
@@ -329,6 +339,8 @@ class LocationService : Service() {
             startForeground(1, notification)
         }
     }
+
+
 
     private fun shouldSendLocation(location: Location): Boolean {
         // --- ЗАЩИТА: Блокировка Fake GPS (Mock Locations) ---[cite: 3]
@@ -384,6 +396,7 @@ class LocationService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        isForegroundStarted = false // 🟢 Сбрасываем флаг при остановке
         isServiceRunning = false
         fusedLocationClient.removeLocationUpdates(locationCallback)
     }

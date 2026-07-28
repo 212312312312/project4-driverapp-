@@ -308,6 +308,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         startUILocationUpdates()
         updateCommissionInfo()
 
+        // 🛠️ ГАРАНТИЯ ДЛЯ GOOGLE PLAY: При каждом открытии/возврате на главный экран
+        // мгновенно запускаем Foreground Service и подтягиваем плашку трансляции
+        if (hasLocationPermission()) {
+            startLocationService()
+        }
+
         if (::map.isInitialized) {
             updateMapUI()
             updateSearchStatusUI()
@@ -1485,43 +1491,40 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     // 🛠️ ДОБАВЛЕНО: Официальное диалоговое окно Prominent Disclosure для прохождения модерации Google
+    // 🛠️ ИСПРАВЛЕНО: Запуск сервиса перенесен строго ПОСЛЕ получения разрешения
     private fun showLocationDisclosureDialog() {
         val dialog = android.app.Dialog(this)
         dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
         dialog.setContentView(R.layout.dialog_location_disclosure)
 
-        // Делаем стандартный фон окна прозрачным, чтобы углы из bg_bottom_nav_floating не обрезались
         dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
         dialog.window?.setLayout(
             android.view.ViewGroup.LayoutParams.MATCH_PARENT,
             android.view.ViewGroup.LayoutParams.WRAP_CONTENT
         )
-        dialog.setCancelable(false) // Защита от закрытия диалога кликом мимо экрана
+        dialog.setCancelable(false)
 
         val btnCancel = dialog.findViewById<androidx.appcompat.widget.AppCompatButton>(R.id.btnCancelPermission)
         val btnAllow = dialog.findViewById<androidx.appcompat.widget.AppCompatButton>(R.id.btnAllowPermission)
 
-        // Обработка кнопки "Ні, дякую"
         btnAllow?.setOnClickListener {
             dialog.dismiss()
 
-            // 1. Запрашиваем доступ к уведомлениям для Android 13+ (чтобы плашка в шторке обязательно показалась)
+            // 1. Запрашиваем уведомления для Android 13+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 if (ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                     requestPermissionLauncher.launch(arrayOf(Manifest.permission.POST_NOTIFICATIONS))
                 }
             }
 
-            // 2. Запрашиваем фоновую геолокацию
+            // 2. Запрашиваем фоновую геолокацию (Сервис запустится внутри requestBackgroundPermissionLauncher после одобрения!)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 requestBackgroundPermissionLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+            } else {
+                startLocationService()
             }
-
-            // 3. Запускаем сервис локации
-            startLocationService()
         }
 
-        // Обработка кнопки "Ні, дякую"
         btnCancel?.setOnClickListener {
             dialog.dismiss()
             Toast.makeText(this@MainActivity, "Для роботи додатка обов'язково потрібен доступ до фонової геолокації!", Toast.LENGTH_LONG).show()
@@ -1535,6 +1538,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         dialog.show()
     }
 
+    private fun hasLocationPermission(): Boolean {
+        return ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+                ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+    }
     fun startHomeSectorSelection(preSelectedIds: List<Long>?) {
         currentSelectionTarget = SelectionTarget.HOME
         selectedIds.clear()

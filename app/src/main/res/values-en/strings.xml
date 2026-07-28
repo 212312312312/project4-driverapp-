@@ -7,7 +7,10 @@
     <string name="menu_activity">Activity</string>
     <string name="menu_stats">Statistics</string>
     <string name="menu_logout">Log Out</string>
-
+    <string name="location_disclosure_title">Background Location Access</string>
+    <string name="location_disclosure_desc">Unit Driver collects location data to receive nearby ride requests, calculate trip routes, and track ride fares in real time even when the app is closed or not in use.</string>
+    <string name="location_disclosure_btn_cancel">No, thanks</string>
+    <string name="location_disclosure_btn_allow">Accept</string>
     <string name="settings_title">Settings</string>
     <string name="settings_language">Language</string>
     <string name="settings_theme">Theme</string>

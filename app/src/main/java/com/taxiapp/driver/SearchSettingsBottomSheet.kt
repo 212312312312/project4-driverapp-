@@ -1,6 +1,5 @@
 package com.taxiapp.driver
 
-import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -55,7 +54,13 @@ class SearchSettingsBottomSheet(
         val btnPlus = view.findViewById<View>(R.id.btnRadiusPlus)
 
         val session = SessionManager(requireContext())
-        currentMode = session.getSearchMode()
+        val savedMode = session.getSearchMode()
+
+        // 🛠️ ФИКС 1: Выбираем "Ланцюг" по умолчанию, если не выбран режим "Домой"
+        currentMode = if (savedMode == DriverSearchMode.HOME) DriverSearchMode.HOME else DriverSearchMode.CHAIN
+
+        // 🛠️ ФИКС 2: Устанавливаем 0.5 км как базовый радиус по умолчанию
+        currentRadius = session.getSearchRadius().takeIf { it >= 0.5 } ?: 0.5
 
         updateLocalUI()
         loadSettings()
@@ -108,17 +113,18 @@ class SearchSettingsBottomSheet(
                 if (response.isSuccessful && response.body() != null) {
                     val state = response.body()!!
 
-                    currentRadius = state.radius
+                    currentRadius = state.radius.takeIf { it >= 0.5 } ?: 0.5
                     selectedHomeSectorIds = state.homeSectorIds
 
-                    // 🚀 ОПТИМИЗАЦИЯ: Если поиск выключен (MANUAL), берем заготовленный режим из памяти устройства,
-                    // чтобы галочка не перепрыгивала самовольно на Ланцюг!
                     val session = SessionManager(requireContext())
-                    currentMode = if (state.mode == DriverSearchMode.MANUAL) {
+                    val modeFromState = if (state.mode == DriverSearchMode.MANUAL) {
                         session.getSearchMode()
                     } else {
                         state.mode
                     }
+
+                    // 🛠️ ФИКС: Всегда держим подсвеченной одну из двух доступных опций
+                    currentMode = if (modeFromState == DriverSearchMode.HOME) DriverSearchMode.HOME else DriverSearchMode.CHAIN
 
                     updateUI(state)
                 }
@@ -140,7 +146,7 @@ class SearchSettingsBottomSheet(
         }
 
         val progress = ((currentRadius - 0.5) / 0.5).toInt()
-        seekBar.progress = progress
+        seekBar.progress = progress.coerceAtLeast(0)
         updateRadiusText()
     }
 
@@ -150,7 +156,6 @@ class SearchSettingsBottomSheet(
     }
 
     private fun selectMode(newMode: DriverSearchMode) {
-        if (currentMode == newMode) return
         currentMode = newMode
         radioHome.isChecked = currentMode == DriverSearchMode.HOME
         radioChain.isChecked = currentMode == DriverSearchMode.CHAIN
@@ -162,11 +167,8 @@ class SearchSettingsBottomSheet(
 
         lifecycleScope.launch {
             try {
-                // 🚀 АРХИТЕКТУРНОЕ РЕШЕНИЕ: Узнаем у MainActivity, запущен ли поиск прямо сейчас
                 val mainActivity = requireActivity() as MainActivity
 
-                // Если на главном экране поиск не запущен, шлем на сервер MANUAL,
-                // чтобы просто сохранить радиус и сектора, но не активировать автоподбор замовлень.
                 val modeToSend = if (mainActivity.isSearchActive) {
                     currentMode
                 } else {
@@ -182,7 +184,6 @@ class SearchSettingsBottomSheet(
 
                 if (response.isSuccessful && response.body() != null) {
                     val session = SessionManager(requireContext())
-                    // В локальные префсы ВСЕГДА сохраняем CHAIN или HOME, чтобы кнопка Старт знала что включать
                     session.saveSearchMode(currentMode)
                     session.saveSearchRadius(currentRadius)
 
