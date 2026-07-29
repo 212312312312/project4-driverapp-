@@ -74,7 +74,8 @@ class PhotoControlActivity : AppCompatActivity() {
             }
         }
 
-        val url = "http://192.168.0.107:8080/driver/photo-upload?id=$photoControlId&driverId=$driverId"
+        val baseUrl = "http://192.168.0.107:8080" // Замените на ваш актуальный BASE_URL если используется другой
+        val url = "$baseUrl/driver/photo-upload?id=$photoControlId&driverId=$driverId"
         webView.loadUrl(url)
     }
 }

@@ -92,6 +92,7 @@ class WebViewActivity : AppCompatActivity() {
         settings.allowFileAccess = true
         settings.mediaPlaybackRequiresUserGesture = false
         settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+        settings.cacheMode = WebSettings.LOAD_NO_CACHE
 
         // Обробка навігації
         webView.webViewClient = object : WebViewClient() {

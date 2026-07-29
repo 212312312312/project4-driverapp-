@@ -40,12 +40,8 @@ class WelcomeActivity : AppCompatActivity() {
 
         binding.btnRegisterNav.setOnClickListener {
             val rawUrl = BuildConfig.BASE_URL.replace("api/v1/", "")
-            // ✅ ЗАЩИТА: Если в релизе случайно остался IP локальной сети, не даем открывать мертвую страницу
-            if (rawUrl.contains("192.168.") || rawUrl.contains("localhost")) {
-                Toast.makeText(this, "Реєстрація тимчасово доступна через диспетчера", Toast.LENGTH_LONG).show()
-                return@setOnClickListener
-            }
 
+            // Временно разрешаем локал, пока идет тест
             val intent = Intent(this, WebViewActivity::class.java)
             intent.putExtra("url", "${rawUrl}driver-register")
             startActivity(intent)
