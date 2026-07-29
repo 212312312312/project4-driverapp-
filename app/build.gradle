@@ -18,7 +18,7 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
         // Твій серверний IP (переконайся, що він актуальний)
-        buildConfigField "String", "BASE_URL", "\"https://taxi-server-594834712305.europe-central2.run.app/\""
+        buildConfigField "String", "BASE_URL", "\"http://192.168.0.107:8080/\""
     }
 
     buildFeatures {

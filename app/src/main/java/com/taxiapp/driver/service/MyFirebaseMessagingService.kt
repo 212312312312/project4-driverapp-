@@ -36,6 +36,12 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             }
             return
         }
+        if (type == "PHOTO_CONTROL_REQUEST" || type == "PHOTO_CONTROL_APPROVED" ||
+            type == "PHOTO_CONTROL_REJECTED" || type == "PHOTO_CONTROL_EXPIRED") {
+            wakeUpScreen()
+            showPhotoControlNotification(data)
+            return
+        }
 
         if (type == "ORDER_OFFER" || type == "ORDER_CONFIRMATION") {
             // 1. Сразу будим экран физически (актуально для заблокированных устройств)
@@ -114,7 +120,37 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             e.printStackTrace()
         }
     }
+    private fun showPhotoControlNotification(data: Map<String, String>) {
+        val title = data["title"] ?: "Фотоконтроль"
+        val body = data["body"] ?: "Оновлено статус фотоконтролю"
 
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val channelId = "photo_control_channel"
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(channelId, "Фотоконтроль", NotificationManager.IMPORTANCE_HIGH)
+            notificationManager.createNotificationChannel(channel)
+        }
+
+        val intent = Intent(this, MainActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        }
+
+        val pendingIntent = PendingIntent.getActivity(
+            this, System.currentTimeMillis().toInt(), intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val builder = NotificationCompat.Builder(this, channelId)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+
+        notificationManager.notify(9001, builder.build())
+    }
     private fun showOfferNotification(order: Order) {
         val intent = Intent(this, OrderOfferActivity::class.java).apply {
             putExtra("EXTRA_ORDER", order)

@@ -91,6 +91,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private var isDriverOnline = false
     private var searchBorderAnimator: android.animation.ObjectAnimator? = null
 
+    private lateinit var cardPhotoControl: com.google.android.material.card.MaterialCardView
+    private lateinit var tvPhotoControlTitle: TextView
+    private lateinit var tvPhotoControlSubtitle: TextView
+    private lateinit var btnPassPhotoControl: androidx.appcompat.widget.AppCompatButton
+    private var activePhotoControlData: com.taxiapp.driver.network.PhotoControlStatusDto? = null
+
     private var defaultMapPaddingBottom = 0
     private lateinit var mainScreenUiGroup: androidx.constraintlayout.widget.Group
     private lateinit var btnSaveSelection: android.widget.ImageView
@@ -318,6 +324,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             updateMapUI()
             updateSearchStatusUI()
         }
+        checkPhotoControlStatus()
     }
 
     override fun onStop() {
@@ -457,6 +464,21 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             isDriverOnline = !isDriverOnline
             setOnlineVisualState(isDriverOnline, animate = true)
             updateDriverStatus(isDriverOnline)
+        }
+
+        cardPhotoControl = findViewById(R.id.cardPhotoControl)
+        tvPhotoControlTitle = findViewById(R.id.tvPhotoControlTitle)
+        tvPhotoControlSubtitle = findViewById(R.id.tvPhotoControlSubtitle)
+        btnPassPhotoControl = findViewById(R.id.btnPassPhotoControl)
+
+        btnPassPhotoControl.setOnClickListener {
+            activePhotoControlData?.let { pc ->
+                val intent = Intent(this, PhotoControlActivity::class.java).apply {
+                    putExtra("PHOTO_CONTROL_ID", pc.id)
+                    putExtra("DRIVER_ID", pc.driverId)
+                }
+                startActivity(intent)
+            }
         }
 
         findViewById<View>(R.id.btn_nav_ether).setOnClickListener {
@@ -888,6 +910,49 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         updateSearchBlockVisuals(false)
     }
 
+    private fun checkPhotoControlStatus() {
+        lifecycleScope.launch {
+            try {
+                val response = ApiClient.getInstance().getApiService(this@MainActivity).getActivePhotoControl()
+                Log.d("PHOTO_CONTROL", "HTTP Status: ${response.code()}, Body: ${response.body()}")
+
+                if (response.isSuccessful && response.body() != null) {
+                    val pc = response.body()!!
+                    activePhotoControlData = pc
+                    Log.d("PHOTO_CONTROL", "Знайдено фотоконтроль: status=${pc.status}, restricted=${pc.photoControlRestricted}")
+
+                    if (pc.photoControlRestricted) {
+                        cardPhotoControl.visibility = View.VISIBLE
+                        cardPhotoControl.setCardBackgroundColor(Color.parseColor("#e74c3c"))
+                        tvPhotoControlTitle.text = "Обмеження в роботі"
+                        tvPhotoControlSubtitle.text = pc.rejectReason ?: "Пройдіть повторний фотоконтроль для відновлення"
+                        btnPassPhotoControl.visibility = View.VISIBLE
+                    } else if (pc.status == "PENDING") {
+                        cardPhotoControl.visibility = View.VISIBLE
+                        cardPhotoControl.setCardBackgroundColor(Color.parseColor("#e67e22"))
+                        tvPhotoControlTitle.text = "Потрібно пройти фотоконтроль"
+                        val timeFormatted = pc.deadlineAt?.takeLast(8)?.take(5) ?: ""
+                        tvPhotoControlSubtitle.text = "Пройдіть фотоконтроль до $timeFormatted"
+                        btnPassPhotoControl.visibility = View.VISIBLE
+                    } else if (pc.status == "SUBMITTED") {
+                        cardPhotoControl.visibility = View.VISIBLE
+                        cardPhotoControl.setCardBackgroundColor(Color.parseColor("#3498db"))
+                        tvPhotoControlTitle.text = "Фото на перевірці"
+                        tvPhotoControlSubtitle.text = "Очікуйте рішення диспетчера"
+                        btnPassPhotoControl.visibility = View.GONE
+                    } else {
+                        cardPhotoControl.visibility = View.GONE
+                    }
+                } else {
+                    Log.d("PHOTO_CONTROL", "Активного фотоконтролю для цього водія немає")
+                    cardPhotoControl.visibility = View.GONE
+                }
+            } catch (e: Exception) {
+                Log.e("PHOTO_CONTROL", "Помилка перевірки фотоконтролю: ${e.message}")
+                e.printStackTrace()
+            }
+        }
+    }
     private fun loadUserProfile() {
         val tvDriverName = navViewContent.findViewById<TextView>(R.id.tv_driver_name)
         val tvRating = navViewContent.findViewById<TextView>(R.id.tv_menu_rating)

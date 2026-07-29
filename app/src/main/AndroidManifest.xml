@@ -75,7 +75,7 @@
             android:exported="false"
             android:windowSoftInputMode="adjustPan"
             android:screenOrientation="portrait" />
-
+        <activity android:name=".PhotoControlActivity" android:exported="false" />
         <activity
             android:name=".FiltersActivity"
             android:exported="false"

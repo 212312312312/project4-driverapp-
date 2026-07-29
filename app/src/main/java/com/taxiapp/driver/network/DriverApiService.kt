@@ -11,7 +11,15 @@ data class ChartPointDto(
     @SerializedName("date") val date: String,
     @SerializedName("income") val income: Double
 )
-
+data class PhotoControlStatusDto(
+    val id: Long,
+    val driverId: Long,
+    val driverName: String?,
+    val status: String, // PENDING, SUBMITTED, APPROVED, REJECTED, EXPIRED
+    val deadlineAt: String?,
+    val photoControlRestricted: Boolean,
+    val rejectReason: String?
+)
 data class TokenRefreshRequestDto(val refreshToken: String)
 
 data class ChatMessageDto(
@@ -184,6 +192,9 @@ interface DriverApiService {
 
     @GET("api/v1/driver/commission")
     suspend fun getCommission(): Response<CommissionInfoDto>
+
+    @GET("api/v1/photo-control/driver/active")
+    suspend fun getActivePhotoControl(): Response<PhotoControlStatusDto>
 
     @POST("api/v1/payments/init")
     suspend fun initPayment(@Body request: InitPaymentRequest): Response<InitPaymentResponse>
