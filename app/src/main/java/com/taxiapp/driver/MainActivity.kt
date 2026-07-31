@@ -931,8 +931,21 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                         cardPhotoControl.visibility = View.VISIBLE
                         cardPhotoControl.setCardBackgroundColor(Color.parseColor("#e67e22"))
                         tvPhotoControlTitle.text = "Потрібно пройти фотоконтроль"
-                        val timeFormatted = pc.deadlineAt?.takeLast(8)?.take(5) ?: ""
-                        tvPhotoControlSubtitle.text = "Пройдіть фотоконтроль до $timeFormatted"
+
+                        // 🛠️ ИСПРАВЛЕНИЕ: Корректный парсинг времени ЧЧ:ММ из ISO-строки (напр. 2026-07-29T22:12:00)
+                        val timeFormatted = try {
+                            val rawDate = pc.deadlineAt
+                            if (!rawDate.isNullOrBlank()) {
+                                val timePart = when {
+                                    rawDate.contains("T") -> rawDate.substringAfter("T")
+                                    rawDate.contains(" ") -> rawDate.substringAfter(" ")
+                                    else -> rawDate
+                                }
+                                timePart.take(5) // Берём ровно 5 символов HH:mm
+                            } else ""
+                        } catch (e: Exception) { "" }
+
+                        tvPhotoControlSubtitle.text = if (timeFormatted.isNotBlank()) "Пройдіть фотоконтроль до $timeFormatted" else "Потрібно пройти фотоконтроль"
                         btnPassPhotoControl.visibility = View.VISIBLE
                     } else if (pc.status == "SUBMITTED") {
                         cardPhotoControl.visibility = View.VISIBLE
@@ -941,6 +954,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                         tvPhotoControlSubtitle.text = "Очікуйте рішення диспетчера"
                         btnPassPhotoControl.visibility = View.GONE
                     } else {
+                        // Если статус APPROVED / CANCELLED / EXPIRED — скрываем виджет
                         cardPhotoControl.visibility = View.GONE
                     }
                 } else {
