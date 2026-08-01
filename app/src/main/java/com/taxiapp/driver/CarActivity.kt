@@ -62,6 +62,17 @@ class CarActivity : AppCompatActivity() {
         progressBar = findViewById(R.id.progress_bar)
     }
 
+    override fun onResume() {
+        super.onResume()
+        // При возврате на экран (например, после заполнения формы в WebView)
+        // перезагружаем данные активного авто и списки
+        if (carTabs.selectedTabPosition == 0) {
+            loadActiveCarData()
+        } else {
+            loadCarList()
+        }
+    }
+
     private fun setupListeners() {
         findViewById<ImageView>(R.id.btn_back).setOnClickListener { finish() }
 
@@ -197,15 +208,17 @@ class CarActivity : AppCompatActivity() {
         }
     }
 
-    // --- ОШИБКА ИСПРАВЛЕНА: лишняя битая строка View.grid@VISIBLE удалена полностью ---
     private fun changeActiveCar(car: CarDto) {
         progressBar.visibility = View.VISIBLE
         lifecycleScope.launch {
             try {
                 val response = ApiClient.getInstance().getApiService(this@CarActivity).selectActiveCar(car.id)
                 if (response.isSuccessful) {
-                    Toast.makeText(this@CarActivity, "Авто успішно змінено!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@CarActivity, "Авто успішно змінено! Тарифи оновлено.", Toast.LENGTH_SHORT).show()
+
+                    // 🔥 ВАЖНО: Перезагружаем и список машин, и профиль водителя с новыми тарифами классификатора
                     loadCarList()
+                    loadActiveCarData()
                 } else {
                     val errorMsg = response.errorBody()?.string() ?: "Помилка"
                     Toast.makeText(this@CarActivity, "Не вдалося змінити: $errorMsg", Toast.LENGTH_SHORT).show()

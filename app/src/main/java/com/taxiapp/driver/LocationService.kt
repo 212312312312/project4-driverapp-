@@ -239,12 +239,11 @@ class LocationService : Service() {
         }
 
         if (latToSend == 0.0 && lngToSend == 0.0) return
-
         if (sessionManager.fetchAuthToken() == null) { stopSelf(); return }
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                // Улетают либо реальные координаты, либо закрепленные водителем
+                // Улетают координаты. Сервер сам знает статус isOnline водителя из БД
                 val request = UpdateLocationRequest(latToSend, lngToSend, bearing)
                 val response = ApiClient.getInstance().getApiService(applicationContext).updateLocation(request)
 
@@ -263,17 +262,22 @@ class LocationService : Service() {
         val token = sessionManager.fetchAuthToken()
 
         if (token != null) {
-            // ✅ ИСПРАВЛЕНО: Выполняем фоновую отписку без блокировки главного потока (убираем ANR)
-            CoroutineScope(Dispatchers.IO).launch {
-                try {
-                    val offlineRequest = com.taxiapp.driver.network.UpdateDriverStatusRequest(false, 0.0, 0.0)
-                    ApiClient.getInstance().getApiService(applicationContext).updateStatus(offlineRequest)
-                    ApiClient.getInstance().getApiService(applicationContext).deleteLocation()
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                } finally {
-                    stopSelf()
+            try {
+                // 🟢 БЛОКИРУЕМ ПОТОК НА ДРОБЬ СЕКУНДЫ, ЧТОБЫ СЕТЕВОЙ ЗАПРОС УСПЕЛ УЙТИ ДО СМЕРТИ ПРОЦЕССА
+                runBlocking(Dispatchers.IO) {
+                    try {
+                        val offlineRequest = com.taxiapp.driver.network.UpdateDriverStatusRequest(false, 0.0, 0.0)
+                        ApiClient.getInstance().getApiService(applicationContext).updateStatus(offlineRequest)
+                        ApiClient.getInstance().getApiService(applicationContext).deleteLocation()
+                        Log.d("LocationService", "✅ Сигнал выхода в офлайн успешно отправлен при выгрузке приложения")
+                    } catch (e: Exception) {
+                        Log.e("LocationService", "Помилка відправки статусу offline: ${e.message}")
+                    }
                 }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                stopSelf()
             }
         } else {
             stopSelf()
