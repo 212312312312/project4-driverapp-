@@ -149,6 +149,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private var manualLocationMarker: Marker? = null
 
+    private var systemBarsTopInset = 0
+    private var systemBarsBottomInset = 0
+
     internal var isSearchActive = false // 👈 Должна быть доступна для шторки из того же пакета
     private var restoreDialog: android.app.Dialog? = null
 
@@ -227,6 +230,18 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
             val density = resources.displayMetrics.density
 
+            // 🟢 Сохраняем системные инсеты для использования при открытии оверлея
+            systemBarsTopInset = systemBars.top
+            systemBarsBottomInset = systemBars.bottom
+            // ...
+            findViewById<View>(R.id.header_selection)?.let { view ->
+                view.setPadding(
+                    (24 * density).toInt(),
+                    systemBars.top + (16 * density).toInt(),
+                    (24 * density).toInt(),
+                    (16 * density).toInt()
+                )
+            }
             // Сдвигаем гамбургер-меню и плашку статуса "Онлайн/Офлайн" под статус-бар
             findViewById<View>(R.id.btn_menu_container)?.let { view ->
                 val params = view.layoutParams as android.view.ViewGroup.MarginLayoutParams
@@ -247,9 +262,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             }
 
             // Адаптируем под статус-бар шапку оверлея при выборе домашних секторов
-            findViewById<View>(R.id.header_selection)?.let { view ->
-                view.setPadding(view.paddingLeft, systemBars.top + (16 * density).toInt(), view.paddingRight, view.paddingBottom)
-            }
+            // 🟢 Обновляем отступ хедера выборки секторов
+            updateHeaderSelectionPadding()
 
             // 🌟 НОВОЕ: Безопасные отступы для бокового меню (layout_drawer_content)
             findViewById<android.widget.LinearLayout>(R.id.ll_menu_scroll_content)?.let { menuScrollContent ->
@@ -544,7 +558,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             setOnlineVisualState(false, animate = false)
             lifecycleScope.launch {
                 try {
-                    ApiClient.getInstance().getApiService(this@MainActivity).updateStatus(UpdateDriverStatusRequest(false, 0.0, 0.0))
+                    // 🚀 Вызываем deleteLocation(), чтобы полностью удалить водителя из оперативного кэша диспетчера
+                    ApiClient.getInstance().getApiService(this@MainActivity).deleteLocation()
                 } catch (e: Exception) {
                 } finally {
                     val intent = Intent(this@MainActivity, AccountSelectionActivity::class.java)
@@ -1634,7 +1649,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         mainScreenUiGroup.visibility = View.GONE
 
         if (::map.isInitialized) {
-            map.setPadding(0, 0, 0, 0)
+            // 🟢 Применяем нижний отступ, чтобы логотип Google был над панелью жестов
+            map.setPadding(0, 0, 0, systemBarsBottomInset)
             if (searchRadiusCircle != null) searchRadiusCircle?.isVisible = false
             drawOverlaySectorsOnMap()
         }
@@ -1642,7 +1658,24 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         updateSectorSaveButtonState(selectedIds.size)
         overlayBackPressedCallback?.isEnabled = true
     }
+    private fun updateHeaderSelectionPadding() {
+        val header = findViewById<View>(R.id.header_selection) ?: return
+        val density = resources.displayMetrics.density
+        val baseHorizontal = (24 * density).toInt()
+        val baseBottom = (16 * density).toInt()
+        val baseTop = (12 * density).toInt()
 
+        // 🟢 Берем либо сохраненный инсет, либо считываем напрямую у окна
+        val topInset = if (systemBarsTopInset > 0) {
+            systemBarsTopInset
+        } else {
+            val windowInsets = ViewCompat.getRootWindowInsets(findViewById(R.id.root_container))
+            windowInsets?.getInsets(WindowInsetsCompat.Type.systemBars())?.top ?: (28 * density).toInt()
+        }
+
+        // Устанавливаем точный отступ: Высота статус-бара + 12dp
+        header.setPadding(baseHorizontal, topInset + baseTop, baseHorizontal, baseBottom)
+    }
     private fun loadSectorsDataSilently() {
         lifecycleScope.launch {
             try {
@@ -1813,7 +1846,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             mainScreenUiGroup.visibility = View.GONE
 
             if (::map.isInitialized) {
-                map.setPadding(0, 0, 0, 0)
+                // 🟢 Синхронизировали: карта на весь экран, но логотип Google над системными жестами
+                map.setPadding(0, 0, 0, systemBarsBottomInset)
                 if (searchRadiusCircle != null) searchRadiusCircle?.isVisible = false
                 drawOverlaySectorsOnMap()
             }

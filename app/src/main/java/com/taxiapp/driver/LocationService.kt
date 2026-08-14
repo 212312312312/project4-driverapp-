@@ -266,10 +266,9 @@ class LocationService : Service() {
                 // 🟢 БЛОКИРУЕМ ПОТОК НА ДРОБЬ СЕКУНДЫ, ЧТОБЫ СЕТЕВОЙ ЗАПРОС УСПЕЛ УЙТИ ДО СМЕРТИ ПРОЦЕССА
                 runBlocking(Dispatchers.IO) {
                     try {
-                        val offlineRequest = com.taxiapp.driver.network.UpdateDriverStatusRequest(false, 0.0, 0.0)
-                        ApiClient.getInstance().getApiService(applicationContext).updateStatus(offlineRequest)
+                        // 🚀 Оставляем 1 быстрый запрос: deleteLocation() на сервере сам ставит isOnline = false и очищает Redis
                         ApiClient.getInstance().getApiService(applicationContext).deleteLocation()
-                        Log.d("LocationService", "✅ Сигнал выхода в офлайн успешно отправлен при выгрузке приложения")
+                        Log.d("LocationService", "✅ Сигнал выхода из приложения успешно отправлен")
                     } catch (e: Exception) {
                         Log.e("LocationService", "Помилка відправки статусу offline: ${e.message}")
                     }

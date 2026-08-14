@@ -138,11 +138,14 @@ class SearchSettingsBottomSheet(
         radioHome.isChecked = currentMode == DriverSearchMode.HOME
         radioChain.isChecked = currentMode == DriverSearchMode.CHAIN
 
-        tvHomeCounter.text = "(${state.homeRidesLeft}/2)"
+        // 🟢 Показываем реальное количество выбранных секторов вместо остатка поездок
+        val selectedCount = selectedHomeSectorIds?.size ?: state.homeSectorIds?.size ?: 0
+        tvHomeCounter.text = "($selectedCount)"
 
-        tvHomeSector.text = state.homeSectorNames ?: "Сектори не обрано"
         if (state.homeSectorIds.isNullOrEmpty()) {
-            tvHomeSector.text = "-"
+            tvHomeSector.text = "Сектори не обрано"
+        } else {
+            tvHomeSector.text = state.homeSectorNames ?: "Обрано секторів: $selectedCount"
         }
 
         val progress = ((currentRadius - 0.5) / 0.5).toInt()
@@ -162,6 +165,12 @@ class SearchSettingsBottomSheet(
     }
 
     private fun saveSettings() {
+        // 🛡️ ЗАЩИТА: Если выбран режим "Домой", но сектора не выбраны — не даем сохранить и не шлем запрос
+        if (currentMode == DriverSearchMode.HOME && selectedHomeSectorIds.isNullOrEmpty()) {
+            Toast.makeText(context, "Оберіть хоча б один сектор для режиму 'Додому'", Toast.LENGTH_SHORT).show()
+            return
+        }
+
         btnSave.isEnabled = false
         btnSave.text = "ЗБЕРЕЖЕННЯ..."
 

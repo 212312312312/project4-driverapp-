@@ -21,20 +21,19 @@ import kotlinx.coroutines.launch
 
 class DriverScoreActivity : AppCompatActivity() {
 
-    private lateinit var ivCarMarker: ImageView
-    private lateinit var tvScoreValue: TextView
-    private lateinit var tvLevelTitle: TextView
-    private lateinit var tvLevelDesc: TextView
-    private lateinit var viewScoreGlow: View
-    private lateinit var nestedScrollView: NestedScrollView
+    private var ivCarMarker: ImageView? = null
+    private var tvScoreValue: TextView? = null
+    private var tvLevelTitle: TextView? = null
+    private var tvLevelDesc: TextView? = null
+    private var viewScoreGlow: View? = null
+    private var nestedScrollView: NestedScrollView? = null
 
     private var currentScore: Int = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_levels_info)
+        setContentView(R.layout.activity_driver_score) // 🟢 ПРАВИЛЬНАЯ ВЕРСТКА СКОРИНГА
 
-        // 🛠️ ДОБАВЛЕНО: Автоматический отступ контента от системных панелей для Android 15
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { v, insets ->
             val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
@@ -54,31 +53,31 @@ class DriverScoreActivity : AppCompatActivity() {
         viewScoreGlow = findViewById(R.id.viewScoreGlow)
         nestedScrollView = findViewById(R.id.nestedScrollView)
 
-        // БЛОКИРОВКА СКРОЛЛА: экран сидит намертво и не двигается пальцем во избежание багов
-        nestedScrollView.setOnTouchListener { _, event ->
+        // БЛОКИРОВКА СКРОЛЛА с безопасным вызовом ?.
+        nestedScrollView?.setOnTouchListener { _, event ->
             event.action == MotionEvent.ACTION_MOVE
         }
 
         // Кнопка Назад
-        findViewById<View>(R.id.btnBack).setOnClickListener { finish() }
+        findViewById<View>(R.id.btnBack)?.setOnClickListener { finish() }
 
         // История активности
-        findViewById<View>(R.id.btnOpenHistory).setOnClickListener {
+        findViewById<View>(R.id.btnOpenHistory)?.setOnClickListener {
             startActivity(Intent(this, DriverActivityHistoryActivity::class.java))
         }
 
         // Кнопка 1: Уровни активности
-        findViewById<View>(R.id.btnInfoLevels).setOnClickListener {
+        findViewById<View>(R.id.btnInfoLevels)?.setOnClickListener {
             ActivityLevelsActivity.start(this, currentScore)
         }
 
         // Кнопка 2: Расчет баллов
-        findViewById<View>(R.id.btnInfoCalculation).setOnClickListener {
+        findViewById<View>(R.id.btnInfoCalculation)?.setOnClickListener {
             startActivity(Intent(this, ActivityCalculationInfo::class.java))
         }
 
         // Кнопка 3: Распределение
-        findViewById<View>(R.id.btnInfoDistribution).setOnClickListener {
+        findViewById<View>(R.id.btnInfoDistribution)?.setOnClickListener {
             startActivity(Intent(this, ActivityDistributionInfo::class.java))
         }
     }
@@ -104,13 +103,7 @@ class DriverScoreActivity : AppCompatActivity() {
         currentScore = data.score
 
         // 1. Обновляем число
-        tvScoreValue.text = currentScore.toString()
-
-        // 2. Рассчитываем координаты машинки
-        val safeScore = currentScore.coerceIn(0, 1000)
-        val params = ivCarMarker.layoutParams as ConstraintLayout.LayoutParams
-        params.horizontalBias = safeScore / 1000f
-        ivCarMarker.layoutParams = params
+        tvScoreValue?.text = currentScore.toString()
 
         val color: Int
         val title: String
@@ -140,33 +133,42 @@ class DriverScoreActivity : AppCompatActivity() {
             }
         }
 
-        // Перекрашиваем машинку-маркер
-        ivCarMarker.imageTintList = ColorStateList.valueOf(color)
-
-        // 3. ДИНАМИЧЕСКОЕ СВЕЧЕНИЕ: Аура автоматически принимает цвет текущей зоны!
-        val density = resources.displayMetrics.density
-        val radiusPx = 100 * density
-
-        val dynamicGlow = GradientDrawable().apply {
-            shape = GradientDrawable.OVAL
-            gradientType = GradientDrawable.RADIAL_GRADIENT
-            setGradientRadius(radiusPx)
-
-            val r = Color.red(color)
-            val g = Color.green(color)
-            val b = Color.blue(color)
-
-            // 20% прозрачности в центре, 0% на краях для мягкого рассеивания
-            val startColor = Color.argb(51, r, g, b)
-            val endColor = Color.argb(0, r, g, b)
-
-            colors = intArrayOf(startColor, endColor)
+        // 2. Рассчитываем координаты машинки
+        ivCarMarker?.let { marker ->
+            val safeScore = currentScore.coerceIn(0, 1000)
+            val params = marker.layoutParams as? ConstraintLayout.LayoutParams
+            if (params != null) {
+                params.horizontalBias = safeScore / 1000f
+                marker.layoutParams = params
+            }
+            marker.imageTintList = ColorStateList.valueOf(color)
         }
-        viewScoreGlow.background = dynamicGlow
+
+        // 3. ДИНАМИЧЕСКОЕ СВЕЧЕНИЕ
+        viewScoreGlow?.let { glowView ->
+            val density = resources.displayMetrics.density
+            val radiusPx = 100 * density
+
+            val dynamicGlow = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                gradientType = GradientDrawable.RADIAL_GRADIENT
+                setGradientRadius(radiusPx)
+
+                val r = Color.red(color)
+                val g = Color.green(color)
+                val b = Color.blue(color)
+
+                val startColor = Color.argb(51, r, g, b)
+                val endColor = Color.argb(0, r, g, b)
+
+                colors = intArrayOf(startColor, endColor)
+            }
+            glowView.background = dynamicGlow
+        }
 
         // Обновляем текстовые блоки под треком шкал
-        tvLevelTitle.text = title
-        tvLevelTitle.setTextColor(color)
-        tvLevelDesc.text = desc
+        tvLevelTitle?.text = title
+        tvLevelTitle?.setTextColor(color)
+        tvLevelDesc?.text = desc
     }
 }
