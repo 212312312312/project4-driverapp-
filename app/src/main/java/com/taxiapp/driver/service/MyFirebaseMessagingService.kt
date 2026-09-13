@@ -194,19 +194,10 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     private fun showFullScreen(intent: Intent, channelId: String, channelName: String, title: String, notifId: Int) {
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        // Пересоздаем каналы с суффиксом _v3, чтобы Android жестко выставил наивысший приоритет
-        // ЗАМЕНИТЬ БЛОК СОЗДАНИЯ КАНАЛА В МЕТОДЕ showCancelNotification:
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(channelId, "Скасування замовлень", NotificationManager.IMPORTANCE_HIGH).apply {
+            val channel = NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_HIGH).apply {
                 enableVibration(true)
                 lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
-                setSound(
-                    android.provider.Settings.System.DEFAULT_NOTIFICATION_URI, // Поменяли рингтон на короткое уведомление
-                    android.media.AudioAttributes.Builder()
-                        .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION) // Меняем USAGE_NOTIFICATION_RINGTONE на обычный USAGE_NOTIFICATION
-                        .build()
-                )
             }
             notificationManager.createNotificationChannel(channel)
         }
@@ -221,16 +212,15 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         val builder = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(title)
-            .setContentText("Натисніть для деталей")
+            .setContentText("Натисніть для перегляду деталей замовлення")
             .setPriority(NotificationCompat.PRIORITY_MAX)
-            .setCategory(NotificationCompat.CATEGORY_ALARM) // Категория ALARM пробивает режимы тишины
+            .setCategory(NotificationCompat.CATEGORY_MESSAGE)
             .setAutoCancel(true)
-            .setFullScreenIntent(pendingIntent, true) // Пробивает Lockscreen и выводит баннер
             .setContentIntent(pendingIntent)
-            .setTimeoutAfter(20000) // Автоотмена через 20 секунд (время жизни оффера)
+            .setTimeoutAfter(20000)
 
         notificationManager.notify(notifId, builder.build())
-        Log.d("FCM_UNIT", "🔔 Системное FullScreen-уведомление отправлено в менеджер. ID: $notifId")
+        Log.d("FCM_UNIT", "🔔 Heads-Up сповіщення успішно надіслано. ID: $notifId")
     }
 
     // ДОБАВИТЬ КАК НОВЫЙ МЕТОД В КЛАСС MyFirebaseMessagingService:

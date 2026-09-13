@@ -40,10 +40,14 @@ class WelcomeActivity : AppCompatActivity() {
 
         binding.btnRegisterNav.setOnClickListener {
             val rawUrl = BuildConfig.BASE_URL.replace("api/v1/", "")
-
-            // Временно разрешаем локал, пока идет тест
             val intent = Intent(this, WebViewActivity::class.java)
             intent.putExtra("url", "${rawUrl}driver-register")
+            startActivity(intent)
+        }
+
+        binding.btnPrivacyPolicy.setOnClickListener {
+            val intent = Intent(this, WebViewActivity::class.java)
+            intent.putExtra("url", "https://www.unitua.com/partner-privacy-policy")
             startActivity(intent)
         }
     }

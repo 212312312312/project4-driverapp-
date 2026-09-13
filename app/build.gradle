@@ -11,14 +11,14 @@ android {
     defaultConfig {
         applicationId "com.unitapp.driver"
         minSdk 24
-        targetSdk 35
+        targetSdk 36
         versionCode 6
         versionName "1.0.5"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
         // Твій серверний IP (переконайся, що він актуальний)
-        buildConfigField "String", "BASE_URL", "\"http://192.168.0.107:8080/\""
+        buildConfigField "String", "BASE_URL", "\"https://api.unitua.com/\""
     }
 
     buildFeatures {
