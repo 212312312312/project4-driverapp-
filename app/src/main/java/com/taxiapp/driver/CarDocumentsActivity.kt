@@ -2,6 +2,7 @@ package com.taxiapp.driver
 
 import android.graphics.Color
 import android.os.Bundle
+import com.taxiapp.driver.utils.toFullImageUrl
 import android.widget.ImageView // Используем ImageView вместо ImageButton
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -77,14 +78,14 @@ class CarDocumentsActivity : AppCompatActivity() {
 
     private fun loadImage(url: String?, imageViewId: Int) {
         val imageView = findViewById<ImageView>(imageViewId)
+        val fullUrl = toFullImageUrl(url)
 
-        // ВАЖНО: Сбрасываем фильтры, чтобы фото было оригинальным
         imageView.clearColorFilter()
         imageView.setPadding(0, 0, 0, 0)
 
-        if (!url.isNullOrEmpty()) {
+        if (!fullUrl.isNullOrEmpty()) {
             Glide.with(this)
-                .load(url)
+                .load(fullUrl)
                 .centerCrop()
                 .placeholder(R.drawable.ic_driver_placeholder)
                 .error(R.drawable.ic_driver_placeholder)

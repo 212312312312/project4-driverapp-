@@ -2,6 +2,7 @@ package com.taxiapp.driver
 
 import android.content.Intent
 import android.graphics.Color
+import com.taxiapp.driver.utils.toFullImageUrl
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -158,7 +159,6 @@ class CarActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.tv_car_year).text = car.year.toString()
         findViewById<TextView>(R.id.tv_car_type).text = car.carType ?: "Седан"
 
-        // Исправлен тип элемента на MaterialCardView для поддержки закругленного квадратика
         val colorView = findViewById<com.google.android.material.card.MaterialCardView>(R.id.view_car_color)
         val colorStr = car.color.trim()
 
@@ -172,18 +172,23 @@ class CarActivity : AppCompatActivity() {
             Color.LTGRAY
         }
 
-        // Чистая нативная перекраска фона закругленного квадрата
         colorView.setCardBackgroundColor(parsedColor)
 
         val imgCar = findViewById<ImageView>(R.id.img_car_photo)
-        val finalPhotoUrl = if (!car.photoUrl.isNullOrEmpty()) car.photoUrl else car.photoRight
+        val rawPhoto = if (!car.photoUrl.isNullOrEmpty()) car.photoUrl else car.photoRight
+        val finalPhotoUrl = toFullImageUrl(rawPhoto)
 
         if (!finalPhotoUrl.isNullOrEmpty()) {
             imgCar.clearColorFilter()
-            Glide.with(this).load(finalPhotoUrl).centerCrop().into(imgCar)
+            Glide.with(this)
+                .load(finalPhotoUrl)
+                .centerCrop()
+                .placeholder(R.drawable.ic_car)
+                .error(R.drawable.ic_car)
+                .into(imgCar)
         } else {
             imgCar.setImageResource(R.drawable.ic_car)
-            imgCar.setColorFilter(Color.parseColor("#444444"))
+            imgCar.setColorFilter(androidx.core.content.ContextCompat.getColor(this, R.color.driver_text_secondary))
         }
     }
 

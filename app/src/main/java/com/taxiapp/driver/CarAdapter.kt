@@ -3,6 +3,7 @@ package com.taxiapp.driver
 import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
+import com.taxiapp.driver.utils.toFullImageUrl
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
@@ -72,11 +73,14 @@ class CarAdapter(
             }
 
             // Фото автомобиля
-            if (!car.photoUrl.isNullOrEmpty()) {
+            // Фото автомобиля
+            val fullPhotoUrl = toFullImageUrl(car.photoUrl)
+            if (!fullPhotoUrl.isNullOrEmpty()) {
                 Glide.with(itemView.context)
-                    .load(car.photoUrl)
+                    .load(fullPhotoUrl)
                     .centerCrop()
                     .placeholder(R.drawable.ic_car)
+                    .error(R.drawable.ic_car)
                     .into(imgPhoto)
             } else {
                 imgPhoto.setImageResource(R.drawable.ic_car)

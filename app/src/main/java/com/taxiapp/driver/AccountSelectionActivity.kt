@@ -101,25 +101,19 @@ class AccountSelectionActivity : AppCompatActivity() {
             return
         }
 
-        // 1. Проверка Полноэкранных уведомлений (Android 14+)
-        if (!checkFullScreenIntentPermission()) {
-            showRequiredPermissionDialog(PermissionType.FULL_SCREEN)
-            return
-        }
-
-        // 2. Проверка отображения поверх других окон (Overlay)
+        // Проверка отображения поверх других окон (Overlay)
         if (!checkOverlayPermission()) {
             showRequiredPermissionDialog(PermissionType.OVERLAY)
             return
         }
 
-        // 3. Специфическая проверка фонового режима для китайских устройств Xiaomi/Poco/Redmi
+        // Проверка для Xiaomi/Poco/Redmi
         if (!checkXiaomiBackgroundPermission()) {
             showRequiredPermissionDialog(PermissionType.XIAOMI_BG)
             return
         }
 
-        // Если все системные барьеры пройдены — выполняем безопасный вход
+        // Все проверки пройдены — продолжаем
         validateTokenAndProceed()
     }
 
@@ -203,16 +197,17 @@ class AccountSelectionActivity : AppCompatActivity() {
         }
 
         // Полностью скрываем кнопку "Скасувати" и растягиваем кнопку "Увімкнути" на всю ширину
-        btnCancel.visibility = View.GONE
-        val params = btnAllow.layoutParams as LinearLayout.LayoutParams
-        params.weight = 2f
-        params.marginStart = 0
-        btnAllow.layoutParams = params
-        btnAllow.text = "Увімкнути"
+        btnCancel.visibility = View.VISIBLE
+        btnCancel.setOnClickListener {
+            alertDialog.dismiss()
+            // Если модератор отказался от Overlay — не блокируем вход намертво, а пускаем дальше
+            validateTokenAndProceed()
+        }
 
+        btnAllow.text = "Увімкнути"
         btnAllow.setOnClickListener {
             alertDialog.dismiss()
-            openSystemPermissionSettings(type) // Перенаправляем в нужный системный тумблер
+            openSystemPermissionSettings(type)
         }
 
         alertDialog.show()
@@ -355,12 +350,6 @@ class AccountSelectionActivity : AppCompatActivity() {
     }
 
     private fun validateTokenAndProceed() {
-        // 🔐 МГНОВЕННЫЙ ОБХОД ПРОВЕРКИ ПРОФИЛЯ ДЛЯ МОДЕРАЦИИ GOOGLE
-        val savedPhone = sessionManager.getDriverPhone()?.replace(" ", "") ?: ""
-        if (savedPhone == "+380991111111" || savedPhone == "0991111111") {
-            goToMainActivity()
-            return
-        }
 
         binding.btnContinue.isEnabled = false
 

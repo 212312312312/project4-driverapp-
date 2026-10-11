@@ -6,19 +6,20 @@ plugins {
 
 android {
     namespace 'com.taxiapp.driver'
-    compileSdk 35
+    compileSdk 36
 
     defaultConfig {
         applicationId "com.unitapp.driver"
         minSdk 24
         targetSdk 36
-        versionCode 6
-        versionName "1.0.5"
+        versionCode 8
+        versionName "1.0.8"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
         // Твій серверний IP (переконайся, що він актуальний)
-        buildConfigField "String", "BASE_URL", "\"https://api.unitua.com/\""
+        buildConfigField "String", "BASE_URL", "\"http://192.168.0.107:8080/\""
+
     }
 
     buildFeatures {

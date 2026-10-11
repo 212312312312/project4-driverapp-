@@ -10,6 +10,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.graphics.Bitmap
+import com.taxiapp.driver.utils.toFullImageUrl
 import android.graphics.Canvas
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -177,29 +178,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             startLocationService()
             startUILocationUpdates()
             if (::map.isInitialized) centerMapOnUser()
-
-            // 🛠️ ДОБАВЛЕНО: Запуск проверки фоновой геолокации
-            checkBackgroundLocationPermission()
         } else {
             Toast.makeText(this, "Потрібен доступ до геолокації!", Toast.LENGTH_SHORT).show()
         }
     }
 
-    private val requestBackgroundPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            Toast.makeText(this, "Фоновий пошук замовлень активовано!", Toast.LENGTH_SHORT).show()
-            // 🟢 ЗАПУСКАЕМ СЕРВИС СРАЗУ ПОСЛЕ ВОЗВРАТА ИЗ НАСТРОЕК СИСТЕМЫ
-            startLocationService()
-        } else {
-            Toast.makeText(this, "Доступ обмежено. Без фонової геолокації робота неможлива.", Toast.LENGTH_LONG).show()
-            val intent = Intent(this, AccountSelectionActivity::class.java)
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            startActivity(intent)
-            finish()
-        }
-    }
+
 
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(LocaleHelper.onAttach(newBase))
@@ -1007,9 +991,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     if (tvRating != null) {
                         tvRating.text = String.format("%.1f", profile.rating)
                     }
-                    if (!profile.photoUrl.isNullOrEmpty()) {
+                    val fullAvatarUrl = toFullImageUrl(profile.photoUrl)
+                    if (!fullAvatarUrl.isNullOrEmpty()) {
                         Glide.with(this@MainActivity)
-                            .load(profile.photoUrl)
+                            .load(fullAvatarUrl)
                             .circleCrop()
                             .placeholder(R.drawable.ic_driver_avatar_placeholder)
                             .into(imgAvatar)
@@ -1476,9 +1461,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         if (allGranted) {
             startLocationService()
             startUILocationUpdates()
-
-            // 🛠️ ДОБАВЛЕНО: Проверка фоновой геолокации, если обычная уже есть
-            checkBackgroundLocationPermission()
         } else requestPermissionLauncher.launch(permissionsToRequest.toTypedArray())
     }
 
@@ -1572,65 +1554,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     // 🛠️ ДОБАВЛЕНО: Проверка условий для Android 10+ и вызов диалога
-    private fun checkBackgroundLocationPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val hasBackgroundPermission = ContextCompat.checkSelfPermission(
-                this, Manifest.permission.ACCESS_BACKGROUND_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
 
-            if (!hasBackgroundPermission) {
-                showLocationDisclosureDialog()
-            }
-        }
-    }
 
     // 🛠️ ДОБАВЛЕНО: Официальное диалоговое окно Prominent Disclosure для прохождения модерации Google
-    // 🛠️ ИСПРАВЛЕНО: Запуск сервиса перенесен строго ПОСЛЕ получения разрешения
-    private fun showLocationDisclosureDialog() {
-        val dialog = android.app.Dialog(this)
-        dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
-        dialog.setContentView(R.layout.dialog_location_disclosure)
 
-        dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
-        dialog.window?.setLayout(
-            android.view.ViewGroup.LayoutParams.MATCH_PARENT,
-            android.view.ViewGroup.LayoutParams.WRAP_CONTENT
-        )
-        dialog.setCancelable(false)
-
-        val btnCancel = dialog.findViewById<androidx.appcompat.widget.AppCompatButton>(R.id.btnCancelPermission)
-        val btnAllow = dialog.findViewById<androidx.appcompat.widget.AppCompatButton>(R.id.btnAllowPermission)
-
-        btnAllow?.setOnClickListener {
-            dialog.dismiss()
-
-            // 1. Запрашиваем уведомления для Android 13+
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                if (ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                    requestPermissionLauncher.launch(arrayOf(Manifest.permission.POST_NOTIFICATIONS))
-                }
-            }
-
-            // 2. Запрашиваем фоновую геолокацию (Сервис запустится внутри requestBackgroundPermissionLauncher после одобрения!)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                requestBackgroundPermissionLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
-            } else {
-                startLocationService()
-            }
-        }
-
-        btnCancel?.setOnClickListener {
-            dialog.dismiss()
-            Toast.makeText(this@MainActivity, "Для роботи додатка обов'язково потрібен доступ до фонової геолокації!", Toast.LENGTH_LONG).show()
-
-            val intent = Intent(this@MainActivity, AccountSelectionActivity::class.java)
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            startActivity(intent)
-            finish()
-        }
-
-        dialog.show()
-    }
 
     private fun hasLocationPermission(): Boolean {
         return ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||

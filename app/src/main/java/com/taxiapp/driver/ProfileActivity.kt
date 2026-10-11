@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.ImageView
 import android.widget.TextView
+import com.taxiapp.driver.utils.toFullImageUrl
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -118,9 +119,10 @@ class ProfileActivity : AppCompatActivity() {
 
                     tvLicense.text = profile.driverLicense ?: "Не вказано"
 
-                    if (!profile.photoUrl.isNullOrEmpty()) {
+                    val fullAvatarUrl = toFullImageUrl(profile.photoUrl)
+                    if (!fullAvatarUrl.isNullOrEmpty()) {
                         Glide.with(this@ProfileActivity)
-                            .load(profile.photoUrl)
+                            .load(fullAvatarUrl)
                             .placeholder(R.drawable.ic_driver_avatar_placeholder)
                             .error(R.drawable.ic_driver_avatar_placeholder)
                             .circleCrop()
