@@ -137,9 +137,8 @@ class EtherActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
 
-        // TOЧЕЧНОЕ ОБНОВЛЕНИЕ: Пересоздаем подписки и включаем сокет при каждом возврате на экран
+        // Пересоздаем подписки и подключаем сокет с передачей токена
         setupWebSocket()
-        stompClient.connect()
 
         val sectorFirst = sessionManager.isEtherSectorFirst()
         val hidePrice = sessionManager.isEtherPricePerKmHidden()
@@ -151,7 +150,6 @@ class EtherActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
-        // TOЧЕЧНОЕ ОБНОВЛЕНИЕ: Жестко отключаем сокет и ОЧИЩАЕМ подписки для предотвращения дублирования
         stompClient.disconnect()
         compositeDisposable.clear()
     }
@@ -170,12 +168,11 @@ class EtherActivity : AppCompatActivity() {
 
                 allOrdersList.clear()
                 allOrdersList.addAll(list)
-                // ИСПРАВЛЕНО: Сортируем по числовому idLong, чтобы сохранить правильный хронологический порядок
                 allOrdersList.sortByDescending { it.idLong ?: 0L }
 
                 updateUI()
             } catch (e: Exception) {
-                Log.e("EtherActivity", "Помилка: ${e.message}")
+                Log.e("EtherActivity", "Помилка завантаження ефіру: ${e.message}")
             } finally {
                 pbLoading.visibility = View.GONE
             }
@@ -183,20 +180,25 @@ class EtherActivity : AppCompatActivity() {
     }
 
     private fun setupWebSocket() {
-        // --- УМНОЕ ОБНОВЛЕНИЕ: Динамически переключаем сокет на основе BuildConfig.BASE_URL ---
-        val baseUrl = BuildConfig.BASE_URL // Берем адрес (например, "https://decorous-tempie-nonsubjugable.ngrok-free.dev/" или "http://192.168.0.104:8080/")
+        val baseUrl = BuildConfig.BASE_URL
         val wsProtocol = if (baseUrl.startsWith("https")) "wss" else "ws"
-
-        // Очищаем адрес от префиксов и завершающих слешей, чтобы строка склеилась идеально
         val cleanHost = baseUrl.replace("https://", "").replace("http://", "").removeSuffix("/")
-        val url = "$wsProtocol://$cleanHost/ws-taxi/websocket"
+
+        // 1. Извлекаем чистый токен водителя из SessionManager
+        val token = sessionManager.fetchAuthToken() ?: ""
+
+        // 2. Добавляем токен в URL для HTTP Handshake (страховка от любых блокировок)
+        val url = if (token.isNotEmpty()) {
+            "$wsProtocol://$cleanHost/ws-taxi/websocket?token=$token"
+        } else {
+            "$wsProtocol://$cleanHost/ws-taxi/websocket"
+        }
 
         stompClient = Stomp.over(Stomp.ConnectionProvider.OKHTTP, url)
         Log.d("WS", "Попытка подключения к сокету Эфира: $url")
-        // -------------------------------------------------------------------------------------
 
-        // TOЧЕЧНОЕ ОБНОВЛЕНИЕ: Слушаем общий широковещательный канал Эфира
-        val topicDisposable = stompClient.topic("/topic/ether")
+        // 3. СЛУШАЕМ ПРАВИЛЬНЫЙ ТОПИК: /topic/drivers/ether (куда сервер реально шлет заказы!)
+        val topicDisposable = stompClient.topic("/topic/drivers/ether")
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe({ topicMessage ->
@@ -209,7 +211,7 @@ class EtherActivity : AppCompatActivity() {
 
                     if (action == "REMOVE") {
                         removeOrderFromList(orderId)
-                    } else if (action == "ADD") {
+                    } else if (action == "ADD" || action == "UPDATE") { // Поддерживаем и ADD, и UPDATE
                         val orderJson = msgObj.optJSONObject("order")?.toString()
                         if (orderJson != null) {
                             val newOrder = Gson().fromJson(orderJson, Order::class.java)
@@ -220,7 +222,7 @@ class EtherActivity : AppCompatActivity() {
                     e.printStackTrace()
                 }
             }, { error ->
-                Log.e("WS", "Error: ${error.message}")
+                Log.e("WS", "WS Subscription Error: ${error.message}")
             })
 
         val lifecycleDisposable = stompClient.lifecycle()
@@ -228,13 +230,23 @@ class EtherActivity : AppCompatActivity() {
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe { lifecycleEvent ->
                 when (lifecycleEvent.type) {
-                    ua.naiksoftware.stomp.dto.LifecycleEvent.Type.OPENED -> Log.d("WS", "Connected")
+                    ua.naiksoftware.stomp.dto.LifecycleEvent.Type.OPENED -> Log.d("WS", "Connected to Ether WebSocket!")
+                    ua.naiksoftware.stomp.dto.LifecycleEvent.Type.ERROR -> Log.e("WS", "WebSocket error: ", lifecycleEvent.exception)
+                    ua.naiksoftware.stomp.dto.LifecycleEvent.Type.CLOSED -> Log.d("WS", "WebSocket disconnected")
                     else -> {}
                 }
             }
 
         compositeDisposable.add(topicDisposable)
         compositeDisposable.add(lifecycleDisposable)
+
+        // 4. ПЕРЕДАЕМ STOMP-ЗАГОЛОВОК AUTHORIZATION С ТОКЕНОМ
+        val headers = if (token.isNotEmpty()) {
+            listOf(ua.naiksoftware.stomp.dto.StompHeader("Authorization", "Bearer $token"))
+        } else {
+            emptyList()
+        }
+        stompClient.connect(headers)
     }
 
     private fun handleSocketOrderUpdate(order: Order) {

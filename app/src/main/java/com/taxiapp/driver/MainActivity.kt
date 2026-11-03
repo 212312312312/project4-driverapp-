@@ -306,14 +306,17 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             showRestoreDialog()
             return
         }
+
+        // Синхронизируем статус с сохранённым в сессии
+        this.isDriverOnline = sessionManager.isDriverOnline()
+        setOnlineVisualState(this.isDriverOnline, animate = false)
+
         updateLockIconState()
         updateOrdersBadge()
         checkActiveOrderOnStart()
         startUILocationUpdates()
         updateCommissionInfo()
 
-        // 🛠️ ГАРАНТИЯ ДЛЯ GOOGLE PLAY: При каждом открытии/возврате на главный экран
-        // мгновенно запускаем Foreground Service и подтягиваем плашку трансляции
         if (hasLocationPermission()) {
             startLocationService()
         }
