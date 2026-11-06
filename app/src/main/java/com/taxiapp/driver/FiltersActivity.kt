@@ -223,9 +223,17 @@ class FiltersActivity : AppCompatActivity() {
             val btnCycle: MaterialButton = v.findViewById(R.id.btn_mode_cycle)
 
             init {
-                v.setOnClickListener { onEdit(list[adapterPosition]) }
+                v.setOnClickListener {
+                    val pos = adapterPosition
+                    if (pos != RecyclerView.NO_POSITION && pos in list.indices) {
+                        onEdit(list[pos])
+                    }
+                }
                 v.setOnLongClickListener {
-                    onLongClick(list[adapterPosition])
+                    val pos = adapterPosition
+                    if (pos != RecyclerView.NO_POSITION && pos in list.indices) {
+                        onLongClick(list[pos])
+                    }
                     true
                 }
             }

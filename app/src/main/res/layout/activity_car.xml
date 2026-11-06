@@ -3,337 +3,423 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/car_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/driver_black_bg">
+    android:background="@color/driver_card_bg">
 
-    <RelativeLayout
+    <!-- ВЕРХНЯ ШАПКА У СТИЛІ UKLON (#34373F = @color/driver_black_bg) З ВКЛАДКАМИ -->
+    <com.google.android.material.card.MaterialCardView
         android:id="@+id/header"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
-        android:layout_marginBottom="16dp"
-        android:layout_marginHorizontal="24dp"
-        app:layout_constraintTop_toTopOf="parent">
+        android:layout_marginTop="-16dp"
+        app:cardBackgroundColor="@color/driver_black_bg"
+        app:cardCornerRadius="20dp"
+        app:cardElevation="4dp"
+        app:strokeWidth="0dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
-        <ImageView
-            android:id="@+id/btn_back"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:src="@drawable/ic_arrow_back_black"
-            app:tint="@color/driver_text_primary"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:clickable="true"
-            android:focusable="true"
-            android:layout_centerVertical="true"
-            android:layout_alignParentStart="true" />
-
-        <TextView
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_toEndOf="@id/btn_back"
-            android:layout_marginStart="16dp"
-            android:text="@string/car_title"
-            android:textColor="@color/driver_text_primary"
-            android:textSize="22sp"
-            android:textStyle="bold"
-            android:layout_centerVertical="true" />
-    </RelativeLayout>
+            android:orientation="vertical">
 
-    <com.google.android.material.tabs.TabLayout
-        android:id="@+id/car_tabs"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@color/driver_black_bg"
-        app:tabIndicatorColor="@color/driver_neon_teal"
-        app:tabSelectedTextColor="@color/driver_neon_teal"
-        app:tabTextColor="@color/driver_text_secondary"
-        app:tabRippleColor="@android:color/transparent"
-        app:tabTextAppearance="@style/CarTabTextStyle"
-        app:tabSelectedTextAppearance="@style/CarTabTextStyle"
-        app:layout_constraintTop_toBottomOf="@id/header">
+            <LinearLayout
+                android:id="@+id/header_content"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingTop="32dp"
+                android:paddingBottom="12dp"
+                android:paddingHorizontal="16dp">
 
-        <com.google.android.material.tabs.TabItem
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/car_tab_active" />
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="42dp"
+                    android:layout_height="42dp"
+                    app:cardBackgroundColor="@color/driver_surface_elevated"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="0dp"
+                    app:strokeWidth="0dp">
 
-        <com.google.android.material.tabs.TabItem
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/car_tab_list" />
-    </com.google.android.material.tabs.TabLayout>
+                    <ImageView
+                        android:id="@+id/btn_back"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:padding="10dp"
+                        android:src="@drawable/ic_arrow_back_black"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:clickable="true"
+                        android:focusable="true"
+                        app:tint="@color/driver_text_primary" />
+                </com.google.android.material.card.MaterialCardView>
 
-    <ScrollView
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:text="@string/car_title"
+                    android:textColor="@color/driver_text_primary"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <com.google.android.material.tabs.TabLayout
+                android:id="@+id/car_tabs"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@android:color/transparent"
+                app:tabIndicatorColor="@color/driver_neon_teal"
+                app:tabIndicatorFullWidth="false"
+                app:tabIndicatorHeight="3dp"
+                app:tabSelectedTextColor="@color/driver_neon_teal"
+                app:tabTextColor="@color/driver_text_secondary"
+                app:tabRippleColor="@android:color/transparent"
+                app:tabTextAppearance="@style/CarTabTextStyle"
+                app:tabSelectedTextAppearance="@style/CarTabTextStyle">
+
+                <com.google.android.material.tabs.TabItem
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/car_tab_active" />
+
+                <com.google.android.material.tabs.TabItem
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/car_tab_list" />
+            </com.google.android.material.tabs.TabLayout>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- ВКЛАДКА 1: АКТИВНЕ АВТО -->
+    <androidx.core.widget.NestedScrollView
         android:id="@+id/scroll_details"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginTop="8dp"
         android:visibility="visible"
         android:overScrollMode="never"
         android:scrollbars="none"
-        app:layout_constraintTop_toBottomOf="@id/car_tabs"
+        android:clipToPadding="false"
+        android:paddingBottom="32dp"
+        app:layout_constraintTop_toBottomOf="@id/header"
         app:layout_constraintBottom_toTopOf="@id/btn_add_car">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingBottom="24dp">
+            android:paddingHorizontal="16dp"
+            android:paddingTop="20dp">
 
+            <!-- ГОЛОВНА КАРТКА АВТОМОБІЛЯ (Фото + Модель + Держномер + Колір/Рік) -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
-                android:layout_height="200dp"
-                app:cardCornerRadius="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                app:cardCornerRadius="16dp"
                 app:cardElevation="0dp"
                 app:strokeWidth="0dp"
-                app:cardBackgroundColor="@color/driver_card_bg"
-                android:layout_marginBottom="12dp">
+                app:cardBackgroundColor="@color/driver_black_bg">
 
-                <ImageView
-                    android:id="@+id/img_car_photo"
+                <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:scaleType="centerCrop"
-                    android:src="@drawable/ic_car" />
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="190dp"
+                        android:background="@color/driver_surface_elevated">
+
+                        <ImageView
+                            android:id="@+id/img_car_photo"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:scaleType="centerCrop"
+                            android:src="@drawable/ic_car" />
+                    </FrameLayout>
+
+                    <androidx.constraintlayout.widget.ConstraintLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:paddingHorizontal="16dp"
+                        android:paddingVertical="16dp">
+
+                        <TextView
+                            android:id="@+id/tv_car_model"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:text="@string/car_status_loading"
+                            android:textColor="@color/driver_text_primary"
+                            android:textSize="20sp"
+                            android:textStyle="bold"
+                            android:layout_marginEnd="10dp"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintEnd_toStartOf="@id/tv_plate_number"
+                            app:layout_constraintTop_toTopOf="parent" />
+
+                        <TextView
+                            android:id="@+id/tv_plate_number"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/car_plate_placeholder"
+                            android:background="@drawable/bg_license_plate"
+                            android:paddingHorizontal="10dp"
+                            android:paddingVertical="4dp"
+                            android:textColor="#000000"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:fontFamily="sans-serif-medium"
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintTop_toTopOf="@id/tv_car_model"
+                            app:layout_constraintBottom_toBottomOf="@id/tv_car_model" />
+
+                        <LinearLayout
+                            android:id="@+id/layout_color_type"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginTop="10dp"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintTop_toBottomOf="@id/tv_car_model">
+
+                            <com.google.android.material.card.MaterialCardView
+                                android:id="@+id/view_car_color"
+                                android:layout_width="16dp"
+                                android:layout_height="16dp"
+                                app:cardCornerRadius="5dp"
+                                app:cardElevation="0dp"
+                                app:strokeWidth="1dp"
+                                app:strokeColor="@color/driver_divider"
+                                app:cardBackgroundColor="#CCCCCC" />
+
+                            <TextView
+                                android:id="@+id/tv_car_type"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/car_label_type"
+                                android:textColor="@color/driver_text_secondary"
+                                android:textSize="14sp"
+                                android:layout_marginStart="8dp" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/tv_car_year"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/car_year_placeholder"
+                            android:textColor="@color/driver_text_secondary"
+                            android:textSize="14sp"
+                            android:layout_marginTop="10dp"
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintTop_toBottomOf="@id/tv_plate_number" />
+                    </androidx.constraintlayout.widget.ConstraintLayout>
+                </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
+
+            <!-- СЕКЦІЯ 1: ОПЦІЇ ТА ДОКУМЕНТИ АВТО (У СТИЛІ UKLON КАРТОК ПРОФІЛЮ) -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                android:text="Опції та документи"
+                android:textColor="@color/driver_text_primary"
+                android:textSize="15sp"
+                android:textStyle="bold" />
 
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardCornerRadius="0dp"
+                android:layout_marginBottom="24dp"
+                app:cardCornerRadius="16dp"
                 app:cardElevation="0dp"
                 app:strokeWidth="0dp"
-                app:cardBackgroundColor="@color/driver_card_bg"
-                android:layout_marginBottom="12dp">
+                app:cardBackgroundColor="@color/driver_black_bg">
 
-                <androidx.constraintlayout.widget.ConstraintLayout
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:paddingHorizontal="24dp"
-                    android:paddingVertical="14dp">
+                    android:orientation="vertical">
 
-                    <TextView
-                        android:id="@+id/tv_car_model"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:text="@string/car_status_loading"
-                        android:textColor="@color/driver_text_primary"
-                        android:textSize="22sp"
-                        android:textStyle="bold"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintEnd_toStartOf="@id/tv_plate_number"
-                        app:layout_constraintTop_toTopOf="parent"
-                        android:layout_marginEnd="8dp" />
-
-                    <TextView
-                        android:id="@+id/tv_plate_number"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/car_plate_placeholder"
-                        android:background="@drawable/bg_license_plate"
-                        android:paddingHorizontal="10dp"
-                        android:paddingVertical="4dp"
-                        android:textColor="#000000" android:textSize="15sp"
-                        android:textStyle="bold"
-                        android:fontFamily="sans-serif-medium"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintTop_toTopOf="@id/tv_car_model"
-                        app:layout_constraintBottom_toBottomOf="@id/tv_car_model" />
-
+                    <!-- Брендування -->
                     <LinearLayout
-                        android:id="@+id/layout_color_type"
-                        android:layout_width="wrap_content"
+                        android:id="@+id/btn_branding"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:layout_marginTop="8dp"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toBottomOf="@id/tv_car_model">
+                        android:paddingHorizontal="16dp"
+                        android:paddingVertical="16dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="?attr/selectableItemBackground">
 
-                        <com.google.android.material.card.MaterialCardView
-                            android:id="@+id/view_car_color"
-                            android:layout_width="16dp"
-                            android:layout_height="16dp"
-                            app:cardCornerRadius="4dp"
-                            app:cardElevation="0dp"
-                            app:strokeWidth="0dp"
-                            app:cardBackgroundColor="#CCCCCC" />
+                        <ImageView
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"
+                            android:src="@drawable/ic_star_main"
+                            app:tint="@color/driver_text_primary" />
 
                         <TextView
-                            android:id="@+id/tv_car_type"
-                            android:layout_width="wrap_content"
+                            android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:text="@string/car_label_type"
-                            android:textColor="@color/driver_text_secondary"
-                            android:textSize="14sp"
-                            android:layout_marginStart="8dp" />
+                            android:layout_weight="1"
+                            android:layout_marginStart="16dp"
+                            android:layout_marginEnd="12dp"
+                            android:text="@string/car_btn_add_branding"
+                            android:textColor="@color/driver_text_primary"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/ic_chevron"
+                            app:tint="@color/driver_text_primary" />
                     </LinearLayout>
 
-                    <TextView
-                        android:id="@+id/tv_car_year"
-                        android:layout_width="wrap_content"
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="@color/driver_divider" />
+
+                    <!-- Додаткові послуги -->
+                    <LinearLayout
+                        android:id="@+id/btn_services"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/car_year_placeholder"
-                        android:textColor="@color/driver_text_secondary"
-                        android:textSize="14sp"
-                        android:layout_marginTop="4dp"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintTop_toBottomOf="@id/tv_plate_number" />
-                </androidx.constraintlayout.widget.ConstraintLayout>
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingHorizontal="16dp"
+                        android:paddingVertical="16dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="?attr/selectableItemBackground">
+
+                        <ImageView
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"
+                            android:src="@drawable/ic_puzzle"
+                            app:tint="@color/driver_text_primary" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="16dp"
+                            android:layout_marginEnd="12dp"
+                            android:text="@string/car_btn_add_services"
+                            android:textColor="@color/driver_text_primary"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/ic_chevron"
+                            app:tint="@color/driver_text_primary" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="@color/driver_divider" />
+
+                    <!-- Документи -->
+                    <LinearLayout
+                        android:id="@+id/btn_documents"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingHorizontal="16dp"
+                        android:paddingVertical="16dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="?attr/selectableItemBackground">
+
+                        <ImageView
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"
+                            android:src="@drawable/ic_payment_card"
+                            app:tint="@color/driver_text_primary" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="16dp"
+                            android:layout_marginEnd="12dp"
+                            android:text="@string/car_btn_documents"
+                            android:textColor="@color/driver_text_primary"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/ic_chevron"
+                            app:tint="@color/driver_text_primary" />
+                    </LinearLayout>
+                </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/btn_branding"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:cardCornerRadius="0dp"
-                app:cardElevation="0dp"
-                app:strokeWidth="0dp"
-                app:cardBackgroundColor="@color/driver_card_bg"
-                android:layout_marginBottom="2dp"
-                android:clickable="true"
-                android:focusable="true"
-                android:foreground="?attr/selectableItemBackground">
-
-                <RelativeLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:paddingHorizontal="24dp"
-                    android:paddingVertical="16dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/car_btn_add_branding"
-                        android:textColor="@color/driver_text_primary"
-                        android:textSize="16sp"
-                        android:layout_alignParentStart="true"
-                        android:layout_centerVertical="true" />
-
-                    <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:src="@drawable/ic_chevron"
-                        app:tint="@color/driver_text_secondary"
-                        android:layout_alignParentEnd="true"
-                        android:layout_centerVertical="true" />
-                </RelativeLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/btn_services"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:cardCornerRadius="0dp"
-                app:cardElevation="0dp"
-                app:strokeWidth="0dp"
-                app:cardBackgroundColor="@color/driver_card_bg"
-                android:layout_marginBottom="16dp"
-                android:clickable="true"
-                android:focusable="true"
-                android:foreground="?attr/selectableItemBackground">
-
-                <RelativeLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:paddingHorizontal="24dp"
-                    android:paddingVertical="16dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/car_btn_add_services"
-                        android:textColor="@color/driver_text_primary"
-                        android:textSize="16sp"
-                        android:layout_alignParentStart="true"
-                        android:layout_centerVertical="true" />
-
-                    <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:src="@drawable/ic_chevron"
-                        app:tint="@color/driver_text_secondary"
-                        android:layout_alignParentEnd="true"
-                        android:layout_centerVertical="true" />
-                </RelativeLayout>
-            </com.google.android.material.card.MaterialCardView>
-
+            <!-- СЕКЦІЯ 2: КЛАСИ АВТО ТА ПОСЛУГИ -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/car_label_classes_services"
-                android:textColor="@color/driver_text_secondary"
-                android:textSize="14sp"
-                android:layout_marginStart="24dp"
-                android:layout_marginBottom="8dp" />
-
-            <LinearLayout
-                android:id="@+id/layout_tariffs_container"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginBottom="16dp" />
+                android:textColor="@color/driver_text_primary"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="10dp" />
 
             <com.google.android.material.card.MaterialCardView
-                android:id="@+id/btn_documents"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardCornerRadius="0dp"
+                android:layout_marginBottom="24dp"
+                app:cardCornerRadius="16dp"
                 app:cardElevation="0dp"
                 app:strokeWidth="0dp"
-                app:cardBackgroundColor="@color/driver_card_bg"
-                android:layout_marginBottom="24dp"
-                android:clickable="true"
-                android:focusable="true"
-                android:foreground="?attr/selectableItemBackground">
+                app:cardBackgroundColor="@color/driver_black_bg">
 
-                <RelativeLayout
+                <LinearLayout
+                    android:id="@+id/layout_tariffs_container"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:paddingHorizontal="24dp"
-                    android:paddingVertical="16dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/car_btn_documents"
-                        android:textColor="@color/driver_text_primary"
-                        android:textSize="16sp"
-                        android:layout_alignParentStart="true"
-                        android:layout_centerVertical="true" />
-
-                    <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:src="@drawable/ic_chevron"
-                        app:tint="@color/driver_text_secondary"
-                        android:layout_alignParentEnd="true"
-                        android:layout_centerVertical="true" />
-                </RelativeLayout>
+                    android:orientation="vertical" />
             </com.google.android.material.card.MaterialCardView>
 
         </LinearLayout>
-    </ScrollView>
+    </androidx.core.widget.NestedScrollView>
 
+    <!-- ВКЛАДКА 2: СПИСОК АВТОМОБІЛІВ -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recycler_cars"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginTop="8dp"
+        android:paddingTop="16dp"
+        android:paddingBottom="16dp"
         android:clipToPadding="false"
         android:visibility="gone"
-        app:layout_constraintTop_toBottomOf="@id/car_tabs"
+        app:layout_constraintTop_toBottomOf="@id/header"
         app:layout_constraintBottom_toTopOf="@id/btn_add_car" />
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/btn_add_car"
         android:layout_width="match_parent"
-        android:layout_height="60dp"
-        android:layout_marginHorizontal="9dp"
-        android:layout_marginTop="16dp"
+        android:layout_height="54dp"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="12dp"
         android:layout_marginBottom="16dp"
         android:background="@drawable/bg_driver_btn"
+        android:backgroundTint="@color/driver_neon_teal"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -345,9 +431,9 @@
             android:layout_height="match_parent"
             android:text="@string/car_cd_add_new"
             android:textAllCaps="false"
-            android:textSize="18sp"
+            android:textSize="16sp"
             android:textStyle="bold"
-            android:textColor="@color/white"
+            android:textColor="@color/driver_text_black"
             android:background="@android:color/transparent"
             android:elevation="0dp"
             android:stateListAnimator="@null"
@@ -364,7 +450,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:visibility="gone"
-        android:indeterminateTint="@color/driver_text_primary"
+        android:indeterminateTint="@color/driver_neon_teal"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"

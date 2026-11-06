@@ -36,6 +36,7 @@ class CreateFilterActivity : AppCompatActivity() {
 
     // Для режима редактирования
     private var editingFilterId: Long? = null
+    private var savedIsEther: Boolean = false
     private var savedIsAuto: Boolean = false
     private var savedIsCycle: Boolean = false
 
@@ -139,6 +140,7 @@ class CreateFilterActivity : AppCompatActivity() {
 
     private fun setupEditMode(f: DriverFilter) {
         editingFilterId = f.id
+        savedIsEther = f.isEther
         savedIsAuto = f.isAuto
         savedIsCycle = f.isCycle
 
@@ -232,6 +234,7 @@ class CreateFilterActivity : AppCompatActivity() {
 
         val request = CreateFilterRequest(
             name = name,
+            isEther = if (editingFilterId != null) savedIsEther else false,
             isAuto = if (editingFilterId != null) savedIsAuto else false,
             isCycle = if (editingFilterId != null) savedIsCycle else false,
 

@@ -16,21 +16,23 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
-import com.google.gson.Gson
 import com.taxiapp.driver.network.ApiClient
 import com.taxiapp.driver.network.Order
 import com.taxiapp.driver.utils.SessionManager
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.schedulers.Schedulers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import ua.naiksoftware.stomp.Stomp
 import ua.naiksoftware.stomp.StompClient
+import java.util.concurrent.CopyOnWriteArrayList
 
 class EtherActivity : AppCompatActivity() {
 
-    private lateinit var stompClient: StompClient
+    private var stompClient: StompClient? = null
     private val compositeDisposable = CompositeDisposable()
     private lateinit var sessionManager: SessionManager
 
@@ -43,15 +45,16 @@ class EtherActivity : AppCompatActivity() {
     private lateinit var pbLoading: ProgressBar
     private lateinit var tabLayout: TabLayout
 
-    private val allOrdersList = mutableListOf<Order>()
+    // Потокобезопасный список во избежание ConcurrentModificationException при быстрых пушах сокета
+    private val allOrdersList = CopyOnWriteArrayList<Order>()
     private var currentTabIndex = 0
+    private var syncJob: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_ether)
 
-        // 🛠️ ДОБАВЛЕНО: Безопасный отступ для сохранения Edge-to-Edge фона на Android 15
-        val rootView = findViewById<android.view.ViewGroup>(android.R.id.content).getChildAt(0)
+        val rootView = findViewById<ViewGroup>(android.R.id.content).getChildAt(0)
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(rootView) { v, insets ->
             val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
@@ -93,51 +96,16 @@ class EtherActivity : AppCompatActivity() {
         btnBack.setOnClickListener { finish() }
     }
 
-    private fun acceptScheduledOrder(order: Order) {
-        pbLoading.visibility = View.VISIBLE
-        lifecycleScope.launch {
-            try {
-                val response = ApiClient.getInstance().getApiService(this@EtherActivity).acceptOrder(order.id)
-
-                if (response.isSuccessful) {
-                    Toast.makeText(this@EtherActivity, "Ви забронювали замовлення!", Toast.LENGTH_SHORT).show()
-                    removeOrderFromList(order.id)
-
-                    val intent = Intent(this@EtherActivity, OrdersActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                    startActivity(intent)
-                    finish()
-                } else {
-                    val errorMsg = response.errorBody()?.string() ?: ""
-                    if (errorMsg.contains("Conflict") || response.code() == 409) {
-                        Toast.makeText(this@EtherActivity, "Замовлення вже зайняте", Toast.LENGTH_SHORT).show()
-                        removeOrderFromList(order.id)
-                    } else {
-                        Toast.makeText(this@EtherActivity, "Помилка: ${response.code()}", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            } catch (e: Exception) {
-                Toast.makeText(this@EtherActivity, "Помилка мережі", Toast.LENGTH_SHORT).show()
-            } finally {
-                pbLoading.visibility = View.GONE
-            }
-        }
-    }
-
-    private fun acceptOrder(order: Order) {
-        acceptScheduledOrder(order)
-    }
-
-    // ИСПРАВЛЕНО: Тип параметра изменен на String под UUID
     private fun removeOrderFromList(orderId: String) {
-        allOrdersList.removeAll { it.id == orderId }
-        filterAndShowOrders()
+        val removed = allOrdersList.removeAll { it.id == orderId }
+        if (removed) {
+            filterAndShowOrders()
+        }
     }
 
     override fun onResume() {
         super.onResume()
 
-        // Пересоздаем подписки и подключаем сокет с передачей токена
         setupWebSocket()
 
         val sectorFirst = sessionManager.isEtherSectorFirst()
@@ -145,77 +113,102 @@ class EtherActivity : AppCompatActivity() {
         activeAdapter.updateDisplaySettings(sectorFirst, hidePrice)
         scheduledAdapter.updateDisplaySettings(sectorFirst, hidePrice)
 
-        fetchOrders()
+        fetchOrders(showLoader = allOrdersList.isEmpty())
     }
 
     override fun onPause() {
         super.onPause()
-        stompClient.disconnect()
-        compositeDisposable.clear()
+        syncJob?.cancel()
+        disconnectWebSocket()
     }
 
     override fun onDestroy() {
-        compositeDisposable.dispose()
+        syncJob?.cancel()
+        disconnectWebSocket()
         super.onDestroy()
     }
 
-    private fun fetchOrders() {
-        pbLoading.visibility = View.VISIBLE
+    private fun disconnectWebSocket() {
+        compositeDisposable.clear()
+        try {
+            stompClient?.disconnect()
+        } catch (e: Exception) {
+            Log.w("EtherActivity", "Помилка закриття сокета: ${e.message}")
+        }
+        stompClient = null
+    }
+
+    private fun fetchOrders(showLoader: Boolean = true) {
+        if (showLoader) pbLoading.visibility = View.VISIBLE
         lifecycleScope.launch {
             try {
                 val response = ApiClient.getInstance().getApiService(this@EtherActivity).getAvailableOrders()
-                val list = if (response.isSuccessful) response.body() ?: emptyList() else emptyList()
-
-                allOrdersList.clear()
-                allOrdersList.addAll(list)
-                allOrdersList.sortByDescending { it.idLong ?: 0L }
-
-                updateUI()
+                if (response.isSuccessful) {
+                    val list = (response.body() ?: emptyList()).sortedByDescending { it.idLong ?: 0L }
+                    allOrdersList.clear()
+                    allOrdersList.addAll(list)
+                    filterAndShowOrders()
+                }
             } catch (e: Exception) {
                 Log.e("EtherActivity", "Помилка завантаження ефіру: ${e.message}")
             } finally {
-                pbLoading.visibility = View.GONE
+                if (showLoader) pbLoading.visibility = View.GONE
             }
         }
     }
 
+    /**
+     * Дебаунс-синхронизация с сервером при событиях ADD/UPDATE в сокете Эфира:
+     * гарантирует 100% соблюдение активных фильтров водителя (сектора, радиус, тарифы, цена/км),
+     * которые рассчитываются на сервере в getFilteredOrdersForDriver().
+     */
+    private fun scheduleFilteredSync() {
+        syncJob?.cancel()
+        syncJob = lifecycleScope.launch {
+            delay(250)
+            fetchOrders(showLoader = false)
+        }
+    }
+
     private fun setupWebSocket() {
+        disconnectWebSocket()
+
         val baseUrl = BuildConfig.BASE_URL
         val wsProtocol = if (baseUrl.startsWith("https")) "wss" else "ws"
         val cleanHost = baseUrl.replace("https://", "").replace("http://", "").removeSuffix("/")
 
-        // 1. Извлекаем чистый токен водителя из SessionManager
         val token = sessionManager.fetchAuthToken() ?: ""
-
-        // 2. Добавляем токен в URL для HTTP Handshake (страховка от любых блокировок)
         val url = if (token.isNotEmpty()) {
             "$wsProtocol://$cleanHost/ws-taxi/websocket?token=$token"
         } else {
             "$wsProtocol://$cleanHost/ws-taxi/websocket"
         }
 
-        stompClient = Stomp.over(Stomp.ConnectionProvider.OKHTTP, url)
-        Log.d("WS", "Попытка подключения к сокету Эфира: $url")
+        val client = Stomp.over(Stomp.ConnectionProvider.OKHTTP, url).apply {
+            withClientHeartbeat(15000).withServerHeartbeat(15000)
+        }
+        stompClient = client
 
-        // 3. СЛУШАЕМ ПРАВИЛЬНЫЙ ТОПИК: /topic/drivers/ether (куда сервер реально шлет заказы!)
-        val topicDisposable = stompClient.topic("/topic/drivers/ether")
+        val topicDisposable = client.topic("/topic/drivers/ether")
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe({ topicMessage ->
-                if (topicMessage.payload == null || topicMessage.payload == "null") return@subscribe
+                val payload = topicMessage.payload
+                if (payload.isNullOrBlank() || payload == "null") return@subscribe
 
                 try {
-                    val msgObj = JSONObject(topicMessage.payload)
+                    val msgObj = JSONObject(payload)
                     val action = msgObj.optString("action")
                     val orderId = msgObj.optString("orderId")
 
-                    if (action == "REMOVE") {
-                        removeOrderFromList(orderId)
-                    } else if (action == "ADD" || action == "UPDATE") { // Поддерживаем и ADD, и UPDATE
-                        val orderJson = msgObj.optJSONObject("order")?.toString()
-                        if (orderJson != null) {
-                            val newOrder = Gson().fromJson(orderJson, Order::class.java)
-                            handleSocketOrderUpdate(newOrder)
+                    when (action) {
+                        "REMOVE" -> {
+                            removeOrderFromList(orderId)
+                        }
+                        "ADD", "UPDATE" -> {
+                            // Синхронизируем список через серверный фильтр водителя,
+                            // чтобы в Эфир попадали только заказы, проходящие по фильтрам и тарифам водителя
+                            scheduleFilteredSync()
                         }
                     }
                 } catch (e: Exception) {
@@ -225,7 +218,7 @@ class EtherActivity : AppCompatActivity() {
                 Log.e("WS", "WS Subscription Error: ${error.message}")
             })
 
-        val lifecycleDisposable = stompClient.lifecycle()
+        val lifecycleDisposable = client.lifecycle()
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe { lifecycleEvent ->
@@ -240,47 +233,26 @@ class EtherActivity : AppCompatActivity() {
         compositeDisposable.add(topicDisposable)
         compositeDisposable.add(lifecycleDisposable)
 
-        // 4. ПЕРЕДАЕМ STOMP-ЗАГОЛОВОК AUTHORIZATION С ТОКЕНОМ
         val headers = if (token.isNotEmpty()) {
             listOf(ua.naiksoftware.stomp.dto.StompHeader("Authorization", "Bearer $token"))
         } else {
             emptyList()
         }
-        stompClient.connect(headers)
-    }
-
-    private fun handleSocketOrderUpdate(order: Order) {
-        if (order.status != "REQUESTED" && order.status != "SCHEDULED") {
-            removeOrderFromList(order.id)
-            return
-        }
-
-        allOrdersList.removeAll { it.id == order.id }
-        allOrdersList.add(0, order)
-        // ИСПРАВЛЕНО: Сортируем по числовому idLong для сохранения структуры списков
-        allOrdersList.sortByDescending { it.idLong ?: 0L }
-
-        filterAndShowOrders()
-    }
-
-    private fun updateUI() {
-        filterAndShowOrders()
+        client.connect(headers)
     }
 
     private fun filterAndShowOrders() {
-        // TOЧЕЧНОЕ ОБНОВЛЕНИЕ: Загружаем отфильтрованные данные в адаптеры напрямую
-        val activeList = allOrdersList.filter { !it.isScheduled() }
-        val scheduledList = allOrdersList.filter { it.isScheduled() }
+        val snapshot = allOrdersList.toList()
+        val activeList = snapshot.filter { !it.isScheduled() }
+        val scheduledList = snapshot.filter { it.isScheduled() }
 
         activeAdapter.submitList(activeList)
         scheduledAdapter.submitList(scheduledList)
 
-        // Просим внутренний Pager-адаптер обновить только состояние видимости (Empty State)
         pagerAdapter.updatePage(0)
         pagerAdapter.updatePage(1)
     }
 
-    // --- ВНУТРЕННИЙ УМНЫЙ АДАПТЕР СТРАНИЦ VIEW_PAGER_2 ---
     private inner class EtherPagerAdapter : RecyclerView.Adapter<EtherPagerAdapter.PageViewHolder>() {
 
         private val viewHolders = SparseArray<PageViewHolder>()
@@ -298,6 +270,7 @@ class EtherActivity : AppCompatActivity() {
         override fun onBindViewHolder(holder: PageViewHolder, position: Int) {
             viewHolders.put(position, holder)
             holder.rvOrdersList.layoutManager = LinearLayoutManager(this@EtherActivity)
+            holder.rvOrdersList.itemAnimator = null
             holder.rvOrdersList.adapter = if (position == 0) activeAdapter else scheduledAdapter
 
             updatePageVisibility(position, holder)
@@ -319,7 +292,6 @@ class EtherActivity : AppCompatActivity() {
         }
 
         private fun updatePageVisibility(position: Int, holder: PageViewHolder) {
-            // TOЧЕЧНОЕ ОБНОВЛЕНИЕ: Управляем только видимостью списков и Empty State карточек
             val filteredList = if (position == 0) {
                 allOrdersList.filter { !it.isScheduled() }
             } else {

@@ -7,8 +7,11 @@ import java.util.Locale
 
 object LocaleHelper {
 
+    private const val PREFS_NAME = "DriverPrefs"
+    private const val KEY_LANGUAGE = "app_language"
+
     fun onAttach(context: Context): Context {
-        val lang = getPersistedData(context, "uk") // По замовчуванню Українська
+        val lang = getPersistedData(context, "uk")
         return setLocale(context, lang)
     }
 
@@ -25,14 +28,15 @@ object LocaleHelper {
         }
     }
 
+    // ✅ ИСПРАВЛЕНО: Используем тот же файл ("DriverPrefs") и ключ ("app_language"), что и SessionManager
     private fun getPersistedData(context: Context, defaultLanguage: String): String {
-        val preferences = context.getSharedPreferences("TaxiDriverSession", Context.MODE_PRIVATE)
-        return preferences.getString("KEY_LANGUAGE", defaultLanguage) ?: defaultLanguage
+        val preferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return preferences.getString(KEY_LANGUAGE, defaultLanguage) ?: defaultLanguage
     }
 
     private fun persist(context: Context, language: String) {
-        val preferences = context.getSharedPreferences("TaxiDriverSession", Context.MODE_PRIVATE)
-        preferences.edit().putString("KEY_LANGUAGE", language).apply()
+        val preferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        preferences.edit().putString(KEY_LANGUAGE, language).apply()
     }
 
     @TargetApi(Build.VERSION_CODES.N)
@@ -52,9 +56,7 @@ object LocaleHelper {
         val resources = context.resources
         val configuration = resources.configuration
         configuration.locale = locale
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-            configuration.setLayoutDirection(locale)
-        }
+        configuration.setLayoutDirection(locale)
         resources.updateConfiguration(configuration, resources.displayMetrics)
         return context
     }

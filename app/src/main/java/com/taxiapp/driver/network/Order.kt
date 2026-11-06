@@ -14,6 +14,8 @@ data class Order(
     @SerializedName("fromAddress") val fromAddress: String? = null,
     @SerializedName("toAddress") val toAddress: String? = null,
     @SerializedName("googleRoutePolyline") val polyline: String? = null,
+    @SerializedName("driverToPickupPolyline") val driverToPickupPolyline: String? = null,
+    @SerializedName("addedValue") val addedValue: Double = 0.0,
     @SerializedName("stops") val stops: List<OrderStop>? = null,
     @SerializedName("distanceMeters") val distanceMeters: Int? = 0,
     @SerializedName("status") val status: String? = null,

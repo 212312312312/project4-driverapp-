@@ -4,7 +4,10 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.*
+import android.widget.RadioButton
+import android.widget.SeekBar
+import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.widget.AppCompatButton
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
@@ -16,9 +19,15 @@ import com.taxiapp.driver.utils.SessionManager
 import kotlinx.coroutines.launch
 import java.text.DecimalFormat
 
-class SearchSettingsBottomSheet(
-    private val onSettingsChanged: () -> Unit
-) : BottomSheetDialogFragment() {
+// ✅ ИСПРАВЛЕНО: Пустой основной конструктор защищает от краша Fragment$InstantiationException
+// при повороте экрана, смене темы или пересоздании Activity системой Android.
+class SearchSettingsBottomSheet() : BottomSheetDialogFragment() {
+
+    private var onSettingsChanged: (() -> Unit)? = null
+
+    constructor(onSettingsChanged: () -> Unit) : this() {
+        this.onSettingsChanged = onSettingsChanged
+    }
 
     private lateinit var radioHome: RadioButton
     private lateinit var radioChain: RadioButton
@@ -56,10 +65,7 @@ class SearchSettingsBottomSheet(
         val session = SessionManager(requireContext())
         val savedMode = session.getSearchMode()
 
-        // 🛠️ ФИКС 1: Выбираем "Ланцюг" по умолчанию, если не выбран режим "Домой"
         currentMode = if (savedMode == DriverSearchMode.HOME) DriverSearchMode.HOME else DriverSearchMode.CHAIN
-
-        // 🛠️ ФИКС 2: Устанавливаем 0.5 км как базовый радиус по умолчанию
         currentRadius = session.getSearchRadius().takeIf { it >= 0.5 } ?: 0.5
 
         updateLocalUI()
@@ -70,7 +76,7 @@ class SearchSettingsBottomSheet(
 
         btnEditHomeSector.setOnClickListener {
             dismiss()
-            (requireActivity() as MainActivity).startHomeSectorSelection(selectedHomeSectorIds)
+            (activity as? MainActivity)?.startHomeSectorSelection(selectedHomeSectorIds)
         }
 
         seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
@@ -107,29 +113,30 @@ class SearchSettingsBottomSheet(
     }
 
     private fun loadSettings() {
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             try {
-                val response = ApiClient.getInstance().getApiService(requireContext()).getSearchSettings()
+                val ctx = context ?: return@launch
+                val response = ApiClient.getInstance().getApiService(ctx).getSearchSettings()
                 if (response.isSuccessful && response.body() != null) {
                     val state = response.body()!!
 
                     currentRadius = state.radius.takeIf { it >= 0.5 } ?: 0.5
                     selectedHomeSectorIds = state.homeSectorIds
 
-                    val session = SessionManager(requireContext())
+                    val session = SessionManager(ctx)
                     val modeFromState = if (state.mode == DriverSearchMode.MANUAL) {
                         session.getSearchMode()
                     } else {
                         state.mode
                     }
 
-                    // 🛠️ ФИКС: Всегда держим подсвеченной одну из двух доступных опций
                     currentMode = if (modeFromState == DriverSearchMode.HOME) DriverSearchMode.HOME else DriverSearchMode.CHAIN
-
                     updateUI(state)
                 }
             } catch (e: Exception) {
-                Toast.makeText(context, "Помилка завантаження налаштувань", Toast.LENGTH_SHORT).show()
+                context?.let {
+                    Toast.makeText(it, "Помилка завантаження налаштувань", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
@@ -138,7 +145,6 @@ class SearchSettingsBottomSheet(
         radioHome.isChecked = currentMode == DriverSearchMode.HOME
         radioChain.isChecked = currentMode == DriverSearchMode.CHAIN
 
-        // 🟢 Показываем реальное количество выбранных секторов вместо остатка поездок
         val selectedCount = selectedHomeSectorIds?.size ?: state.homeSectorIds?.size ?: 0
         tvHomeCounter.text = "($selectedCount)"
 
@@ -165,7 +171,6 @@ class SearchSettingsBottomSheet(
     }
 
     private fun saveSettings() {
-        // 🛡️ ЗАЩИТА: Если выбран режим "Домой", но сектора не выбраны — не даем сохранить и не шлем запрос
         if (currentMode == DriverSearchMode.HOME && selectedHomeSectorIds.isNullOrEmpty()) {
             Toast.makeText(context, "Оберіть хоча б один сектор для режиму 'Додому'", Toast.LENGTH_SHORT).show()
             return
@@ -174,9 +179,10 @@ class SearchSettingsBottomSheet(
         btnSave.isEnabled = false
         btnSave.text = "ЗБЕРЕЖЕННЯ..."
 
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             try {
-                val mainActivity = requireActivity() as MainActivity
+                val mainActivity = activity as? MainActivity ?: return@launch
+                val ctx = context ?: return@launch
 
                 val modeToSend = if (mainActivity.isSearchActive) {
                     currentMode
@@ -189,24 +195,28 @@ class SearchSettingsBottomSheet(
                     radius = currentRadius,
                     homeSectorIds = selectedHomeSectorIds
                 )
-                val response = ApiClient.getInstance().getApiService(requireContext()).updateSearchSettings(req)
+                val response = ApiClient.getInstance().getApiService(ctx).updateSearchSettings(req)
 
                 if (response.isSuccessful && response.body() != null) {
-                    val session = SessionManager(requireContext())
+                    val session = SessionManager(ctx)
                     session.saveSearchMode(currentMode)
                     session.saveSearchRadius(currentRadius)
 
-                    onSettingsChanged()
-                    dismiss()
+                    onSettingsChanged?.invoke() ?: mainActivity.onSearchSettingsUpdated()
+                    dismissAllowingStateLoss()
                 } else {
-                    Toast.makeText(context, "Помилка: ${response.errorBody()?.string()}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(ctx, "Помилка: ${response.errorBody()?.string()}", Toast.LENGTH_SHORT).show()
                     loadSettings()
                 }
             } catch (e: Exception) {
-                Toast.makeText(context, "Помилка збереження", Toast.LENGTH_SHORT).show()
+                context?.let {
+                    Toast.makeText(it, "Помилка збереження", Toast.LENGTH_SHORT).show()
+                }
             } finally {
-                btnSave.isEnabled = true
-                btnSave.text = "ЗБЕРЕГТИ"
+                if (isAdded) {
+                    btnSave.isEnabled = true
+                    btnSave.text = "ЗБЕРЕГТИ"
+                }
             }
         }
     }

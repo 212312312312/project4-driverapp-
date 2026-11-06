@@ -1,91 +1,119 @@
 package com.taxiapp.driver
 
+import android.app.KeyguardManager
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
-import androidx.activity.OnBackPressedCallback
 import android.os.CountDownTimer
+import android.view.ViewGroup
+import android.view.WindowManager
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.AppCompatButton
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
-import androidx.appcompat.widget.AppCompatButton // ИСПРАВЛЕНО: Импортируем AppCompatButton вместо MaterialButton
 import com.taxiapp.driver.network.ApiClient
 import com.taxiapp.driver.network.Order
 import kotlinx.coroutines.launch
-import android.app.KeyguardManager
-import android.content.Context
-import android.view.WindowManager
 
 class OrderConfirmationActivity : AppCompatActivity() {
 
     private lateinit var tvTimer: TextView
-    private lateinit var btnConfirm: AppCompatButton // ИСПРАВЛЕНО: тип изменен на AppCompatButton
-    private lateinit var btnReject: AppCompatButton  // ИСПРАВЛЕНО: тип изменен на AppCompatButton
-    private lateinit var timer: CountDownTimer
+    private lateinit var btnConfirm: AppCompatButton
+    private lateinit var btnReject: AppCompatButton
+    private var timer: CountDownTimer? = null
     private var currentOrder: Order? = null
+    private var fallbackOrderId: String? = null
+
+    private val cancelReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val cancelledId = intent?.getStringExtra("EXTRA_ORDER_ID")
+            val activeId = currentOrder?.id ?: fallbackOrderId
+            if (cancelledId == null || activeId == null || cancelledId == activeId) {
+                timer?.cancel()
+                Toast.makeText(this@OrderConfirmationActivity, "Замовлення було скасовано клієнтом", Toast.LENGTH_LONG).show()
+                finish()
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // --- БЛОК 1: Пробудження экрана и показ поверх блокировки ---
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true)
             setTurnScreenOn(true)
-            val keyguardManager = getSystemService(android.content.Context.KEYGUARD_SERVICE) as android.app.KeyguardManager
+            val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
             keyguardManager.requestDismissKeyguard(this, null)
         } else {
             @Suppress("DEPRECATION")
             window.addFlags(
-                android.view.WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
-                        android.view.WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
-                        android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
-                        android.view.WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD
+                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                        WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
+                        WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
+                        WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD
             )
         }
-        // -----------------------------------------------------------
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         setContentView(R.layout.activity_order_confirmation)
 
-        // 🛠️ ДОБАВЛЕНО: Безопасный отступ для сохранения Edge-to-Edge фона на Android 15
-        val rootView = findViewById<android.view.ViewGroup>(android.R.id.content).getChildAt(0)
-        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(rootView) { v, insets ->
-            val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+        val rootView = findViewById<ViewGroup>(android.R.id.content).getChildAt(0)
+        ViewCompat.setOnApplyWindowInsetsListener(rootView) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
 
-        // ХАРДКОРНАЯ БЛОКИРОВКА КНОПКИ НАЗАД (БЕЗ ВОРНИНГОВ)
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                // Оставляем пустым. Перехватывает нажатие и ничего не делает, блокируя шаг назад.
+                // Блокуємо випадкове закриття кнопкою Назад
             }
         })
 
-        // --- БЛОК 2: Получение данных заказа ---
+        val filter = IntentFilter().apply {
+            addAction("com.taxiapp.driver.ACTION_CLOSE_ORDER_OFFER")
+            addAction("com.taxiapp.driver.ORDER_CANCELLED")
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(cancelReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            @Suppress("UnspecifiedRegisterReceiverFlag")
+            registerReceiver(cancelReceiver, filter)
+        }
+
+        initViews()
+
         currentOrder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             intent.getSerializableExtra("EXTRA_ORDER", Order::class.java)
         } else {
             @Suppress("DEPRECATION")
             intent.getSerializableExtra("EXTRA_ORDER") as? Order
         }
+        fallbackOrderId = intent.getStringExtra("EXTRA_ORDER_ID") ?: currentOrder?.id
 
-        if (currentOrder == null) {
+        if (currentOrder != null) {
+            bindOrderDetails(currentOrder!!)
+            startTimer()
+        } else if (!fallbackOrderId.isNullOrEmpty()) {
+            // ✅ ИСПРАВЛЕНО: Когда экран открывается из фонового FCM-пуша ORDER_CONFIRMATION,
+            // передается только EXTRA_ORDER_ID. Подгружаем заказ с сервера вместо мгновенного finish()!
+            loadOrderAndStart(fallbackOrderId!!)
+        } else {
             finish()
-            return
         }
-
-        initViews()
-        startTimer()
     }
 
     private fun initViews() {
         tvTimer = findViewById(R.id.tv_timer)
         btnConfirm = findViewById(R.id.btn_confirm)
         btnReject = findViewById(R.id.btn_reject)
-
-        findViewById<TextView>(R.id.tv_address).text = currentOrder?.fromAddress ?: "Адреса"
-        findViewById<TextView>(R.id.tv_price).text = currentOrder?.getFormattedPrice() ?: "0 ₴"
 
         btnConfirm.setOnClickListener {
             confirmOrder()
@@ -96,79 +124,120 @@ class OrderConfirmationActivity : AppCompatActivity() {
         }
     }
 
+    private fun bindOrderDetails(order: Order) {
+        findViewById<TextView>(R.id.tv_address_from).text = order.fromAddress ?: "Адреса подачі"
+        findViewById<TextView>(R.id.tv_address_to).text = order.toAddress ?: "Кінцева точка"
+        findViewById<TextView>(R.id.tv_price).text = "${order.getTotalFullPrice().toInt()} ₴"
+        findViewById<TextView>(R.id.tv_scheduled_time).text = "На: ${order.getFormattedScheduledTime()}"
+    }
+
+    private fun loadOrderAndStart(orderId: String) {
+        btnConfirm.isEnabled = false
+        lifecycleScope.launch {
+            try {
+                val response = ApiClient.getInstance().getApiService(this@OrderConfirmationActivity).getActiveOrder()
+                if (response.isSuccessful && response.body() != null) {
+                    currentOrder = response.body()
+                    bindOrderDetails(currentOrder!!)
+                    btnConfirm.isEnabled = true
+                    startTimer()
+                } else {
+                    // Если активный заказ не вернулся, пробуем отобразить данные из пуша и разрешить подтверждение по ID
+                    findViewById<TextView>(R.id.tv_address_from).text = intent.getStringExtra("EXTRA_ADDRESS") ?: "Заплановане замовлення"
+                    findViewById<TextView>(R.id.tv_price).text = "${intent.getStringExtra("EXTRA_PRICE") ?: ""} ₴"
+                    btnConfirm.isEnabled = true
+                    startTimer()
+                }
+            } catch (e: Exception) {
+                btnConfirm.isEnabled = true
+                startTimer()
+            }
+        }
+    }
+
     private fun startTimer() {
+        timer?.cancel()
         timer = object : CountDownTimer(60000, 1000) {
             override fun onTick(millisUntilFinished: Long) {
-                tvTimer.text = (millisUntilFinished / 1000).toString()
+                val seconds = millisUntilFinished / 1000
+                tvTimer.text = String.format("00:%02d", seconds)
             }
 
             override fun onFinish() {
-                tvTimer.text = "0"
+                tvTimer.text = "00:00"
                 rejectOrder(isTimeout = true)
             }
         }.start()
     }
 
     private fun confirmOrder() {
-        timer.cancel()
+        val targetId = currentOrder?.id ?: fallbackOrderId ?: return
+        timer?.cancel()
         btnConfirm.isEnabled = false
-        btnConfirm.text = "..."
+        btnReject.isEnabled = false
+        btnConfirm.text = "Підтвердження..."
 
         lifecycleScope.launch {
             try {
                 val response = ApiClient.getInstance().getApiService(this@OrderConfirmationActivity)
-                    .confirmOrder(currentOrder!!.id)
+                    .confirmOrder(targetId)
 
-                if (response.isSuccessful) {
-                    Toast.makeText(this@OrderConfirmationActivity, "Успішно підтверджено!", Toast.LENGTH_LONG).show()
+                if (response.isSuccessful && response.body() != null) {
+                    Toast.makeText(this@OrderConfirmationActivity, "Замовлення підтверджено! Виїжджайте.", Toast.LENGTH_LONG).show()
+
                     val intent = Intent(this@OrderConfirmationActivity, OrderProgressActivity::class.java)
                     intent.putExtra("EXTRA_ORDER", response.body())
-                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    intent.putExtra("EXTRA_ORDER_ID", targetId)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                     startActivity(intent)
                     finish()
                 } else {
-                    Toast.makeText(this@OrderConfirmationActivity, "Помилка підтвердження", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@OrderConfirmationActivity, "Помилка підтвердження: ${response.code()}", Toast.LENGTH_SHORT).show()
                     finish()
                 }
             } catch (e: Exception) {
                 Toast.makeText(this@OrderConfirmationActivity, "Помилка мережі", Toast.LENGTH_SHORT).show()
-                finish()
+                btnConfirm.isEnabled = true
+                btnReject.isEnabled = true
+                btnConfirm.text = "ПІДТВЕРДИТИ"
             }
         }
     }
 
     private fun rejectOrder(isTimeout: Boolean = false) {
-        timer.cancel()
+        val targetId = currentOrder?.id ?: fallbackOrderId
+        timer?.cancel()
+        btnConfirm.isEnabled = false
         btnReject.isEnabled = false
         btnReject.text = "..."
 
         lifecycleScope.launch {
-            try {
-                val response = ApiClient.getInstance().getApiService(this@OrderConfirmationActivity)
-                    .cancelOrder(currentOrder!!.id, null)
+            if (!targetId.isNullOrEmpty()) {
+                try {
+                    val response = ApiClient.getInstance().getApiService(this@OrderConfirmationActivity)
+                        .cancelOrder(targetId, null)
 
-                if (response.isSuccessful) {
-                    Toast.makeText(this@OrderConfirmationActivity, if(isTimeout) "Час вийшов. Замовлення знято." else "Ви відмовились від замовлення", Toast.LENGTH_LONG).show()
-                } else {
-                    Toast.makeText(this@OrderConfirmationActivity, "Замовлення скасовано локально", Toast.LENGTH_SHORT).show()
-                }
-            } catch (e: Exception) {
-                // Ignore network error on reject
-            } finally {
-                val intent = Intent(this@OrderConfirmationActivity, EtherActivity::class.java)
-                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                startActivity(intent)
-                finish()
+                    if (response.isSuccessful) {
+                        Toast.makeText(
+                            this@OrderConfirmationActivity,
+                            if (isTimeout) "Час вийшов. Замовлення знято." else "Ви відмовились від замовлення",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                } catch (_: Exception) {}
             }
+            val intent = Intent(this@OrderConfirmationActivity, MainActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            startActivity(intent)
+            finish()
         }
     }
 
     override fun onDestroy() {
+        timer?.cancel()
+        try {
+            unregisterReceiver(cancelReceiver)
+        } catch (_: Exception) {}
         super.onDestroy()
-        if (::timer.isInitialized) timer.cancel()
-    }
-
-    override fun onBackPressed() {
-        // Блокуємо кнопку назад
     }
 }

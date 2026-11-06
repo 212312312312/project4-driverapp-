@@ -50,6 +50,10 @@ class CardsActivity : AppCompatActivity() {
         rvCards.layoutManager = LinearLayoutManager(this)
 
         setupAdapter()
+    }
+
+    override fun onResume() {
+        super.onResume()
         loadCards()
     }
 

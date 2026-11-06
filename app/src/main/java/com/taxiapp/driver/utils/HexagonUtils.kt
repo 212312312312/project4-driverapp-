@@ -8,7 +8,7 @@ import kotlin.math.sqrt
 object HexagonUtils {
     // Радіус має точно співпадати з сервером! (0.0135)
     // Можна додати мікро-напуск (0.01355), щоб перекрити шви рендерингу
-    private const val R = 0.01355
+    private const val R = 0.01125
 
     fun getHexagonPoints(center: LatLng): List<LatLng> {
         val points = mutableListOf<LatLng>()

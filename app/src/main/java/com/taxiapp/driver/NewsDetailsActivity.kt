@@ -6,6 +6,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.bumptech.glide.Glide
+import com.taxiapp.driver.utils.toFullImageUrl
 
 class NewsDetailsActivity : AppCompatActivity() {
 
@@ -13,7 +14,6 @@ class NewsDetailsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_news_details)
 
-        // 🛠️ ДОБАВЛЕНО: Безопасный отступ для сохранения Edge-to-Edge фона на Android 15
         val rootView = findViewById<android.view.ViewGroup>(android.R.id.content).getChildAt(0)
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(rootView) { v, insets ->
             val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
@@ -27,8 +27,6 @@ class NewsDetailsActivity : AppCompatActivity() {
         val content = intent.getStringExtra("content")
         val date = intent.getStringExtra("date")
         val imageUrl = intent.getStringExtra("imageUrl")
-        // Получаем Base URL из предыдущего экрана или используем дефолтный
-        val baseUrl = intent.getStringExtra("baseUrl") ?: "http://192.168.0.100:8080"
 
         findViewById<TextView>(R.id.tv_full_title).text = title
         findViewById<TextView>(R.id.tv_full_content).text = content
@@ -36,15 +34,9 @@ class NewsDetailsActivity : AppCompatActivity() {
 
         val imgBanner = findViewById<ImageView>(R.id.img_full_banner)
 
-        if (!imageUrl.isNullOrEmpty()) {
+        val fullUrl = toFullImageUrl(imageUrl)
+        if (!fullUrl.isNullOrEmpty()) {
             imgBanner.visibility = View.VISIBLE
-
-            val fullUrl = if (imageUrl.startsWith("http")) {
-                imageUrl
-            } else {
-                "$baseUrl$imageUrl" // Исправлено: просто склеиваем
-            }
-
             Glide.with(this)
                 .load(fullUrl)
                 .placeholder(R.drawable.ic_launcher_background)

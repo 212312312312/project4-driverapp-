@@ -6,11 +6,12 @@
     android:id="@+id/layout_root"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    app:cardCornerRadius="0dp"
+    android:layout_marginHorizontal="16dp"
+    android:layout_marginBottom="12dp"
+    app:cardCornerRadius="16dp"
     app:cardElevation="0dp"
     app:strokeWidth="0dp"
-    app:cardBackgroundColor="@color/driver_card_bg"
-    android:layout_marginBottom="2dp"
+    app:cardBackgroundColor="@color/driver_black_bg"
     android:clickable="true"
     android:focusable="true"
     android:foreground="?attr/selectableItemBackground">
@@ -20,16 +21,16 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:paddingHorizontal="24dp"
+        android:paddingHorizontal="16dp"
         android:paddingVertical="14dp">
 
         <com.google.android.material.card.MaterialCardView
             android:layout_width="64dp"
             android:layout_height="64dp"
-            app:cardCornerRadius="8dp"
+            app:cardCornerRadius="12dp"
             app:cardElevation="0dp"
             app:strokeWidth="0dp"
-            app:cardBackgroundColor="@color/driver_black_bg">
+            app:cardBackgroundColor="@color/driver_surface_elevated">
 
             <ImageView
                 android:id="@+id/img_car_item"
@@ -51,10 +52,10 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 tools:text="Skoda Octavia"
-                android:textSize="16sp"
+                android:textSize="17sp"
                 android:textStyle="bold"
                 android:fontFamily="@font/app_font_family"
-                android:textColor="@color/driver_text_primary"/>
+                android:textColor="@color/driver_text_primary" />
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -70,14 +71,14 @@
                     tools:text="AA 1234 BB"
                     android:textSize="14sp"
                     android:fontFamily="@font/app_font_family"
-                    android:textColor="@color/driver_text_primary"/>
+                    android:textColor="@color/driver_text_secondary" />
 
                 <View
                     android:layout_width="4dp"
                     android:layout_height="4dp"
                     android:layout_marginHorizontal="8dp"
                     android:background="@drawable/bg_round_button"
-                    android:backgroundTint="@color/driver_text_secondary"/>
+                    android:backgroundTint="@color/driver_text_secondary" />
 
                 <TextView
                     android:id="@+id/tv_item_status"
@@ -86,7 +87,7 @@
                     tools:text="АКТИВНЕ"
                     android:textSize="12sp"
                     android:textStyle="bold"
-                    android:fontFamily="@font/app_font_family"/>
+                    android:fontFamily="@font/app_font_family" />
             </LinearLayout>
 
             <TextView
@@ -96,7 +97,7 @@
                 tools:text="Натисніть, щоб обрати"
                 android:layout_marginTop="6dp"
                 android:fontFamily="@font/app_font_family"
-                android:textSize="13sp"/>
+                android:textSize="13sp" />
         </LinearLayout>
 
         <ImageView
@@ -106,7 +107,7 @@
             android:src="@drawable/ic_check_mark"
             app:tint="@color/driver_neon_teal"
             android:visibility="gone"
-            android:layout_marginStart="16dp" />
+            android:layout_marginStart="12dp" />
 
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

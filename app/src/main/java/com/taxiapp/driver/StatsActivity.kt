@@ -320,7 +320,12 @@ class StatsActivity : AppCompatActivity() {
         tvTotalHours.text = String.format(locale, "%dг %dхв", hours, minutes)
 
         if (chartContainer.visibility == View.VISIBLE) {
-            renderDynamicChart(stats.chartPoints ?: emptyList())
+            val points = stats.chartPoints ?: emptyList()
+            chartBarsContainer.post {
+                if (!isFinishing && !isDestroyed) {
+                    renderDynamicChart(points)
+                }
+            }
         }
     }
 

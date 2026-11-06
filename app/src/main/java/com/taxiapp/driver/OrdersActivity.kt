@@ -61,6 +61,47 @@ class OrdersActivity : AppCompatActivity() {
         initViews()
         setupListeners()
     }
+
+    private val orderUpdateReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: android.content.Context?, intent: Intent?) {
+            if (viewPager.currentItem == 0) {
+                loadActiveOrder()
+            } else {
+                loadHistory()
+            }
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        val filter = android.content.IntentFilter().apply {
+            addAction("com.taxiapp.driver.ORDER_CANCELLED")
+            addAction("com.taxiapp.driver.ACTION_CLOSE_ORDER_OFFER")
+            addAction("com.taxiapp.driver.ACTION_ORDER_UPDATED")
+        }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(orderUpdateReceiver, filter, android.content.Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            @Suppress("UnspecifiedRegisterReceiverFlag")
+            registerReceiver(orderUpdateReceiver, filter)
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        try {
+            unregisterReceiver(orderUpdateReceiver)
+        } catch (_: Exception) {}
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (viewPager.currentItem == 0) {
+            loadActiveOrder()
+        } else {
+            loadHistory()
+        }
+    }
     private fun initViews() {
         tabLayout = findViewById(R.id.orders_tabs)
         viewPager = findViewById(R.id.orders_view_pager)

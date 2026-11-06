@@ -36,6 +36,8 @@ import com.google.maps.android.PolyUtil
 import com.taxiapp.driver.network.ApiClient
 import com.taxiapp.driver.network.Order
 import com.taxiapp.driver.utils.SessionManager
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.launch
 
 class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
@@ -106,6 +108,55 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
         startOfferSound()
+        observeCancellationEvents()
+    }
+
+    companion object {
+        @Volatile
+        var activeOfferedOrderId: String? = null
+    }
+
+    private val cancelReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val cancelledUuid = intent?.getStringExtra("CANCELLED_ORDER_UUID")
+            if (cancelledUuid == null || cancelledUuid == currentOrder?.id) {
+                handleCancelledByClient()
+            }
+        }
+    }
+
+    private fun handleCancelledByClient() {
+        stopOfferSound()
+        timer?.cancel()
+        activeOfferedOrderId = null
+        try {
+            val nm = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+            val notifId = currentOrder?.idLong?.toInt() ?: currentOrder?.id?.hashCode() ?: 0
+            nm.cancel(notifId)
+        } catch (_: Exception) {}
+        Toast.makeText(this@OrderOfferActivity, "Замовлення було скасовано клієнтом", Toast.LENGTH_LONG).show()
+        finish()
+    }
+
+    private fun observeCancellationEvents() {
+        activeOfferedOrderId = currentOrder?.id
+
+        val filter = android.content.IntentFilter("com.taxiapp.driver.ORDER_CANCELLED")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(cancelReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            @Suppress("UnspecifiedRegisterReceiverFlag")
+            registerReceiver(cancelReceiver, filter)
+        }
+
+        // ✅ ИСПРАВЛЕНО: Слушаем без repeatOnLifecycle(STARTED), чтобы ловить отмену даже на заблокированном экране!
+        lifecycleScope.launch {
+            ChatEventBus.cancelledOrders.collect { cancelledUuid ->
+                if (cancelledUuid == null || cancelledUuid == currentOrder?.id) {
+                    handleCancelledByClient()
+                }
+            }
+        }
     }
     private fun turnScreenOnAndKeyguardOff() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
@@ -476,30 +527,34 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private fun startOfferSound() {
         if (mediaPlayer == null) {
-            // Создаем плеер напрямую через конструктор, чтобы иметь возможность накрутить AudioAttributes до вызова prepare/start
-            mediaPlayer = android.media.MediaPlayer().apply {
-                val assetFileDescriptor = resources.openRawResourceFd(R.raw.incoming_offer)
-                setDataSource(assetFileDescriptor.fileDescriptor, assetFileDescriptor.startOffset, assetFileDescriptor.length)
-                assetFileDescriptor.close()
+            try {
+                // Создаем плеер напрямую через конструктор, чтобы иметь возможность накрутить AudioAttributes до вызова prepare/start
+                mediaPlayer = android.media.MediaPlayer().apply {
+                    val assetFileDescriptor = resources.openRawResourceFd(R.raw.incoming_offer)
+                    setDataSource(assetFileDescriptor.fileDescriptor, assetFileDescriptor.startOffset, assetFileDescriptor.length)
+                    assetFileDescriptor.close()
 
-                isLooping = true
+                    isLooping = true
 
-                // На ладони: принудительно пускаем звук через поток Будильника (USAGE_ALARM).
-                // Это позволяет пробивать стандартный беззвучный режим на большинстве устройств!
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    setAudioAttributes(
-                        android.media.AudioAttributes.Builder()
-                            .setUsage(android.media.AudioAttributes.USAGE_ALARM)
-                            .setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC)
-                            .build()
-                    )
-                } else {
-                    @Suppress("DEPRECATION")
-                    setAudioStreamType(android.media.AudioManager.STREAM_ALARM)
+                    // На ладони: принудительно пускаем звук через поток Будильника (USAGE_ALARM).
+                    // Это позволяет пробивать стандартный беззвучный режим на большинстве устройств!
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        setAudioAttributes(
+                            android.media.AudioAttributes.Builder()
+                                .setUsage(android.media.AudioAttributes.USAGE_ALARM)
+                                .setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC)
+                                .build()
+                        )
+                    } else {
+                        @Suppress("DEPRECATION")
+                        setAudioStreamType(android.media.AudioManager.STREAM_ALARM)
+                    }
+
+                    prepare()
+                    start()
                 }
-
-                prepare()
-                start()
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
         startHeavyVibration() // 👈 Запускаем агрессивную тряску
@@ -549,9 +604,26 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
     data class RoutePoint(val address: String, val type: PointType)
     enum class PointType { START, WAYPOINT, END }
 
+    private fun cancelOfferNotification() {
+        try {
+            val nm = getSystemService(android.content.Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+            val notifId = currentOrder?.idLong?.toInt() ?: currentOrder?.id?.hashCode()
+            if (notifId != null) {
+                nm.cancel(notifId)
+            }
+        } catch (_: Exception) {}
+    }
+
     override fun onDestroy() {
-        stopOfferSound() // 👈 Гарантированно глушим плеер
-        timer?.cancel()  // Используем корректное имя 'timer'
+        cancelOfferNotification()
+        if (activeOfferedOrderId == currentOrder?.id) {
+            activeOfferedOrderId = null
+        }
+        try {
+            unregisterReceiver(cancelReceiver)
+        } catch (_: Exception) {}
+        stopOfferSound()
+        timer?.cancel()
         super.onDestroy()
     }
     override fun onBackPressed() { Toast.makeText(this, "Тисніть хрестик!", Toast.LENGTH_SHORT).show() }

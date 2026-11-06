@@ -2,98 +2,131 @@
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://tools.android.com/tools"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/wallet_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/driver_black_bg">
+    android:background="@color/driver_card_bg">
 
-    <RelativeLayout
+    <!-- ВЕРХНЯ ШАПКА У СТИЛІ UKLON (#34373F = @color/driver_black_bg) З ВКЛАДКАМИ -->
+    <com.google.android.material.card.MaterialCardView
         android:id="@+id/header"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
-        android:layout_marginBottom="16dp"
-        android:layout_marginHorizontal="24dp"
-        app:layout_constraintTop_toTopOf="parent">
+        android:layout_marginTop="-16dp"
+        app:cardBackgroundColor="@color/driver_black_bg"
+        app:cardCornerRadius="20dp"
+        app:cardElevation="4dp"
+        app:strokeWidth="0dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
-        <ImageView
-            android:id="@+id/btn_back"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:src="@drawable/ic_arrow_back_black"
-            app:tint="@color/driver_text_primary"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:clickable="true"
-            android:focusable="true"
-            android:layout_centerVertical="true"
-            android:layout_alignParentStart="true" />
-
-        <TextView
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_toEndOf="@id/btn_back"
-            android:layout_marginStart="16dp"
-            android:text="@string/wallet_title"
-            android:textColor="@color/driver_text_primary"
-            android:textSize="22sp"
-            android:textStyle="bold"
-            android:fontFamily="@font/app_font_family"
-            android:layout_centerVertical="true" />
-    </RelativeLayout>
+            android:orientation="vertical">
 
-    <com.google.android.material.tabs.TabLayout
-        android:id="@+id/wallet_tabs"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@color/driver_black_bg"
-        app:tabIndicatorColor="@color/driver_neon_teal"
-        app:tabSelectedTextColor="@color/driver_neon_teal"
-        app:tabTextColor="@color/driver_text_secondary"
-        app:tabRippleColor="@android:color/transparent"
-        app:tabTextAppearance="@style/CarTabTextStyle"
-        app:tabSelectedTextAppearance="@style/CarTabTextStyle"
-        app:layout_constraintTop_toBottomOf="@id/header">
+            <LinearLayout
+                android:id="@+id/header_content"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingTop="32dp"
+                android:paddingBottom="12dp"
+                android:paddingHorizontal="16dp">
 
-        <com.google.android.material.tabs.TabItem
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Баланс" />
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="42dp"
+                    android:layout_height="42dp"
+                    app:cardBackgroundColor="@color/driver_surface_elevated"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="0dp"
+                    app:strokeWidth="0dp">
 
-        <com.google.android.material.tabs.TabItem
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Операції" />
-    </com.google.android.material.tabs.TabLayout>
+                    <ImageView
+                        android:id="@+id/btn_back"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:padding="10dp"
+                        android:src="@drawable/ic_arrow_back_black"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:clickable="true"
+                        android:focusable="true"
+                        app:tint="@color/driver_text_primary" />
+                </com.google.android.material.card.MaterialCardView>
 
-    <ScrollView
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:text="@string/wallet_title"
+                    android:textColor="@color/driver_text_primary"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:fontFamily="@font/app_font_family" />
+            </LinearLayout>
+
+            <com.google.android.material.tabs.TabLayout
+                android:id="@+id/wallet_tabs"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@android:color/transparent"
+                app:tabIndicatorColor="@color/driver_neon_teal"
+                app:tabIndicatorFullWidth="false"
+                app:tabIndicatorHeight="3dp"
+                app:tabSelectedTextColor="@color/driver_neon_teal"
+                app:tabTextColor="@color/driver_text_secondary"
+                app:tabRippleColor="@android:color/transparent"
+                app:tabTextAppearance="@style/CarTabTextStyle"
+                app:tabSelectedTextAppearance="@style/CarTabTextStyle">
+
+                <com.google.android.material.tabs.TabItem
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Баланс" />
+
+                <com.google.android.material.tabs.TabItem
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Операції" />
+            </com.google.android.material.tabs.TabLayout>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- ОСНОВНИЙ СКРОЛ ЕКРАНУ -->
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:overScrollMode="never"
         android:scrollbars="none"
-        app:layout_constraintTop_toBottomOf="@id/wallet_tabs"
+        android:clipToPadding="false"
+        android:paddingBottom="32dp"
+        app:layout_constraintTop_toBottomOf="@id/header"
         app:layout_constraintBottom_toBottomOf="parent">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingBottom="32dp">
+            android:paddingHorizontal="16dp"
+            android:paddingTop="20dp">
 
-            <!-- ОБЪЕМНАЯ КРЕДИТНАЯ КАРТА БАЛАНСА -->
+            <!-- ГОЛОВНА КАРТКА БАЛАНСУ У СТИЛІ UKLON (#34373F) -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
-                android:layout_height="210dp"
-                android:layout_marginHorizontal="24dp"
-                android:layout_marginTop="16dp"
-                android:layout_marginBottom="24dp"
-                app:cardElevation="10dp"
-                app:cardBackgroundColor="@color/driver_card_bg"
-                app:cardCornerRadius="24dp">
+                android:layout_height="196dp"
+                android:layout_marginBottom="20dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp"
+                app:cardBackgroundColor="@color/driver_black_bg"
+                app:cardCornerRadius="20dp">
 
                 <RelativeLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:padding="24dp">
+                    android:padding="22dp">
 
                     <TextView
                         android:id="@+id/tv_main_balance"
@@ -105,7 +138,7 @@
                         android:textStyle="bold"
                         android:fontFamily="@font/app_font_family"
                         android:layout_alignParentEnd="true"
-                        android:layout_alignParentTop="true"/>
+                        android:layout_alignParentTop="true" />
 
                     <TextView
                         android:id="@+id/tv_balance_label"
@@ -114,7 +147,7 @@
                         tools:text="Поточний баланс"
                         android:textColor="@color/driver_text_primary"
                         android:fontFamily="@font/app_font_family"
-                        android:textSize="15sp"
+                        android:textSize="16sp"
                         android:textStyle="bold"
                         android:layout_alignParentStart="true"
                         android:layout_toStartOf="@id/tv_main_balance"
@@ -123,16 +156,21 @@
                         android:layout_alignBottom="@id/tv_main_balance"
                         android:gravity="center_vertical"
                         android:ellipsize="end"
-                        android:singleLine="true"
-                        android:letterSpacing="0.02"/>
+                        android:singleLine="true" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_centerVertical="true"
+                        android:background="@color/driver_divider" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Unit Driver"
-                        android:textColor="@color/driver_text_primary"
+                        android:textColor="@color/driver_text_secondary"
                         android:textSize="14sp"
-                        android:textStyle="italic"
+                        android:textStyle="bold"
                         android:fontFamily="@font/app_font_family"
                         android:layout_alignParentBottom="true"
                         android:layout_alignParentStart="true"
@@ -141,47 +179,50 @@
                         android:layout_alignBottom="@id/btn_top_up"
                         android:layout_alignTop="@id/btn_top_up"
                         android:gravity="center_vertical"
-                        android:paddingEnd="8dp"
-                        android:letterSpacing="0.05"/>
+                        android:letterSpacing="0.04" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_top_up"
-                        android:layout_width="130dp"
-                        android:layout_height="44dp"
+                        android:layout_width="140dp"
+                        android:layout_height="46dp"
                         android:text="@string/wallet_btn_top_up"
                         android:backgroundTint="@color/driver_neon_teal"
-                        android:textColor="@color/driver_black_bg"
+                        android:textColor="@color/driver_text_black"
                         android:textStyle="bold"
-                        android:textSize="11sp"
+                        android:textSize="13sp"
+                        android:textAllCaps="false"
                         android:fontFamily="@font/app_font_family"
                         android:layout_alignParentBottom="true"
                         android:layout_alignParentEnd="true"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
                         android:padding="0dp"
-                        app:cornerRadius="10dp"/>
+                        app:cornerRadius="12dp" />
 
                 </RelativeLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- КНОПКИ "ВАШІ КАРТКИ" ТА "ВАШІ КОШТИ" (ВКЛАДКА ОПЕРАЦІЇ) -->
             <LinearLayout
                 android:id="@+id/layout_funds_buttons"
                 android:layout_width="match_parent"
-                android:layout_height="80dp"
+                android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:weightSum="2"
-                android:paddingHorizontal="24dp"
                 android:layout_marginBottom="24dp"
-                android:visibility="gone">
+                android:visibility="gone"
+                tools:visibility="visible">
 
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/btn_my_cards"
                     android:layout_width="0dp"
-                    android:layout_height="match_parent"
+                    android:layout_height="92dp"
                     android:layout_weight="1"
-                    app:cardCornerRadius="12dp"
+                    android:layout_marginEnd="6dp"
+                    app:cardCornerRadius="16dp"
                     app:cardElevation="0dp"
                     app:strokeWidth="0dp"
-                    app:cardBackgroundColor="@color/driver_card_bg"
-                    android:layout_marginEnd="6dp"
+                    app:cardBackgroundColor="@color/driver_black_bg"
                     android:clickable="true"
                     android:focusable="true"
                     android:foreground="?attr/selectableItemBackground">
@@ -191,14 +232,24 @@
                         android:layout_height="match_parent"
                         android:orientation="vertical"
                         android:gravity="center"
-                        android:padding="8dp">
+                        android:padding="12dp">
 
-                        <ImageView
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
-                            android:src="@drawable/ic_payment_card"
-                            app:tint="@color/driver_neon_teal"
-                            android:layout_marginBottom="4dp"/>
+                        <com.google.android.material.card.MaterialCardView
+                            android:layout_width="38dp"
+                            android:layout_height="38dp"
+                            app:cardBackgroundColor="@color/driver_surface_elevated"
+                            app:cardCornerRadius="10dp"
+                            app:cardElevation="0dp"
+                            app:strokeWidth="0dp"
+                            android:layout_marginBottom="6dp">
+
+                            <ImageView
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:padding="8dp"
+                                android:src="@drawable/ic_payment_card"
+                                app:tint="@color/driver_neon_teal" />
+                        </com.google.android.material.card.MaterialCardView>
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -207,20 +258,20 @@
                             android:textColor="@color/driver_text_primary"
                             android:textSize="14sp"
                             android:textStyle="bold"
-                            android:fontFamily="@font/app_font_family"/>
+                            android:fontFamily="@font/app_font_family" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/btn_my_funds"
                     android:layout_width="0dp"
-                    android:layout_height="match_parent"
+                    android:layout_height="92dp"
                     android:layout_weight="1"
-                    app:cardCornerRadius="12dp"
+                    android:layout_marginStart="6dp"
+                    app:cardCornerRadius="16dp"
                     app:cardElevation="0dp"
                     app:strokeWidth="0dp"
-                    app:cardBackgroundColor="@color/driver_card_bg"
-                    android:layout_marginStart="6dp"
+                    app:cardBackgroundColor="@color/driver_black_bg"
                     android:clickable="true"
                     android:focusable="true"
                     android:foreground="?attr/selectableItemBackground">
@@ -230,14 +281,24 @@
                         android:layout_height="match_parent"
                         android:orientation="vertical"
                         android:gravity="center"
-                        android:padding="8dp">
+                        android:padding="12dp">
 
-                        <ImageView
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
-                            android:src="@drawable/ic_wallet"
-                            app:tint="@color/driver_neon_teal"
-                            android:layout_marginBottom="4dp"/>
+                        <com.google.android.material.card.MaterialCardView
+                            android:layout_width="38dp"
+                            android:layout_height="38dp"
+                            app:cardBackgroundColor="@color/driver_surface_elevated"
+                            app:cardCornerRadius="10dp"
+                            app:cardElevation="0dp"
+                            app:strokeWidth="0dp"
+                            android:layout_marginBottom="6dp">
+
+                            <ImageView
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:padding="8dp"
+                                android:src="@drawable/ic_wallet"
+                                app:tint="@color/driver_neon_teal" />
+                        </com.google.android.material.card.MaterialCardView>
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -246,30 +307,40 @@
                             android:textColor="@color/driver_text_primary"
                             android:textSize="14sp"
                             android:textStyle="bold"
-                            android:fontFamily="@font/app_font_family"/>
+                            android:fontFamily="@font/app_font_family" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
             </LinearLayout>
 
+            <!-- СЕКЦІЯ ІСТОРІЇ ОПЕРАЦІЙ У КАРТЦІ (#34373F) -->
             <TextView
                 android:id="@+id/tv_history_title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/wallet_history_title"
-                android:textColor="@color/driver_text_secondary"
-                android:textSize="14sp"
+                android:textColor="@color/driver_text_primary"
+                android:textSize="15sp"
+                android:textStyle="bold"
                 android:fontFamily="@font/app_font_family"
-                android:layout_marginStart="24dp"
-                android:layout_marginBottom="8dp"/>
+                android:layout_marginBottom="10dp" />
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rv_transactions"
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:nestedScrollingEnabled="false"
-                android:clipToPadding="false"
-                tools:listitem="@layout/item_wallet_transaction"/>
+                app:cardBackgroundColor="@color/driver_black_bg"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp">
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rv_transactions"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:nestedScrollingEnabled="false"
+                    android:clipToPadding="false"
+                    tools:listitem="@layout/item_wallet_transaction" />
+            </com.google.android.material.card.MaterialCardView>
 
         </LinearLayout>
-    </ScrollView>
+    </androidx.core.widget.NestedScrollView>
 </androidx.constraintlayout.widget.ConstraintLayout>

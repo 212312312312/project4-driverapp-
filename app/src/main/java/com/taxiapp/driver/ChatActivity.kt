@@ -1,16 +1,14 @@
 package com.taxiapp.driver
 
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import android.os.Bundle
+import android.view.View
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.taxiapp.driver.network.ApiClient
@@ -19,42 +17,38 @@ import kotlinx.coroutines.launch
 
 class ChatActivity : AppCompatActivity() {
 
-    private var orderId: String = "" // 👈 ИСПРАВЛЕНО: Переведено на String для поддержки UUID
+    private var orderId: String = ""
     private lateinit var rvChat: RecyclerView
     private lateinit var etMessage: EditText
     private lateinit var btnSend: ImageView
-
-    private lateinit var layoutQuickPhrases: android.view.View
+    private lateinit var layoutQuickPhrases: View
     private lateinit var btnBack: ImageView
 
     private val chatAdapter = ChatAdapter(mutableListOf())
-
-    // Слухач, який чекає на сигнал від FirebaseService
-    private val messageReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            // Як тільки прийшов сигнал - оновлюємо історію без повідомлень про помилку
-            loadMessageHistory(silent = true)
-        }
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_chat)
 
-        // 🛠️ ДОБАВЛЕНО: Автоматический отступ контента от системных панелей для Android 15
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { v, insets ->
             val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
 
-        orderId = intent.getStringExtra("ORDER_ID") ?: ""
+        // ✅ ИСПРАВЛЕНО: Безопасное извлечение ORDER_ID как String (UUID) с фолбеком на Long
+        orderId = intent.getStringExtra("ORDER_ID")
+            ?: intent.getLongExtra("ORDER_ID", -1L).takeIf { it != -1L }?.toString()
+                    ?: ""
+
         if (orderId.isEmpty()) {
+            Toast.makeText(this, "Помилка: невірний ID замовлення", Toast.LENGTH_SHORT).show()
             finish()
             return
         }
 
         initUI()
+        observeRealTimeChatUpdates()
         loadMessageHistory()
     }
 
@@ -80,38 +74,55 @@ class ChatActivity : AppCompatActivity() {
 
         layoutQuickPhrases = findViewById(R.id.layout_quick_phrases)
 
-        findViewById<android.view.View>(R.id.btn_phrase_on_my_way).setOnClickListener {
+        findViewById<View>(R.id.btn_phrase_on_my_way).setOnClickListener {
             sendMessage("Вже у дорозі")
-            layoutQuickPhrases.visibility = android.view.View.GONE
+            layoutQuickPhrases.visibility = View.GONE
         }
 
-        findViewById<android.view.View>(R.id.btn_phrase_where_waiting).setOnClickListener {
+        findViewById<View>(R.id.btn_phrase_where_waiting).setOnClickListener {
             sendMessage("Де Вас очікувати?")
-            layoutQuickPhrases.visibility = android.view.View.GONE
+            layoutQuickPhrases.visibility = View.GONE
         }
 
-        findViewById<android.view.View>(R.id.btn_phrase_arrived).setOnClickListener {
+        findViewById<View>(R.id.btn_phrase_arrived).setOnClickListener {
             sendMessage("Я на місці")
-            layoutQuickPhrases.visibility = android.view.View.GONE
+            layoutQuickPhrases.visibility = View.GONE
+        }
+    }
+
+    // ✅ ИСПРАВЛЕНО: Реальная подписка на пуши чата и отмены заказа через ChatEventBus
+    private fun observeRealTimeChatUpdates() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch {
+                    ChatEventBus.newMessages.collect {
+                        loadMessageHistory(silent = true)
+                    }
+                }
+                launch {
+                    ChatEventBus.cancelledOrders.collect { cancelledUuid ->
+                        if (cancelledUuid == null || cancelledUuid == orderId) {
+                            Toast.makeText(this@ChatActivity, "Замовлення було скасовано клієнтом", Toast.LENGTH_LONG).show()
+                            finish()
+                        }
+                    }
+                }
+            }
         }
     }
 
     override fun onStart() {
         super.onStart()
-        // Кажемо системі, що екран відкрито (глушимо пуші)
         ChatEventBus.isChatScreenOpen = true
     }
 
     override fun onResume() {
         super.onResume()
-        // Щоразу, коли ми повертаємося в додаток (розгортаємо його),
-        // автоматично і тихо підтягуємо свіжі повідомлення.
         loadMessageHistory(silent = true)
     }
 
     override fun onStop() {
         super.onStop()
-        // Коли згортаємо додаток - дозволяємо Firebase показувати пуші
         ChatEventBus.isChatScreenOpen = false
     }
 
@@ -124,9 +135,8 @@ class ChatActivity : AppCompatActivity() {
                     response.body()?.let { newMessages ->
                         val isUpdated = chatAdapter.updateMessages(newMessages)
 
-                        // Если в истории переписки уже есть хоть одно сообщение от DRIVER — скрываем блок шаблонов
                         if (newMessages.any { it.senderRole == "DRIVER" }) {
-                            layoutQuickPhrases.visibility = android.view.View.GONE
+                            layoutQuickPhrases.visibility = View.GONE
                         }
 
                         if (isUpdated) {
@@ -136,7 +146,7 @@ class ChatActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 if (!silent) {
-                    Toast.makeText(this@ChatActivity, "Помилка завантаження", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@ChatActivity, "Помилка завантаження чату", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -144,6 +154,7 @@ class ChatActivity : AppCompatActivity() {
 
     private fun sendMessage(text: String) {
         etMessage.text.clear()
+        btnSend.isEnabled = false
 
         lifecycleScope.launch {
             try {
@@ -156,10 +167,14 @@ class ChatActivity : AppCompatActivity() {
                         scrollToBottom()
                     }
                 } else {
+                    etMessage.setText(text)
                     Toast.makeText(this@ChatActivity, "Помилка відправки", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
+                etMessage.setText(text)
                 Toast.makeText(this@ChatActivity, "Помилка мережі", Toast.LENGTH_SHORT).show()
+            } finally {
+                btnSend.isEnabled = true
             }
         }
     }

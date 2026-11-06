@@ -29,7 +29,9 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.gms.location.*
@@ -116,10 +118,38 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
+    private var isCancelledDialogShowing = false
+
     private val orderCancelledReceiver = object : android.content.BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == "com.taxiapp.driver.ORDER_CANCELLED") {
-                showOrderCancelledDialog()
+            when (intent?.action) {
+                "com.taxiapp.driver.ORDER_CANCELLED",
+                "com.taxiapp.driver.ACTION_CLOSE_ORDER_OFFER" -> {
+                    val eventOrderId = intent.getStringExtra("EXTRA_ORDER_ID")
+                    if (eventOrderId.isNullOrEmpty() || currentOrder?.id == null || eventOrderId == currentOrder?.id) {
+                        showOrderCancelledDialog()
+                    }
+                }
+                "com.taxiapp.driver.ACTION_ORDER_UPDATED" -> {
+                    val orderJson = intent.getStringExtra("EXTRA_ORDER_JSON") ?: return
+                    try {
+                        val updatedOrder = com.google.gson.Gson().fromJson(orderJson, Order::class.java)
+                        if (updatedOrder != null && (currentOrder?.id == null || updatedOrder.id == currentOrder?.id)) {
+                            val oldPayment = currentOrder?.paymentMethod
+                            val oldPrice = currentOrder?.getTotalFullPrice()
+                            currentOrder = updatedOrder
+                            setupOrderData()
+                            if (oldPayment != null && oldPayment != updatedOrder.paymentMethod) {
+                                val label = if (updatedOrder.paymentMethod == "CASH") "Готівка" else "Картка"
+                                Toast.makeText(this@OrderProgressActivity, "Змінено спосіб оплати: $label", Toast.LENGTH_LONG).show()
+                            } else if (oldPrice != null && oldPrice != updatedOrder.getTotalFullPrice()) {
+                                Toast.makeText(this@OrderProgressActivity, "Оновлено вартість замовлення: ${updatedOrder.getTotalFullPrice().toInt()} ₴", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
             }
         }
     }
@@ -163,6 +193,29 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
 
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
+
+        observeRealTimeOrderEvents()
+    }
+
+    private fun observeRealTimeOrderEvents() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch {
+                    ChatEventBus.newMessages.collect {
+                        if (!ChatEventBus.isChatScreenOpen) {
+                            incrementUnreadMessages()
+                        }
+                    }
+                }
+                launch {
+                    ChatEventBus.cancelledOrders.collect { cancelledUuid ->
+                        if (cancelledUuid == null || cancelledUuid == currentOrder?.id) {
+                            showOrderCancelledDialog()
+                        }
+                    }
+                }
+            }
+        }
     }
 
     override fun onStart() {
@@ -172,8 +225,12 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
         }
         timeHandler.post(timeRunnable)
 
-        // ТОЧЕЧНОЕ ДОБАВЛЕНИЕ: Регистрируем слушатель отмены заказа
-        val filter = android.content.IntentFilter("com.taxiapp.driver.ORDER_CANCELLED")
+        // Регистрируем слушатель отмены и живого обновления заказа
+        val filter = android.content.IntentFilter().apply {
+            addAction("com.taxiapp.driver.ORDER_CANCELLED")
+            addAction("com.taxiapp.driver.ACTION_CLOSE_ORDER_OFFER")
+            addAction("com.taxiapp.driver.ACTION_ORDER_UPDATED")
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(orderCancelledReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
         } else {
@@ -224,16 +281,14 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
         }
 
         btnChatClient.setOnClickListener {
-            // Берем idLong (Long) или пробуем распарсить текстовый id в Long для ChatActivity
-            val correctLongId = currentOrder?.idLong ?: currentOrder?.id?.toLongOrNull()
-
-            if (correctLongId != null) {
+            // ✅ ИСПРАВЛЕНО: Передаем строковый UUID заказа (currentOrder?.id), который ждет ChatActivity и серверный контроллер чата
+            val orderUuid = currentOrder?.id
+            if (!orderUuid.isNullOrEmpty()) {
                 unreadChatMessages = 0
                 updateChatBadgeUI()
 
-                // Открываем экран чата с корректным числовым типом данных
                 val intent = Intent(this@OrderProgressActivity, ChatActivity::class.java)
-                intent.putExtra("ORDER_ID", correctLongId)
+                intent.putExtra("ORDER_ID", orderUuid)
                 startActivity(intent)
             } else {
                 Toast.makeText(this, "Помилка: невірний ID замовлення", Toast.LENGTH_SHORT).show()
@@ -681,8 +736,9 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
 
     // ТОЧЕЧНОЕ ДОБАВЛЕНИЕ: Полноэкранный блокирующий кастомный диалог отмены заказа
     private fun showOrderCancelledDialog() {
-        // Защита: если водитель уже нажал "Завершить" и оценивает клиента, диалог отмены не должен перекрывать логику
-        if (currentState == RideState.COMPLETED) return
+        // Защита от дублирования диалога и показа на закрытом экране
+        if (currentState == RideState.COMPLETED || isCancelledDialogShowing || isFinishing || isDestroyed) return
+        isCancelledDialogShowing = true
 
         stopWaitingTimer()
 
@@ -782,9 +838,9 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
             return
         }
 
-        // Достаем из настроек выбранный водителем навигатор (по умолчанию google_maps)
+        // ✅ ИСПРАВЛЕНО: Реально читаем выбранный водителем навигатор из SessionManager ("waze" или "google")
         val session = com.taxiapp.driver.utils.SessionManager(this)
-        val chosenNavigator = "google_maps"
+        val chosenNavigator = session.getNavigator()
 
         try {
             if (chosenNavigator == "waze") {
@@ -1087,26 +1143,70 @@ class OrderProgressActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
     private fun drawRoadRoute(start: LatLng, end: LatLng, colorRes: Int) {
-        lifecycleScope.launch(Dispatchers.IO) {
+        val precomputedPolyline = currentOrder?.driverToPickupPolyline
+        if (!precomputedPolyline.isNullOrEmpty()) {
+            try {
+                val path = PolyUtil.decode(precomputedPolyline)
+                if (path.isNotEmpty()) {
+                    map.addPolyline(
+                        PolylineOptions()
+                            .addAll(path)
+                            .width(14f)
+                            .color(ContextCompat.getColor(this@OrderProgressActivity, colorRes))
+                            .jointType(JointType.ROUND)
+                    )
+                    val builder = LatLngBounds.Builder()
+                    path.forEach { builder.include(it) }
+                    builder.include(start)
+                    builder.include(end)
+                    map.animateCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 200))
+                    return
+                }
+            } catch (_: Exception) {}
+        }
+
+        lifecycleScope.launch {
             try {
                 val apiKey = getApiKeyFromManifest()
-                val url = "https://maps.googleapis.com/maps/api/directions/json?origin=${start.latitude},${start.longitude}&destination=${end.latitude},${end.longitude}&mode=driving&key=$apiKey"
-                val result = URL(url).readText()
-                val routes = JSONObject(result).getJSONArray("routes")
-                if (routes.length() > 0) {
-                    val points = routes.getJSONObject(0).getJSONObject("overview_polyline").getString("points")
+                val origin = "${start.latitude},${start.longitude}"
+                val destination = "${end.latitude},${end.longitude}"
+                val response = withContext(Dispatchers.IO) {
+                    ApiClient.getInstance().getGoogleMapsApi().getDirections(
+                        origin = origin,
+                        destination = destination,
+                        apiKey = apiKey
+                    )
+                }
+                if (response.routes.isNotEmpty()) {
+                    val points = response.routes[0].overview_polyline.points
                     val path = PolyUtil.decode(points)
-                    withContext(Dispatchers.Main) {
-                        map.addPolyline(PolylineOptions().addAll(path).width(14f).color(ContextCompat.getColor(this@OrderProgressActivity, colorRes)).jointType(JointType.ROUND))
-                        val builder = LatLngBounds.Builder()
-                        path.forEach { builder.include(it) }; builder.include(start); builder.include(end)
-                        map.animateCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 200))
-                    }
+                    map.addPolyline(
+                        PolylineOptions()
+                            .addAll(path)
+                            .width(14f)
+                            .color(ContextCompat.getColor(this@OrderProgressActivity, colorRes))
+                            .jointType(JointType.ROUND)
+                    )
+                    val builder = LatLngBounds.Builder()
+                    path.forEach { builder.include(it) }
+                    builder.include(start)
+                    builder.include(end)
+                    map.animateCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 200))
                 }
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) { map.animateCamera(CameraUpdateFactory.newLatLngBounds(LatLngBounds.Builder().include(start).include(end).build(), 200)) }
+                try {
+                    map.animateCamera(CameraUpdateFactory.newLatLngBounds(LatLngBounds.Builder().include(start).include(end).build(), 200))
+                } catch (_: Exception) {}
             }
         }
+    }
+
+    override fun onDestroy() {
+        driverPositionAnimator?.cancel()
+        driverRotationAnimator?.cancel()
+        stopWaitingTimer()
+        timeHandler.removeCallbacks(timeRunnable)
+        super.onDestroy()
     }
     private fun getCurrentLegRoutePoints(driverLatLng: LatLng, targetLatLng: LatLng, fullRoute: List<LatLng>): List<LatLng> {
         if (fullRoute.isEmpty()) return emptyList()

@@ -44,9 +44,16 @@ class DeleteAccountActivity : AppCompatActivity() {
                 if (response.isSuccessful) {
                     Toast.makeText(this@DeleteAccountActivity, "Акаунт переведено в чергу на видалення", Toast.LENGTH_LONG).show()
 
-                    // Очищаємо сесію
+                    // Зупиняємо фонові сервіси та очищаємо сесію
+                    try {
+                        stopService(Intent(this@DeleteAccountActivity, com.taxiapp.driver.service.LocationService::class.java))
+                        stopService(Intent(this@DeleteAccountActivity, com.taxiapp.driver.service.FloatingWidgetService::class.java))
+                    } catch (_: Exception) {}
+                    sessionManager.saveDriverOnlineStatus(false)
                     sessionManager.saveAuthToken("")
+                    sessionManager.saveRefreshToken("")
                     sessionManager.saveDriverId(-1L)
+                    ApiClient.getInstance().reset()
 
                     // Викидаємо на екран логіну
                     // Викидаємо на стартовий екран WelcomeActivity

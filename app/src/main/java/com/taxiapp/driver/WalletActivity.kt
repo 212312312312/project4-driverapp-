@@ -1,238 +1,359 @@
 package com.taxiapp.driver
 
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.graphics.Color
-import android.net.Uri
 import android.os.Bundle
-import android.text.InputType
+import android.util.SparseArray
+import android.view.LayoutInflater
 import android.view.View
-import android.widget.EditText
+import android.view.ViewGroup
+import android.widget.Button
+import android.widget.FrameLayout
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.TextView
-import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.cardview.widget.CardView
+import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.tabs.TabLayout
+import com.google.android.material.tabs.TabLayoutMediator
 import com.taxiapp.driver.network.ApiClient
-import com.taxiapp.driver.network.InitPaymentRequest
+import com.taxiapp.driver.network.Order
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
+import java.util.concurrent.TimeUnit
 
-class WalletActivity : AppCompatActivity() {
+class OrdersActivity : AppCompatActivity() {
 
-    private lateinit var walletTabs: TabLayout
-    private lateinit var tvBalanceLabel: TextView
-    private lateinit var tvBalance: TextView
-    private lateinit var btnTopUp: View
-    private lateinit var layoutFundsButtons: View // Ссылка на контейнер кнопок
-    private lateinit var adapter: WalletAdapter
-    private lateinit var rvTransactions: RecyclerView
+    private lateinit var tabLayout: TabLayout
+    private lateinit var viewPager: ViewPager2
+    private lateinit var pagerAdapter: OrdersPagerAdapter
+    private lateinit var progressBar: ProgressBar
 
-    private var commissionBalance: Double = 0.00
-    private var orderEarningsBalance: Double = 0.00 // Зависит от данных с сервера
+    private val historyAdapter = HistoryOrderAdapter { order ->
+        val intent = Intent(this, HistoryDetailsActivity::class.java)
+        intent.putExtra("EXTRA_ORDER", order)
+        startActivity(intent)
+    }
+
+    private var currentOrder: Order? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_wallet)
-        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { v, insets ->
-            val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+        setContentView(R.layout.activity_orders)
+
+        val rootView = findViewById<View>(R.id.orders_root) ?: findViewById<ViewGroup>(android.R.id.content).getChildAt(0)
+        val headerContent = findViewById<View>(R.id.header_content)
+        val density = resources.displayMetrics.density
+
+        ViewCompat.setOnApplyWindowInsetsListener(rootView) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            if (headerContent != null) {
+                headerContent.setPadding(
+                    (16 * density).toInt(),
+                    systemBars.top + (28 * density).toInt(),
+                    (16 * density).toInt(),
+                    (12 * density).toInt()
+                )
+                v.setPadding(systemBars.left, 0, systemBars.right, systemBars.bottom)
+            } else {
+                v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            }
             insets
         }
+
         initViews()
         setupListeners()
-        setupRecyclerView()
-
-        loadData()
     }
 
     private fun initViews() {
-        walletTabs = findViewById(R.id.wallet_tabs)
-        tvBalanceLabel = findViewById(R.id.tv_balance_label)
-        tvBalance = findViewById(R.id.tv_main_balance)
-        btnTopUp = findViewById(R.id.btn_top_up)
-        layoutFundsButtons = findViewById(R.id.layout_funds_buttons)
-        rvTransactions = findViewById(R.id.rv_transactions)
+        tabLayout = findViewById(R.id.orders_tabs)
+        viewPager = findViewById(R.id.orders_view_pager)
+        progressBar = findViewById(R.id.progressBar)
+
+        pagerAdapter = OrdersPagerAdapter()
+        viewPager.adapter = pagerAdapter
+
+        findViewById<View>(R.id.btn_back).setOnClickListener { finish() }
     }
 
     private fun setupListeners() {
-        findViewById<View>(R.id.btn_back).setOnClickListener { finish() }
-        btnTopUp.setOnClickListener { showTopUpDialog() }
+        TabLayoutMediator(tabLayout, viewPager) { tab, position ->
+            tab.text = if (position == 0) getString(R.string.orders_tab_active) else getString(R.string.orders_tab_history)
+        }.attach()
 
-        walletTabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
-            override fun onTabSelected(tab: TabLayout.Tab?) {
-                updateUIState(tab?.position == 0)
+        viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+            override fun onPageSelected(position: Int) {
+                if (position == 0) {
+                    loadActiveOrder()
+                } else {
+                    loadHistory()
+                }
             }
-            override fun onTabUnselected(tab: TabLayout.Tab?) {}
-            override fun onTabReselected(tab: TabLayout.Tab?) {}
         })
-
-        findViewById<View>(R.id.btn_my_cards).setOnClickListener {
-            // Переход на экран "Ваші картки"
-            startActivity(Intent(this, CardsActivity::class.java))
-        }
-        findViewById<View>(R.id.btn_my_funds).setOnClickListener {
-            // Переход на экран "Ваші кошти"
-            startActivity(Intent(this, PendingFundsActivity::class.java))
-        }
-        findViewById<View>(R.id.btn_top_up).setOnClickListener {
-            val intent = Intent(this, TopUpActivity::class.java)
-            intent.putExtra("CURRENT_BALANCE", commissionBalance) // Передаем double баланса для красивого парсинга
-            startActivity(intent)
-        }
     }
 
-    private fun setupRecyclerView() {
-        adapter = WalletAdapter { orderId ->
-            loadOrderDetailsAndOpen(orderId) // 👈 Передаем клик в фоновый загрузчик
-        }
-        rvTransactions.layoutManager = LinearLayoutManager(this)
-        rvTransactions.adapter = adapter
-    }
-
-    private fun loadOrderDetailsAndOpen(orderId: Long) {
+    private fun loadActiveOrder() {
+        progressBar.visibility = View.VISIBLE
         lifecycleScope.launch {
             try {
-                Toast.makeText(this@WalletActivity, "Завантаження деталей замовлення...", Toast.LENGTH_SHORT).show()
-
-                // Делаем сетевой запрос к Спрингу по Long ID транзакции
-                val response = ApiClient.getInstance()
-                    .getApiService(this@WalletActivity)
-                    .getOrderByInternalId(orderId)
+                val response = ApiClient.getInstance().getApiService(this@OrdersActivity).getActiveOrder()
+                progressBar.visibility = View.GONE
 
                 if (response.isSuccessful && response.body() != null) {
-                    val order = response.body()!!
-
-                    // Бесшовно и красиво открываем экран деталей архивного заказа
-                    val intent = Intent(this@WalletActivity, HistoryDetailsActivity::class.java).apply {
-                        putExtra("EXTRA_ORDER", order) // Упаковываем полный объект, как ожидает этот экран
-                    }
-                    startActivity(intent)
+                    currentOrder = response.body()
                 } else {
-                    Toast.makeText(this@WalletActivity, "Не вдалося завантажити деталі замовлення", Toast.LENGTH_SHORT).show()
+                    currentOrder = null
                 }
+                updateActiveOrderUI()
             } catch (e: Exception) {
-                Toast.makeText(this@WalletActivity, "Помилка мережі при завантаженні замовлення", Toast.LENGTH_SHORT).show()
+                progressBar.visibility = View.GONE
+                currentOrder = null
+                updateActiveOrderUI()
             }
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        loadData()
-    }
+    private fun updateActiveOrderUI() {
+        val holder = pagerAdapter.getHolder(0) ?: return
+        val order = currentOrder
 
-    // --- УПРАВЛЕНИЕ ОТОБРАЖЕНИЕМ И ВИДИМОСТЬЮ БЛОКОВ (Исправление по примечанию) ---
-    private fun updateUIState(isCommissionTab: Boolean) {
-        if (isCommissionTab) {
-            tvBalanceLabel.text = "Поточний баланс" // Текст с большой буквы, без капса
-            btnTopUp.visibility = View.VISIBLE
-            layoutFundsButtons.visibility = View.GONE // Кнопки Скрыты на вкладке Баланс
-            renderBalance(commissionBalance)
-        } else {
-            tvBalanceLabel.text = "Гроші за замовлення" // Текст с большой буквы, без капса
-            btnTopUp.visibility = View.GONE // Кнопка пополнения Скрыта на Операциях
-            layoutFundsButtons.visibility = View.VISIBLE // Кнопки карт и выплат Доступны ТОЛЬКО тут
-            renderBalance(orderEarningsBalance)
-        }
-    }
+        if (order != null) {
+            holder.cardActiveOrder.visibility = View.VISIBLE
+            holder.tvNoActive.visibility = View.GONE
 
-    private fun renderBalance(amount: Double) {
-        // Форматируем строку (выдаст например "150.50 ₴" или "150,50 ₴" в зависимости от языка)
-        val balanceText = "%.2f ₴".format(amount)
-        val spannable = android.text.SpannableString(balanceText)
+            val fullPrice = order.getTotalFullPrice()
+            holder.tvPrice.text = "${fullPrice.toInt()} ₴"
+            holder.tvTariffBadge.text = order.tariffName
 
-        // Ищем разделитель: либо точку, либо запятую
-        val dotIndex = balanceText.indexOf(".")
-        val commaIndex = balanceText.indexOf(",")
-        val separatorIndex = if (dotIndex != -1) dotIndex else commaIndex
-
-        if (separatorIndex != -1) {
-            // Уменьшаем копейки и значок грн до 0.65 от начального размера
-            spannable.setSpan(
-                android.text.style.RelativeSizeSpan(0.65f),
-                separatorIndex,
-                balanceText.length,
-                android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-            )
-        }
-
-        // Сетапим готовый текст в TextView
-        tvBalance.text = spannable
-
-        // Твоя логика цвета при минусовом балансе
-        if (amount < 0) {
-            tvBalance.setTextColor(getColor(R.color.driver_error_red))
-        } else {
-            tvBalance.setTextColor(getColor(R.color.driver_neon_teal))
-        }
-    }
-
-    private fun showTopUpDialog() {
-        val input = EditText(this)
-        input.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
-        input.hint = "100"
-        val container = android.widget.FrameLayout(this)
-        val params = android.widget.FrameLayout.LayoutParams(
-            android.view.ViewGroup.LayoutParams.MATCH_PARENT,
-            android.view.ViewGroup.LayoutParams.WRAP_CONTENT
-        )
-        params.leftMargin = 50; params.rightMargin = 50
-        input.layoutParams = params
-        container.addView(input)
-
-        AlertDialog.Builder(this)
-            .setTitle(getString(R.string.wallet_btn_top_up))
-            .setMessage("Введіть суму (мін 1 грн):")
-            .setView(container)
-            .setPositiveButton("OK") { _, _ ->
-                val amount = input.text.toString().toDoubleOrNull()
-                if (amount != null && amount >= 1.0) initiatePayment(amount)
-                else Toast.makeText(this, "Некоректна сума", Toast.LENGTH_SHORT).show()
+            val meters = order.distanceMeters ?: 0
+            if (meters >= 1000) {
+                val km = meters / 1000.0
+                val calculatedPricePerKm = fullPrice / km
+                holder.tvPricePerKm.text = String.format(Locale.US, "%.2f ₴/км", calculatedPricePerKm)
+                holder.tvPricePerKm.visibility = View.VISIBLE
+            } else {
+                holder.tvPricePerKm.text = "- ₴/км"
+                holder.tvPricePerKm.visibility = View.VISIBLE
             }
-            .setNegativeButton("Скасувати", null)
-            .show()
+
+            holder.tvDistance.text = order.getFormattedDistance()
+            holder.tvDistance.setTextColor(ContextCompat.getColor(this, R.color.driver_text_primary))
+
+            holder.tvAddressFrom.text = order.fromAddress
+            if (!order.fromSector.isNullOrEmpty()) {
+                holder.tvSectorFrom.text = order.fromSector
+                holder.tvSectorFrom.visibility = View.VISIBLE
+            } else {
+                holder.tvSectorFrom.visibility = View.GONE
+            }
+
+            holder.tvAddressTo.text = order.toAddress
+            if (!order.toSector.isNullOrEmpty()) {
+                holder.tvSectorTo.text = order.toSector
+                holder.tvSectorTo.visibility = View.VISIBLE
+            } else {
+                holder.tvSectorTo.visibility = View.GONE
+            }
+
+            val bonus = order.activityBonus
+            holder.tvActivityBonus.text = if (bonus >= 0) "+$bonus" else "$bonus"
+
+            holder.stopsContainer.removeAllViews()
+            if (!order.stops.isNullOrEmpty()) {
+                val inflater = LayoutInflater.from(this)
+                val sortedStops = order.stops.sortedBy { it.stopOrder }
+                for (stop in sortedStops) {
+                    val stopView = inflater.inflate(R.layout.item_route_point, holder.stopsContainer, false)
+                    val tvAddress = stopView.findViewById<TextView>(R.id.tv_point_address)
+                    val ivIcon = stopView.findViewById<ImageView>(R.id.iv_point_icon)
+                    val lineTop = stopView.findViewById<View>(R.id.view_line_top)
+                    val lineBottom = stopView.findViewById<View>(R.id.view_line_bottom)
+
+                    tvAddress.text = stop.address
+                    ivIcon.setImageResource(R.drawable.ic_marker_waypoint)
+                    ivIcon.clearColorFilter()
+                    lineTop.visibility = View.GONE
+                    lineBottom.visibility = View.GONE
+
+                    holder.stopsContainer.addView(stopView)
+                }
+            }
+
+            val method = order.paymentMethod ?: "CASH"
+            if (method == "CASH") {
+                val neonTeal = ContextCompat.getColor(this, R.color.driver_neon_teal)
+                holder.llPriceBg.backgroundTintList = ColorStateList.valueOf(neonTeal)
+                holder.ivPaymentIcon.setImageResource(R.drawable.ic_payment_cash)
+            } else {
+                holder.llPriceBg.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#54b1f0"))
+                holder.ivPaymentIcon.setImageResource(R.drawable.ic_payment_card)
+            }
+            holder.tvPrice.setTextColor(Color.BLACK)
+            holder.ivPaymentIcon.setColorFilter(Color.BLACK)
+
+            if (order.isScheduled()) {
+                val scheduledDate = order.getScheduledDate()
+                if (scheduledDate != null) {
+                    val today = Calendar.getInstance().apply {
+                        set(Calendar.HOUR_OF_DAY, 0)
+                        set(Calendar.MINUTE, 0)
+                        set(Calendar.SECOND, 0)
+                        set(Calendar.MILLISECOND, 0)
+                    }
+                    val orderDay = Calendar.getInstance().apply {
+                        time = scheduledDate
+                        set(Calendar.HOUR_OF_DAY, 0)
+                        set(Calendar.MINUTE, 0)
+                        set(Calendar.SECOND, 0)
+                        set(Calendar.MILLISECOND, 0)
+                    }
+                    val diffMillis = orderDay.timeInMillis - today.timeInMillis
+                    val diffDays = TimeUnit.MILLISECONDS.toDays(diffMillis).toInt()
+
+                    val timeFormat = SimpleDateFormat("HH:mm", Locale.US)
+                    val timeStr = timeFormat.format(scheduledDate)
+
+                    val displayStr = when {
+                        diffDays <= 0 -> timeStr
+                        diffDays == 1 -> "Завтра, $timeStr"
+                        else -> {
+                            val ukrLocale = Locale("uk")
+                            val dateFormat = SimpleDateFormat("d MMM, HH:mm", ukrLocale)
+                            dateFormat.format(scheduledDate)
+                        }
+                    }
+                    holder.tvScheduledTime.text = displayStr
+                } else {
+                    val timeOnly = try {
+                        order.scheduledAt?.substring(11, 16) ?: ""
+                    } catch (e: Exception) { "" }
+                    holder.tvScheduledTime.text = timeOnly
+                }
+                holder.tvScheduledTime.visibility = View.VISIBLE
+            } else {
+                holder.tvScheduledTime.visibility = View.GONE
+            }
+
+            if (order.status == "OFFERING") {
+                holder.btnOpenActive.text = "Переглянути"
+                holder.btnOpenActive.backgroundTintList = ContextCompat.getColorStateList(this, R.color.driver_neon_teal)
+            } else if (order.status == "SCHEDULED") {
+                holder.btnOpenActive.text = "Деталі (Чекаємо)"
+                holder.btnOpenActive.backgroundTintList = ContextCompat.getColorStateList(this, android.R.color.darker_gray)
+            } else {
+                holder.btnOpenActive.text = "Відкрити"
+                holder.btnOpenActive.backgroundTintList = ContextCompat.getColorStateList(this, R.color.driver_neon_teal)
+            }
+
+            holder.btnOpenActive.setOnClickListener { handleActiveOrderClick() }
+        } else {
+            holder.cardActiveOrder.visibility = View.GONE
+            holder.tvNoActive.visibility = View.VISIBLE
+        }
     }
 
-    private fun initiatePayment(amount: Double) {
+    private fun handleActiveOrderClick() {
+        currentOrder?.let { order ->
+            if (order.status == "OFFERING") {
+                val intent = Intent(this, OrderOfferActivity::class.java)
+                intent.putExtra("EXTRA_ORDER", order)
+                startActivity(intent)
+                finish()
+            } else if (order.status == "SCHEDULED") {
+                val intent = Intent(this, OrderDetailsActivity::class.java)
+                intent.putExtra("EXTRA_ORDER", order)
+                intent.putExtra("EXTRA_HIDE_ACCEPT_BUTTON", true)
+                startActivity(intent)
+            } else {
+                val intent = Intent(this, OrderProgressActivity::class.java)
+                intent.putExtra("EXTRA_ORDER", order)
+                startActivity(intent)
+            }
+        }
+    }
+
+    private fun loadHistory() {
+        progressBar.visibility = View.VISIBLE
         lifecycleScope.launch {
             try {
-                Toast.makeText(this@WalletActivity, "Створення платежу...", Toast.LENGTH_SHORT).show()
-                val response = ApiClient.getInstance().getApiService(this@WalletActivity).initPayment(InitPaymentRequest(amount))
-                if (response.isSuccessful && response.body() != null) {
-                    val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(response.body()!!.paymentUrl))
-                    startActivity(browserIntent)
-                } else {
-                    Toast.makeText(this@WalletActivity, "Помилка сервера", Toast.LENGTH_SHORT).show()
+                val response = ApiClient.getInstance().getApiService(this@OrdersActivity).getOrderHistory()
+                progressBar.visibility = View.GONE
+                if (response.isSuccessful) {
+                    historyAdapter.submitList(response.body())
                 }
             } catch (e: Exception) {
-                Toast.makeText(this@WalletActivity, "Помилка мережі", Toast.LENGTH_SHORT).show()
+                progressBar.visibility = View.GONE
             }
         }
     }
 
-    private fun loadData() {
-        lifecycleScope.launch {
-            try {
-                val profileResp = ApiClient.getInstance().getApiService(this@WalletActivity).getDriverProfile()
-                if (profileResp.isSuccessful && profileResp.body() != null) {
-                    val profile = profileResp.body()!!
-                    commissionBalance = profile.balance
-                    orderEarningsBalance = profile.payoutBalance // Настоящий баланс выплат из БД бэкенда
-                    updateUIState(walletTabs.selectedTabPosition == 0)
-                }
+    private inner class OrdersPagerAdapter : RecyclerView.Adapter<OrdersPagerAdapter.PageViewHolder>() {
 
-                val txResp = ApiClient.getInstance().getApiService(this@WalletActivity).getWalletTransactions()
-                if (txResp.isSuccessful && txResp.body() != null) {
-                    val list = txResp.body()!!
-                    if (list.isNotEmpty()) {
-                        adapter.submitList(list)
-                    }
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
+        private val viewHolders = SparseArray<PageViewHolder>()
+
+        inner class PageViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+            val containerActive: FrameLayout = view.findViewById(R.id.container_active)
+            val cardActiveOrder: CardView = view.findViewById(R.id.card_active_order)
+            val rvHistory: RecyclerView = view.findViewById(R.id.rv_history)
+            val tvNoActive: TextView = view.findViewById(R.id.tv_no_active)
+            val btnOpenActive: Button = view.findViewById(R.id.btn_open_active)
+
+            val llPriceBg: LinearLayout = view.findViewById(R.id.ll_price_background)
+            val ivPaymentIcon: ImageView = view.findViewById(R.id.iv_payment_icon)
+            val tvPrice: TextView = view.findViewById(R.id.tv_price)
+            val tvPricePerKm: TextView = view.findViewById(R.id.tv_price_per_km)
+            val tvAddressFrom: TextView = view.findViewById(R.id.tv_address_from)
+            val tvSectorFrom: TextView = view.findViewById(R.id.tv_sector_from)
+            val stopsContainer: LinearLayout = view.findViewById(R.id.ll_stops_container)
+            val tvAddressTo: TextView = view.findViewById(R.id.tv_address_to)
+            val tvSectorTo: TextView = view.findViewById(R.id.tv_sector_to)
+            val tvTariffBadge: TextView = view.findViewById(R.id.tv_tariff_badge)
+            val tvActivityBonus: TextView = view.findViewById(R.id.tv_activity_bonus)
+            val tvScheduledTime: TextView = view.findViewById(R.id.tv_scheduled_time)
+            val tvDistance: TextView = view.findViewById(R.id.tv_distance)
+        }
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PageViewHolder {
+            val view = LayoutInflater.from(parent.context).inflate(R.layout.item_orders_page, parent, false)
+            return PageViewHolder(view)
+        }
+
+        override fun onBindViewHolder(holder: PageViewHolder, position: Int) {
+            viewHolders.put(position, holder)
+
+            if (position == 0) {
+                holder.containerActive.visibility = View.VISIBLE
+                holder.rvHistory.visibility = View.GONE
+                updateActiveOrderUI()
+            } else {
+                holder.containerActive.visibility = View.GONE
+                holder.rvHistory.visibility = View.VISIBLE
+                holder.rvHistory.layoutManager = LinearLayoutManager(this@OrdersActivity)
+                holder.rvHistory.adapter = historyAdapter
             }
         }
+
+        override fun onViewRecycled(holder: PageViewHolder) {
+            val index = viewHolders.indexOfValue(holder)
+            if (index >= 0) {
+                viewHolders.removeAt(index)
+            }
+            super.onViewRecycled(holder)
+        }
+
+        fun getHolder(position: Int): PageViewHolder? = viewHolders.get(position)
+
+        override fun getItemCount(): Int = 2
     }
 }

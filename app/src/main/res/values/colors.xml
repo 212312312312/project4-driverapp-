@@ -2,20 +2,22 @@
 <resources>
     <color name="driver_black_bg">#FFFFFF</color>
     <color name="driver_card_bg">#F3F4F6</color>
+    <color name="driver_surface_elevated">#E5E7EB</color>
+    <color name="driver_divider">#E5E7EB</color>
 
     <color name="driver_neon_teal">#33CCA1</color>
     <color name="driver_teal_dim">#A3EAD5</color>
 
-    <color name="driver_text_primary">#212121</color>
-    <color name="driver_text_secondary">#757575</color>
-    <color name="driver_text_black">#000000</color>
+    <color name="driver_text_primary">#1F2229</color>
+    <color name="driver_text_secondary">#6E7380</color>
+    <color name="driver_text_black">#1A1C1E</color>
 
-    <color name="driver_error">#ff7373</color>
-    <color name="driver_error_red">#ff7373</color>
+    <color name="driver_error">#FF5252</color>
+    <color name="driver_error_red">#FF5252</color>
 
     <color name="purple_200">#FFBB86FC</color>
-    <color name="purple_500">#FF6200EE</color>
-    <color name="purple_700">#FF3700B3</color>
+    <color name="purple_500">#33CCA1</color>
+    <color name="purple_700">#218569</color>
     <color name="teal_200">#FF03DAC5</color>
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
@@ -24,11 +26,11 @@
 
     <color name="marker_green">#00C853</color>
     <color name="marker_yellow">#FFD600</color>
-    <color name="marker_red">#ff7373</color>
+    <color name="marker_red">#FF5252</color>
 
     <color name="activity_green">#2ECC71</color>
     <color name="activity_yellow">#FBC02D</color>
-    <color name="activity_red">#ff7373</color>
+    <color name="activity_red">#FF5252</color>
     <color name="activity_text_dark">#333333</color>
     <color name="activity_text_light">#FFFFFF</color>
     <color name="bg_badge">#FF3333</color>

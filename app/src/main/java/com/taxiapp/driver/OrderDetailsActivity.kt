@@ -35,6 +35,16 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
     private var currentOrder: Order? = null
     private var swipeTriggered = false
 
+    private val orderClosedReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: android.content.Context?, intent: Intent?) {
+            val closedId = intent?.getStringExtra("EXTRA_ORDER_ID")
+            if (closedId == null || closedId == currentOrder?.id) {
+                Toast.makeText(this@OrderDetailsActivity, "Замовлення вже неактуальне або скасовано", Toast.LENGTH_SHORT).show()
+                finish()
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -68,6 +78,27 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
 
         binding.btnBack.setOnClickListener { finish() }
         setupSwipeGesture()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        val filter = android.content.IntentFilter().apply {
+            addAction("com.taxiapp.driver.ACTION_CLOSE_ORDER_OFFER")
+            addAction("com.taxiapp.driver.ORDER_CANCELLED")
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(orderClosedReceiver, filter, android.content.Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            @Suppress("UnspecifiedRegisterReceiverFlag")
+            registerReceiver(orderClosedReceiver, filter)
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        try {
+            unregisterReceiver(orderClosedReceiver)
+        } catch (_: Exception) {}
     }
 
     private fun setupUI() {
@@ -135,7 +166,7 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
 
                     if (deltaX > 0 && !swipeTriggered) {
                         binding.llChevronsLayer.translationX = deltaX
-                        
+
                         val currentChevronRight = binding.llChevronsLayer.left + deltaX + binding.llChevronsLayer.width
                         val textStartPos = binding.llStaticTextLayer.left.toFloat()
 
@@ -267,14 +298,14 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
             if (point.type == PointType.START || point.type == PointType.END) {
                 params.width = (18 * resources.displayMetrics.density).toInt()
                 params.height = (18 * resources.displayMetrics.density).toInt()
-                params.marginStart = (17 * resources.displayMetrics.density).toInt() 
+                params.marginStart = (17 * resources.displayMetrics.density).toInt()
             } else {
                 params.width = (14 * resources.displayMetrics.density).toInt()
                 params.height = (14 * resources.displayMetrics.density).toInt()
-                params.marginStart = (19 * resources.displayMetrics.density).toInt() 
+                params.marginStart = (19 * resources.displayMetrics.density).toInt()
             }
             ivIcon.layoutParams = params
-            
+
             when (point.type) {
                 PointType.START -> {
                     ivIcon.setImageResource(R.drawable.ic_marker_from)
@@ -372,16 +403,16 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
     override fun onMapReady(googleMap: GoogleMap) {
         map = googleMap
         map.uiSettings.apply {
-    isScrollGesturesEnabled = true
-    isZoomGesturesEnabled = true
-    isMapToolbarEnabled = false // Уже отключено (убирает переход в стороннее приложение Гугл карт)
-    
-    // 🛠️ ДОБАВЛЯЕМ СЮДА ЭТИ СТРОКИ:
-    isCompassEnabled = false          // Отключает компас, который появляется при вращении карты
-    isZoomControlsEnabled = false     // Отключает наэкранные кнопки "+" и "-"
-    isMyLocationButtonEnabled = false // Отключает стандартную кнопку привязки к геопозиции
-    isIndoorLevelPickerEnabled = false // Отключает переключатель этажей (для зданий внутри)
-}
+            isScrollGesturesEnabled = true
+            isZoomGesturesEnabled = true
+            isMapToolbarEnabled = false // Уже отключено (убирает переход в стороннее приложение Гугл карт)
+
+            // 🛠️ ДОБАВЛЯЕМ СЮДА ЭТИ СТРОКИ:
+            isCompassEnabled = false          // Отключает компас, который появляется при вращении карты
+            isZoomControlsEnabled = false     // Отключает наэкранные кнопки "+" и "-"
+            isMyLocationButtonEnabled = false // Отключает стандартную кнопку привязки к геопозиции
+            isIndoorLevelPickerEnabled = false // Отключает переключатель этажей (для зданий внутри)
+        }
 
         // 🌟 ИСПРАВЛЕНО: Установка динамического стиля карты на основе текущей темы Android
         try {
@@ -391,7 +422,7 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
             } else {
                 R.raw.map_style_standard
             }
-            
+
             val success = googleMap.setMapStyle(
                 MapStyleOptions.loadRawResourceStyle(this, styleRes)
             )
@@ -453,10 +484,10 @@ class OrderDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
 
             val radius = 14f * resources.displayMetrics.density
             cornerRadii = floatArrayOf(
-                0f, 0f,          
-                radius, radius,  
-                radius, radius,  
-                radius, radius   
+                0f, 0f,
+                radius, radius,
+                radius, radius,
+                radius, radius
             )
         }
     }

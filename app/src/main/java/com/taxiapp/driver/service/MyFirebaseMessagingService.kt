@@ -3,7 +3,6 @@ package com.taxiapp.driver.service
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
-import com.taxiapp.driver.MainActivity
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -13,6 +12,7 @@ import androidx.core.app.NotificationCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.taxiapp.driver.ChatEventBus
+import com.taxiapp.driver.MainActivity
 import com.taxiapp.driver.OrderConfirmationActivity
 import com.taxiapp.driver.OrderOfferActivity
 import com.taxiapp.driver.R
@@ -21,67 +21,85 @@ import com.taxiapp.driver.network.Order
 import com.taxiapp.driver.utils.SessionManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 class MyFirebaseMessagingService : FirebaseMessagingService() {
+
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         val data = remoteMessage.data
         val type = data["type"]
         Log.d("FCM_UNIT", "🔥 Push received. Type: $type, Data payload: $data")
 
-        if (type == "CHAT_MESSAGE") {
-            CoroutineScope(Dispatchers.IO).launch {
-                ChatEventBus.triggerUpdate()
+        when (type) {
+            "CHAT_MESSAGE" -> {
+                ChatEventBus.tryTriggerUpdate()
+                if (!ChatEventBus.isChatScreenOpen) {
+                    showChatMessageNotification(data)
+                }
             }
-            return
-        }
-        if (type == "PHOTO_CONTROL_REQUEST" || type == "PHOTO_CONTROL_APPROVED" ||
-            type == "PHOTO_CONTROL_REJECTED" || type == "PHOTO_CONTROL_EXPIRED") {
-            wakeUpScreen()
-            showPhotoControlNotification(data)
-            return
-        }
+            "PHOTO_CONTROL_REQUEST",
+            "PHOTO_CONTROL_APPROVED",
+            "PHOTO_CONTROL_REJECTED",
+            "PHOTO_CONTROL_EXPIRED" -> {
+                wakeUpScreen()
+                showPhotoControlNotification(data)
+            }
+            "ORDER_OFFER",
+            "ORDER_CONFIRMATION" -> {
+                wakeUpScreen()
+                processOrderPushDirectly(data, type)
+            }
+            "ORDER_CANCEL" -> {
+                wakeUpScreen()
+                val orderUuid = data["orderId"]
+                // 1. Мгновенно оповещаем все активные экраны (OrderProgressActivity, OrderOfferActivity)
+                ChatEventBus.triggerOrderCancelled(orderUuid)
+                val cancelBroadcast = Intent("com.taxiapp.driver.ORDER_CANCELLED").apply {
+                    setPackage(packageName)
+                    putExtra("CANCELLED_ORDER_UUID", orderUuid)
+                }
+                sendBroadcast(cancelBroadcast)
 
-        if (type == "ORDER_OFFER" || type == "ORDER_CONFIRMATION") {
-            // 1. Сразу будим экран физически (актуально для заблокированных устройств)
-            wakeUpScreen()
+                // 2. Убираем висящее уведомление оффера из шторки, если заказ отменили во время предложения
+                try {
+                    val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                    if (orderUuid != null) {
+                        nm.cancel(orderUuid.hashCode())
+                    }
+                } catch (_: Exception) {}
 
-            // 2. Мгновенно собираем объект заказа из пуша без единого сетевого запроса!
-            processOrderPushDirectly(data, type)
-        }
-
-        if (type == "ORDER_CANCEL") {
-            // Пробуждаем экран, если заблокирован
-            wakeUpScreen()
-            // Вызываем метод отображения уведомления в шторке/баннере
-            showCancelNotification(data)
-            return
+                // 3. Выводим системное уведомление об отмене
+                showCancelNotification(data)
+            }
         }
     }
 
     private fun wakeUpScreen() {
         try {
             val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
-            val isScreenOn = if (Build.VERSION.SDK_INT >= 20) pm.isInteractive else pm.isScreenOn
+            val isScreenOn = pm.isInteractive
             if (!isScreenOn) {
+                @Suppress("DEPRECATION")
                 val wl = pm.newWakeLock(
                     PowerManager.FULL_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP or PowerManager.ON_AFTER_RELEASE,
                     "TaxiDriver:WakeUpLock"
                 )
-                wl.acquire(10000) // Держим экран активным 10 секунд
+                wl.acquire(10000L)
             }
         } catch (e: Exception) {
             Log.e("FCM_UNIT", "Ошибка пробуждения экрана WakeLock: ${e.message}")
         }
     }
 
-    // --- ГЕНИАЛЬНЫЙ ОБХОД ЗАМОРОЗКИ СЕТИ: СБОРКА ОБЪЕКТА ИЗ DATA PAYLOAD ---
     private fun processOrderPushDirectly(data: Map<String, String>, type: String) {
         if (SessionManager(this).fetchAuthToken() == null) return
 
-        val orderId = data["orderId"] // Тепер сюди прилітає чистий UUID (наприклад: 8eb7a78c-...)
-        val idLongStr = data["idLong"] // Числовий ID (наприклад: 617)
+        val orderId = data["orderId"]
+        val idLongStr = data["idLong"]
 
         if (orderId.isNullOrEmpty()) {
             Log.e("FCM_UNIT", "Помилка: orderId (UUID) відсутній у пуші!")
@@ -91,17 +109,17 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         try {
             val priceValue = data["price"]?.toDoubleOrNull() ?: 0.0
             val addressValue = data["address"] ?: "Адреса не вказана"
-
+            val toAddressValue = data["toAddress"]
             val distanceKm = data["distance"]?.toDoubleOrNull() ?: 0.0
             val distanceMetersValue = (distanceKm * 1000).toInt()
             val scheduledAtValue = data["time"]
 
-            // 🔥 ВИПРАВЛЕНО: id отримує чистий UUID, а idLong отримує числовий Long
             val order = Order(
-                id = orderId, // Передаємо строковий UUID для Retrofit-запитів
-                idLong = idLongStr?.toLongOrNull(), // Передаємо число для ID нотифікацій
+                id = orderId,
+                idLong = idLongStr?.toLongOrNull(),
                 price = priceValue,
                 fromAddress = addressValue,
+                toAddress = toAddressValue,
                 distanceMeters = distanceMetersValue,
                 scheduledAt = scheduledAtValue,
                 status = if (type == "ORDER_CONFIRMATION") "SCHEDULED" else "PENDING"
@@ -114,12 +132,52 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             } else {
                 showOfferNotification(order)
             }
-
         } catch (e: Exception) {
-            Log.e("FCM_UNIT", "Критична помилка збирання Order: ${e.message}")
-            e.printStackTrace()
+            Log.e("FCM_UNIT", "Критична помилка збирання Order: ${e.message}", e)
         }
     }
+
+    private fun showChatMessageNotification(data: Map<String, String>) {
+        val title = data["title"] ?: "Нове повідомлення від клієнта"
+        val body = data["body"] ?: data["content"] ?: "Відкрийте чат замовлення"
+
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val channelId = "chat_message_channel"
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                channelId,
+                "Чат з клієнтом",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                enableVibration(true)
+            }
+            notificationManager.createNotificationChannel(channel)
+        }
+
+        val intent = Intent(this, MainActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        }
+
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            9002,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val builder = NotificationCompat.Builder(this, channelId)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+
+        notificationManager.notify(9002, builder.build())
+    }
+
     private fun showPhotoControlNotification(data: Map<String, String>) {
         val title = data["title"] ?: "Фотоконтроль"
         val body = data["body"] ?: "Оновлено статус фотоконтролю"
@@ -137,7 +195,9 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         }
 
         val pendingIntent = PendingIntent.getActivity(
-            this, System.currentTimeMillis().toInt(), intent,
+            this,
+            System.currentTimeMillis().toInt(),
+            intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
@@ -151,26 +211,22 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
         notificationManager.notify(9001, builder.build())
     }
+
     private fun showOfferNotification(order: Order) {
         val intent = Intent(this, OrderOfferActivity::class.java).apply {
             putExtra("EXTRA_ORDER", order)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         }
 
-        // Прямой фоновый запуск Activity (работает мгновенно, если включены всплывающие окна)
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || android.provider.Settings.canDrawOverlays(this)) {
-            try {
-                startActivity(intent)
-                Log.d("FCM_UNIT", "🚀 OrderOfferActivity успешно запущена напрямую из фона!")
-            } catch (e: Exception) {
-                Log.e("FCM_UNIT", "Не удалось запустить OrderOfferActivity напрямую, сработает fullScreenIntent: ${e.message}")
-            }
+        try {
+            startActivity(intent)
+            Log.d("FCM_UNIT", "🚀 OrderOfferActivity запущена напрямую!")
+        } catch (e: Exception) {
+            Log.d("FCM_UNIT", "Фоновый запуск через FullScreenIntent: ${e.message}")
         }
 
-        // Полноэкранный системный интент (Heads-Up баннер + разворот на Lockscreen)
-        // Было: showFullScreen(intent, "offer_channel_v3", ...)
-// Стало: передаем новый ID тихого канала
-        showFullScreen(intent, "offer_silent_channel_v4", "Пропозиція замовлення", "Нове замовлення!", order.idLong?.toInt() ?: 0)
+        val notifId = order.idLong?.toInt() ?: order.id.hashCode()
+        showFullScreen(intent, "offer_fullscreen_channel_v5", "Пропозиція замовлення", "Нове замовлення!", notifId)
     }
 
     private fun showConfirmationNotification(order: Order) {
@@ -179,16 +235,15 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         }
 
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || android.provider.Settings.canDrawOverlays(this)) {
-            try {
-                startActivity(intent)
-                Log.d("FCM_UNIT", "🚀 OrderConfirmationActivity успешно запущена напрямую из фона!")
-            } catch (e: Exception) {
-                Log.e("FCM_UNIT", "Не удалось запустить OrderConfirmationActivity напрямую: ${e.message}")
-            }
+        try {
+            startActivity(intent)
+            Log.d("FCM_UNIT", "🚀 OrderConfirmationActivity запущена напрямую!")
+        } catch (e: Exception) {
+            Log.d("FCM_UNIT", "Фоновый запуск подтверждения через FullScreenIntent: ${e.message}")
         }
 
-        showFullScreen(intent, "confirm_channel_v3", "Підтвердження замовлення", "Підтвердіть поїздку!", (order.idLong?.toInt() ?: 0) + 1000)
+        val notifId = (order.idLong?.toInt() ?: order.id.hashCode()) + 1000
+        showFullScreen(intent, "confirm_channel_v3", "Підтвердження замовлення", "Підтвердіть поїздку!", notifId)
     }
 
     private fun showFullScreen(intent: Intent, channelId: String, channelName: String, title: String, notifId: Int) {
@@ -209,49 +264,44 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        // ✅ ИСПРАВЛЕНО: Добавлен настоящий setFullScreenIntent и CATEGORY_CALL для пробуждения экрана блокировки
         val builder = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(title)
             .setContentText("Натисніть для перегляду деталей замовлення")
             .setPriority(NotificationCompat.PRIORITY_MAX)
-            .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+            .setCategory(NotificationCompat.CATEGORY_CALL)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
-            .setTimeoutAfter(20000)
+            .setFullScreenIntent(pendingIntent, true)
+            .setTimeoutAfter(20000L)
 
         notificationManager.notify(notifId, builder.build())
-        Log.d("FCM_UNIT", "🔔 Heads-Up сповіщення успішно надіслано. ID: $notifId")
+        Log.d("FCM_UNIT", "🔔 FullScreen / Heads-Up сповіщення успішно надіслано. ID: $notifId")
     }
-
-    // ДОБАВИТЬ КАК НОВЫЙ МЕТОД В КЛАСС MyFirebaseMessagingService:
 
     private fun showCancelNotification(data: Map<String, String>) {
         val title = data["title"] ?: "Замовлення скасовано"
         val body = data["body"] ?: "Клієнт скасував замовлення"
         val orderUuid = data["orderId"]
 
-        // ЗАМЕНИТЬ КУСОК В НАЧАЛЕ МЕТОДА showCancelNotification НА ЭТОТ:
-
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val channelId = "cancel_channel_v2" // Обязательно сменили ID на v2, чтобы сбросить кэш старого рингтона в телефоне
+        val channelId = "cancel_channel_v2"
 
-// Создаем чистый канал высокой важности без принудительных URI звуков
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(channelId, "Скасування замовлень", NotificationManager.IMPORTANCE_HIGH).apply {
                 enableVibration(true)
                 lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
-                // Никаких setSound! Система сама выдаст дефолтный короткий писк шторки
             }
             notificationManager.createNotificationChannel(channel)
         }
 
-        // При клике на уведомление плавно переводим на MainActivity и чистим стек старых экранов
         val intent = Intent(this, MainActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             putExtra("CANCELLED_ORDER_UUID", orderUuid)
         }
 
-        // Генерируем уникальный ID на основе хэша UUID, чтобы уведомления не затирали друг друга
         val notifId = orderUuid?.hashCode() ?: System.currentTimeMillis().toInt()
 
         val pendingIntent = PendingIntent.getActivity(
@@ -262,10 +312,10 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         )
 
         val builder = NotificationCompat.Builder(this, channelId)
-            .setSmallIcon(R.mipmap.ic_launcher) // Твоя иконка приложения
+            .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(title)
             .setContentText(body)
-            .setPriority(NotificationCompat.PRIORITY_HIGH) // Пробивает фоновый режим
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
@@ -276,22 +326,25 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        Log.d("FCM_UNIT", "🔄 Google generated a new FCM token: $token")
+        Log.d("FCM_UNIT", "🔄 Google generated a new FCM token")
 
         val sessionManager = SessionManager(applicationContext)
         sessionManager.saveFcmToken(token)
 
-        // Если водитель уже вошел в аккаунт, сразу обновляем токен в базе данных бэкенда
         if (sessionManager.fetchAuthToken() != null) {
-            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            serviceScope.launch {
                 try {
                     ApiClient.getInstance().getApiService(applicationContext).updateFcmToken(mapOf("token" to token))
                     Log.d("FCM_UNIT", "✅ Automatically updated new FCM token on server via onNewToken.")
                 } catch (e: Exception) {
                     Log.e("FCM_UNIT", "❌ Failed to update fcm token via onNewToken: ${e.message}")
-                    e.printStackTrace()
                 }
             }
         }
+    }
+
+    override fun onDestroy() {
+        serviceScope.cancel()
+        super.onDestroy()
     }
 }

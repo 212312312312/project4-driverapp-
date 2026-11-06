@@ -5,6 +5,10 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Matrix
+import android.media.ExifInterface
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -17,15 +21,18 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import java.io.File
+import java.io.FileOutputStream
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.max
 
 class WebViewActivity : AppCompatActivity() {
 
@@ -33,20 +40,18 @@ class WebViewActivity : AppCompatActivity() {
     private var filePathCallback: ValueCallback<Array<Uri>>? = null
     private var photoURI: Uri? = null
 
-    // Реєстрація результату вибору файлу
     private val fileChooserLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        if (filePathCallback == null) return@registerForActivityResult
+        val callback = filePathCallback ?: return@registerForActivityResult
+        filePathCallback = null
 
         val results: Array<Uri>? = when (result.resultCode) {
             Activity.RESULT_OK -> {
-                if (result.data?.data != null) {
-                    // Вибрано з галереї
-                    arrayOf(result.data!!.data!!)
-                } else if (photoURI != null) {
-                    // Зроблено фото камерою
-                    arrayOf(photoURI!!)
+                val selectedUri = result.data?.data ?: photoURI
+                if (selectedUri != null) {
+                    val compressedUri = compressImageUriIfNeeded(selectedUri)
+                    arrayOf(compressedUri)
                 } else {
                     null
                 }
@@ -54,16 +59,20 @@ class WebViewActivity : AppCompatActivity() {
             else -> null
         }
 
-        filePathCallback?.onReceiveValue(results)
-        filePathCallback = null
+        callback.onReceiveValue(results)
     }
 
-    // Реєстрація дозволів
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
-        // Після отримання дозволів (або відмови) нічого не робимо,
-        // користувач знову натисне кнопку на сайті
+        val cameraGranted = permissions[Manifest.permission.CAMERA] == true
+        if (cameraGranted && filePathCallback != null) {
+            openFileChooserProcess()
+        } else if (filePathCallback != null) {
+            filePathCallback?.onReceiveValue(null)
+            filePathCallback = null
+            Toast.makeText(this, "Для завантаження фото потрібен доступ до камери", Toast.LENGTH_SHORT).show()
+        }
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -77,7 +86,16 @@ class WebViewActivity : AppCompatActivity() {
         }
         webView = findViewById(R.id.webView)
 
-        // ИСПРАВЛЕНИЕ БАГА: Читаем "URL" в обоих регистрах, чтобы точно поймать ссылку
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (this@WebViewActivity::webView.isInitialized && webView.canGoBack()) {
+                    webView.goBack()
+                } else {
+                    finish()
+                }
+            }
+        })
+
         val url = intent.getStringExtra("URL") ?: intent.getStringExtra("url") ?: "https://google.com"
 
         setupWebView()
@@ -90,25 +108,17 @@ class WebViewActivity : AppCompatActivity() {
         settings.javaScriptEnabled = true
         settings.domStorageEnabled = true
         settings.allowFileAccess = true
+        settings.allowContentAccess = true
         settings.mediaPlaybackRequiresUserGesture = false
-        settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+        settings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
         settings.cacheMode = WebSettings.LOAD_NO_CACHE
 
-        // Обробка навігації
         webView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                val url = request?.url.toString()
-
-                // ОБНОВЛЕННАЯ ЛОГИКА: Ловим успешную отправку заявки на авто
-                // Твой React-фронтенд после успешного добавления авто должен
-                // сделать редирект на любой URL со словом "success" (например, /car-success)
-                if (url.contains("success") || url.contains("registration-success") || url.contains("/login") || url.contains("payment-success.html")) {
-                    if (url.contains("payment-success.html")) {
-                        Toast.makeText(this@WebViewActivity, "Картку успішно верифіковано!", Toast.LENGTH_LONG).show()
-                        setResult(Activity.RESULT_OK) // Передаем статус успеха для CardsActivity
-                    } else {
-                        Toast.makeText(this@WebViewActivity, "Заявку відправлено на перевірку!", Toast.LENGTH_LONG).show()
-                    }
+                val url = request?.url?.toString() ?: return false
+                if (url.contains("close-webview") || url.contains("form-success") || url.contains("status=success")) {
+                    Toast.makeText(this@WebViewActivity, "Дані успішно відправлено!", Toast.LENGTH_SHORT).show()
+                    setResult(Activity.RESULT_OK)
                     finish()
                     return true
                 }
@@ -116,38 +126,34 @@ class WebViewActivity : AppCompatActivity() {
             }
         }
 
-        // Обробка вибору файлів (Camera/Gallery)
         webView.webChromeClient = object : WebChromeClient() {
             override fun onShowFileChooser(
                 webView: WebView?,
                 filePathCallback: ValueCallback<Array<Uri>>?,
                 fileChooserParams: FileChooserParams?
             ): Boolean {
-                if (this@WebViewActivity.filePathCallback != null) {
-                    this@WebViewActivity.filePathCallback?.onReceiveValue(null)
-                }
+                this@WebViewActivity.filePathCallback?.onReceiveValue(null)
                 this@WebViewActivity.filePathCallback = filePathCallback
 
                 if (!hasPermissions()) {
                     requestPermissions()
+                    return true
                 }
 
-                launchFileChooser()
+                openFileChooserProcess()
                 return true
             }
         }
     }
 
-    private fun launchFileChooser() {
-        // 1. Інтент для камери
+    private fun openFileChooserProcess() {
         val takePictureIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
         if (takePictureIntent.resolveActivity(packageManager) != null) {
             var photoFile: File? = null
             try {
                 photoFile = createImageFile()
-            } catch (ex: IOException) {
-                // Error
-            }
+            } catch (_: IOException) {}
+
             if (photoFile != null) {
                 photoURI = FileProvider.getUriForFile(
                     this,
@@ -158,35 +164,85 @@ class WebViewActivity : AppCompatActivity() {
             }
         }
 
-        // 2. Інтент для галереї
-        val contentSelectionIntent = Intent(Intent.ACTION_GET_CONTENT)
-        contentSelectionIntent.addCategory(Intent.CATEGORY_OPENABLE)
-        contentSelectionIntent.type = "image/*"
+        val contentSelectionIntent = Intent(Intent.ACTION_GET_CONTENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "image/*"
+        }
 
-        // 3. Об'єднуємо (Chooser)
-        val chooserIntent = Intent(Intent.ACTION_CHOOSER)
-        chooserIntent.putExtra(Intent.EXTRA_INTENT, contentSelectionIntent)
-        chooserIntent.putExtra(Intent.EXTRA_TITLE, "Виберіть фото або зробіть знімок")
-        chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, arrayOf(takePictureIntent))
+        val chooserIntent = Intent(Intent.ACTION_CHOOSER).apply {
+            putExtra(Intent.EXTRA_INTENT, contentSelectionIntent)
+            putExtra(Intent.EXTRA_TITLE, "Виберіть фото або зробіть знімок")
+            putExtra(Intent.EXTRA_INITIAL_INTENTS, arrayOf(takePictureIntent))
+        }
 
-        fileChooserLauncher.launch(chooserIntent)
+        try {
+            fileChooserLauncher.launch(chooserIntent)
+        } catch (e: Exception) {
+            filePathCallback?.onReceiveValue(null)
+            filePathCallback = null
+        }
+    }
+
+    private fun compressImageUriIfNeeded(sourceUri: Uri): Uri {
+        return try {
+            val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            contentResolver.openInputStream(sourceUri)?.use { BitmapFactory.decodeStream(it, null, options) }
+
+            val maxDim = 1600
+            var sampleSize = 1
+            while (max(options.outWidth, options.outHeight) / sampleSize > maxDim) {
+                sampleSize *= 2
+            }
+
+            val decodeOptions = BitmapFactory.Options().apply { inSampleSize = sampleSize }
+            val rawBitmap = contentResolver.openInputStream(sourceUri)?.use {
+                BitmapFactory.decodeStream(it, null, decodeOptions)
+            } ?: return sourceUri
+
+            val rotation = contentResolver.openInputStream(sourceUri)?.use { input ->
+                val exif = ExifInterface(input)
+                when (exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)) {
+                    ExifInterface.ORIENTATION_ROTATE_90 -> 90f
+                    ExifInterface.ORIENTATION_ROTATE_180 -> 180f
+                    ExifInterface.ORIENTATION_ROTATE_270 -> 270f
+                    else -> 0f
+                }
+            } ?: 0f
+
+            val finalBitmap = if (rotation != 0f) {
+                val matrix = Matrix().apply { postRotate(rotation) }
+                val rotated = Bitmap.createBitmap(rawBitmap, 0, 0, rawBitmap.width, rawBitmap.height, matrix, true)
+                if (rotated != rawBitmap) rawBitmap.recycle()
+                rotated
+            } else {
+                rawBitmap
+            }
+
+            val compressedFile = createImageFile()
+            FileOutputStream(compressedFile).use { out ->
+                finalBitmap.compress(Bitmap.CompressFormat.JPEG, 82, out)
+            }
+            finalBitmap.recycle()
+
+            FileProvider.getUriForFile(
+                this,
+                "${applicationContext.packageName}.provider",
+                compressedFile
+            )
+        } catch (e: Exception) {
+            sourceUri
+        }
     }
 
     @Throws(IOException::class)
     private fun createImageFile(): File {
         val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
         val storageDir: File? = getExternalFilesDir(Environment.DIRECTORY_PICTURES)
-        return File.createTempFile(
-            "JPEG_${timeStamp}_",
-            ".jpg",
-            storageDir
-        )
+        return File.createTempFile("JPEG_${timeStamp}_", ".jpg", storageDir)
     }
 
     private fun hasPermissions(): Boolean {
-        val camera = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
-        // Для Android 13+ READ_EXTERNAL_STORAGE не потрібен для фото
-        return camera
+        return ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
     }
 
     private fun requestPermissions() {
@@ -197,11 +253,13 @@ class WebViewActivity : AppCompatActivity() {
         permissionLauncher.launch(permissions.toTypedArray())
     }
 
-    override fun onBackPressed() {
-        if (webView.canGoBack()) {
-            webView.goBack()
-        } else {
-            super.onBackPressed()
+    override fun onDestroy() {
+        filePathCallback?.onReceiveValue(null)
+        filePathCallback = null
+        if (this::webView.isInitialized) {
+            webView.stopLoading()
+            webView.destroy()
         }
+        super.onDestroy()
     }
 }

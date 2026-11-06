@@ -2,16 +2,18 @@ package com.taxiapp.driver
 
 import android.content.Intent
 import android.graphics.Color
-import com.taxiapp.driver.utils.toFullImageUrl
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import android.widget.ImageView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -22,6 +24,7 @@ import com.taxiapp.driver.network.ApiClient
 import com.taxiapp.driver.network.CarDto
 import com.taxiapp.driver.network.CarTariffDto
 import com.taxiapp.driver.utils.SessionManager
+import com.taxiapp.driver.utils.toFullImageUrl
 import kotlinx.coroutines.launch
 
 class CarActivity : AppCompatActivity() {
@@ -41,10 +44,23 @@ class CarActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_car)
 
-        // 🛠️ ДОБАВЛЕНО: Автоматический отступ контента от системных панелей для Android 15
-        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { v, insets ->
-            val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+        val rootView = findViewById<View>(R.id.car_root) ?: findViewById(android.R.id.content)
+        val headerContent = findViewById<View>(R.id.header_content)
+        val density = resources.displayMetrics.density
+
+        ViewCompat.setOnApplyWindowInsetsListener(rootView) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            if (headerContent != null) {
+                headerContent.setPadding(
+                    (16 * density).toInt(),
+                    systemBars.top + (28 * density).toInt(),
+                    (16 * density).toInt(),
+                    (12 * density).toInt()
+                )
+                v.setPadding(systemBars.left, 0, systemBars.right, systemBars.bottom)
+            } else {
+                v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            }
             insets
         }
 
@@ -65,8 +81,6 @@ class CarActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        // При возврате на экран (например, после заполнения формы в WebView)
-        // перезагружаем данные активного авто и списки
         if (carTabs.selectedTabPosition == 0) {
             loadActiveCarData()
         } else {
@@ -143,7 +157,7 @@ class CarActivity : AppCompatActivity() {
                         findViewById<TextView>(R.id.tv_plate_number).text = "---"
                         val imgCar = findViewById<ImageView>(R.id.img_car_photo)
                         imgCar.setImageResource(R.drawable.ic_car)
-                        imgCar.setColorFilter(Color.parseColor("#444444"))
+                        imgCar.setColorFilter(ContextCompat.getColor(this@CarActivity, R.color.driver_text_secondary))
                     }
                     setupTariffs(profile.allowedTariffs, profile.selectedTariffIds)
                 }
@@ -188,7 +202,7 @@ class CarActivity : AppCompatActivity() {
                 .into(imgCar)
         } else {
             imgCar.setImageResource(R.drawable.ic_car)
-            imgCar.setColorFilter(androidx.core.content.ContextCompat.getColor(this, R.color.driver_text_secondary))
+            imgCar.setColorFilter(ContextCompat.getColor(this, R.color.driver_text_secondary))
         }
     }
 
@@ -220,8 +234,6 @@ class CarActivity : AppCompatActivity() {
                 val response = ApiClient.getInstance().getApiService(this@CarActivity).selectActiveCar(car.id)
                 if (response.isSuccessful) {
                     Toast.makeText(this@CarActivity, "Авто успішно змінено! Тарифи оновлено.", Toast.LENGTH_SHORT).show()
-
-                    // 🔥 ВАЖНО: Перезагружаем и список машин, и профиль водителя с новыми тарифами классификатора
                     loadCarList()
                     loadActiveCarData()
                 } else {
@@ -255,7 +267,6 @@ class CarActivity : AppCompatActivity() {
         container.removeAllViews()
         if (tariffs.isNullOrEmpty()) return
 
-        // Синхронизируем локальное состояние с сервером
         currentSelectedTariffIds.clear()
         if (selectedIds != null) {
             currentSelectedTariffIds.addAll(selectedIds)
@@ -264,14 +275,14 @@ class CarActivity : AppCompatActivity() {
         val thumbStates = android.content.res.ColorStateList(
             arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf(-android.R.attr.state_checked)),
             intArrayOf(
-                androidx.core.content.ContextCompat.getColor(this, R.color.driver_neon_teal),
-                androidx.core.content.ContextCompat.getColor(this, R.color.driver_text_secondary)
+                ContextCompat.getColor(this, R.color.driver_neon_teal),
+                ContextCompat.getColor(this, R.color.driver_text_secondary)
             )
         )
 
         val trackStates = android.content.res.ColorStateList(
             arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf(-android.R.attr.state_checked)),
-            intArrayOf(Color.parseColor("#4D00E5FF"), Color.parseColor("#33FFFFFF"))
+            intArrayOf(Color.parseColor("#4D33CCA1"), Color.parseColor("#33FFFFFF"))
         )
 
         for (tariff in tariffs) {
@@ -283,10 +294,8 @@ class CarActivity : AppCompatActivity() {
             switchToggle.thumbTintList = thumbStates
             switchToggle.trackTintList = trackStates
 
-            // Выставляем сохраненный статус тумблера
             switchToggle.isChecked = currentSelectedTariffIds.contains(tariff.id)
 
-            // Слушатель изменения состояния тумблера водительской корутиной
             switchToggle.setOnCheckedChangeListener { _, isChecked ->
                 val targetIds = if (isChecked) {
                     currentSelectedTariffIds + tariff.id
@@ -303,7 +312,6 @@ class CarActivity : AppCompatActivity() {
                             currentSelectedTariffIds.clear()
                             response.body()!!.selectedTariffIds?.let { currentSelectedTariffIds.addAll(it) }
                         } else {
-                            // Откат тумблера назад без зацикливания слушателя
                             switchToggle.setOnCheckedChangeListener(null)
                             switchToggle.isChecked = !isChecked
                             setupTariffs(tariffs, currentSelectedTariffIds.toList())
@@ -323,7 +331,6 @@ class CarActivity : AppCompatActivity() {
     }
 
     private fun parseColorName(name: String): Int {
-        // Приводим первую букву к заглавной, остальные — к строчным (например: "Белый", "White")
         val cleaned = name.trim().lowercase().replaceFirstChar { it.uppercase() }
 
         return when (cleaned) {
@@ -336,7 +343,6 @@ class CarActivity : AppCompatActivity() {
             "Сірий", "Серый", "Gray", "Grey" -> Color.GRAY
             "Сріблястий", "Серебристый", "Silver" -> Color.LTGRAY
             else -> {
-                // Для HEX-кодов (например, "FF5722") используем полный верхний регистр
                 val hexCleaned = name.trim().uppercase()
                 if (hexCleaned.matches(Regex("[0-9A-F]{6}")) || hexCleaned.matches(Regex("[0-9A-F]{8}"))) {
                     try {

@@ -18,13 +18,13 @@ data class DriverProfileDto(
     @SerializedName("isDeaf") val isDeaf: Boolean = false,
     @SerializedName("hasSpeechIssue") val hasSpeechIssue: Boolean = false,
 
+    @SerializedName("isOnline") val isOnline: Boolean? = null,
+
     @SerializedName("car") val car: CarDto?,
     @SerializedName("allowedTariffs") val allowedTariffs: List<CarTariffDto>?,
     @SerializedName("selectedTariffIds") val selectedTariffIds: List<Long>?,
 
     @SerializedName("rating") val rating: Double = 5.0,
-
-    // --- НОВОЕ ПОЛЕ ---
     @SerializedName("balance") val balance: Double = 0.0,
-    @SerializedName("payoutBalance") val payoutBalance: Double = 0.0 // ДОБАВЛЕНО: Баланс выплат за безнал и чаевые
+    @SerializedName("payoutBalance") val payoutBalance: Double = 0.0
 ) : Serializable

@@ -115,6 +115,17 @@ class LoginPasswordActivity : AppCompatActivity() {
         // ИСПРАВЛЕНО: phoneNumber вместо userPhone и проверка на null
         sessionManager.saveDriverName(data.fullName ?: "Водій")
         sessionManager.saveDriverPhone(data.phoneNumber ?: "")
+        ApiClient.getInstance().reset()
+
+        com.google.firebase.messaging.FirebaseMessaging.getInstance().token.addOnSuccessListener { fcmToken ->
+            if (!fcmToken.isNullOrEmpty()) {
+                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                    try {
+                        ApiClient.getInstance().getApiService(applicationContext).updateFcmToken(mapOf("token" to fcmToken))
+                    } catch (_: Exception) {}
+                }
+            }
+        }
 
         val intent = Intent(this, AccountSelectionActivity::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK

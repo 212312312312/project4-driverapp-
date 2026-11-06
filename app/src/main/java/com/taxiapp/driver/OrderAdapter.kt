@@ -21,9 +21,30 @@ class OrderAdapter(
     private var isPricePerKmHidden: Boolean = false
 
     fun submitList(newOrders: List<Order>) {
+        val diffCallback = object : androidx.recyclerview.widget.DiffUtil.Callback() {
+            override fun getOldListSize(): Int = orders.size
+            override fun getNewListSize(): Int = newOrders.size
+
+            override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+                return orders[oldItemPosition].id == newOrders[newItemPosition].id
+            }
+
+            override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+                val oldItem = orders[oldItemPosition]
+                val newItem = newOrders[newItemPosition]
+                return oldItem.price == newItem.price &&
+                        oldItem.getTotalFullPrice() == newItem.getTotalFullPrice() &&
+                        oldItem.status == newItem.status &&
+                        oldItem.paymentMethod == newItem.paymentMethod &&
+                        oldItem.fromAddress == newItem.fromAddress &&
+                        oldItem.toAddress == newItem.toAddress &&
+                        oldItem.stops?.size == newItem.stops?.size
+            }
+        }
+        val diffResult = androidx.recyclerview.widget.DiffUtil.calculateDiff(diffCallback)
         orders.clear()
         orders.addAll(newOrders)
-        notifyDataSetChanged()
+        diffResult.dispatchUpdatesTo(this)
     }
 
     fun updateDisplaySettings(sectorFirst: Boolean, hidePricePerKm: Boolean) {

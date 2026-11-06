@@ -209,7 +209,9 @@ class TopUpActivity : AppCompatActivity() {
                 Toast.makeText(this@TopUpActivity, "Створення платежу...", Toast.LENGTH_SHORT).show()
                 val response = ApiClient.getInstance().getApiService(this@TopUpActivity).initPayment(InitPaymentRequest(amount))
                 if (response.isSuccessful && response.body() != null) {
-                    val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(response.body()!!.paymentUrl))
+                    val body = response.body()!!
+                    com.taxiapp.driver.utils.SessionManager(this@TopUpActivity).savePendingPaymentId(body.paymentId)
+                    val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(body.paymentUrl))
                     startActivity(browserIntent)
                     finish()
                 } else {

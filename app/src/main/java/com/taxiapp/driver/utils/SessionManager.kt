@@ -83,7 +83,18 @@ class SessionManager(context: Context) {
 
     fun saveAuthToken(token: String) {
         val cleanToken = token.replace("Bearer", "").trim()
-        securePrefs.edit().putString(USER_TOKEN, cleanToken).apply()
+        if (cleanToken.isEmpty()) {
+            clearTokens()
+        } else {
+            securePrefs.edit().putString(USER_TOKEN, cleanToken).apply()
+        }
+    }
+
+    fun clearTokens() {
+        securePrefs.edit()
+            .remove(USER_TOKEN)
+            .remove(REFRESH_TOKEN)
+            .apply()
     }
 
     fun fetchAuthToken(): String? {
@@ -155,7 +166,7 @@ class SessionManager(context: Context) {
     }
 
     fun getSearchRadius(): Double {
-        return prefs.getFloat(KEY_SEARCH_RADIUS, 0.5f).toDouble()
+        return prefs.getFloat(KEY_SEARCH_RADIUS, 3.0f).toDouble()
     }
 
     fun saveSearchMode(mode: DriverSearchMode) {
@@ -268,6 +279,18 @@ class SessionManager(context: Context) {
         val lat = prefs.getFloat(KEY_MANUAL_LAT, 0f).toDouble()
         val lng = prefs.getFloat(KEY_MANUAL_LNG, 0f).toDouble()
         return Pair(lat, lng)
+    }
+
+    fun savePendingPaymentId(paymentId: Long) {
+        prefs.edit().putLong("pending_payment_id", paymentId).apply()
+    }
+
+    fun getPendingPaymentId(): Long {
+        return prefs.getLong("pending_payment_id", -1L)
+    }
+
+    fun clearPendingPaymentId() {
+        prefs.edit().remove("pending_payment_id").apply()
     }
 
     // --- CLEAR SESSION ---

@@ -340,6 +340,13 @@ interface DriverApiService {
     @GET("api/v1/driver/cars")
     suspend fun getMyCars(): Response<List<CarDto>>
 
+    @Multipart
+    @POST("api/v1/driver/cars/documents")
+    suspend fun uploadCarDocument(
+        @Part("field") field: okhttp3.RequestBody,
+        @Part file: okhttp3.MultipartBody.Part
+    ): Response<CarDto>
+
     @POST("api/v1/driver/cars/{id}/select")
     suspend fun selectActiveCar(@Path("id") id: Long): Response<Void>
 

@@ -118,10 +118,15 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationCallback: LocationCallback
+    private var boundLocationService: LocationService? = null
+    private var isLocationServiceBound = false
+
     private val serviceConnection = object : android.content.ServiceConnection {
         override fun onServiceConnected(name: android.content.ComponentName?, service: android.os.IBinder?) {
             val binder = service as LocationService.LocalBinder
             val locationService = binder.getService()
+            boundLocationService = locationService
+            isLocationServiceBound = true
 
             // Подписываемся на нашу лямбду из сервиса и передаем координаты в маркер карты
             locationService.onLocationUpdated = { lat, lng ->
@@ -129,7 +134,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             }
         }
 
-        override fun onServiceDisconnected(name: android.content.ComponentName?) {}
+        override fun onServiceDisconnected(name: android.content.ComponentName?) {
+            boundLocationService?.onLocationUpdated = null
+            boundLocationService = null
+            isLocationServiceBound = false
+        }
     }
 
     private var overlayBackPressedCallback: androidx.activity.OnBackPressedCallback? = null
@@ -137,7 +146,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private var searchRadiusCircle: Circle? = null
     // ЗАМЕНИТЬ СТРОКУ ОБЪЯВЛЕНИЯ В МЕСТАХ ИНИЦИАЛИЗАЦИИ ПЕРЕМЕННЫХ КЛАССА:
 
-    private var currentSearchRadiusKm: Double = 0.5 // Поменяли дефолт с 3.0 на 0.5
+    private var currentSearchRadiusKm: Double = 3.0
     private var currentHomeSectorIds: List<Long> = emptyList()
     private var currentDriverLocation: LatLng? = null
 
@@ -194,8 +203,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         setContentView(R.layout.activity_main)
 
         sessionManager = SessionManager(this)
+        this.isDriverOnline = sessionManager.isDriverOnline()
         currentSearchRadiusKm = sessionManager.getSearchRadius()
-        currentHomeSectorIds = sessionManager.getHomeSectorIds() // 🚀 ИСПРАВЛЕНО: Подгружаем домашние сектора сразу при старте
+        currentHomeSectorIds = sessionManager.getHomeSectorIds()
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         if (sessionManager.fetchAuthToken() == null) {
@@ -323,8 +333,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         if (::map.isInitialized) {
             updateMapUI()
-            updateSearchStatusUI()
         }
+        // ✅ ИСПРАВЛЕНО: Вызываем синхронизацию плашки поиска ВСЕГДА в onResume, не дожидаясь getMapAsync,
+        // чтобы плашка «Ланцюг замовлень» никогда не сбрасывалась при возврате из фона!
+        updateSearchStatusUI()
         checkPhotoControlStatus()
     }
 
@@ -349,12 +361,23 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     override fun onDestroy() {
-        super.onDestroy()
-        try {
-            unbindService(serviceConnection)
-        } catch (e: Exception) {
-            e.printStackTrace()
+        searchBorderAnimator?.cancel()
+        restoreDialog?.dismiss()
+        boundLocationService?.onLocationUpdated = null
+        boundLocationService = null
+        if (isLocationServiceBound) {
+            try {
+                unbindService(serviceConnection)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            isLocationServiceBound = false
         }
+        super.onDestroy()
+    }
+
+    fun onSearchSettingsUpdated() {
+        updateSearchStatusUI()
     }
 
     private fun setupLocationCallback() {
@@ -543,12 +566,18 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         navViewContent.findViewById<View>(R.id.btn_logout).setOnClickListener {
             setOnlineVisualState(false, animate = false)
+            sessionManager.saveDriverOnlineStatus(false)
             lifecycleScope.launch {
                 try {
                     // 🚀 Вызываем deleteLocation(), чтобы полностью удалить водителя из оперативного кэша диспетчера
                     ApiClient.getInstance().getApiService(this@MainActivity).deleteLocation()
                 } catch (e: Exception) {
                 } finally {
+                    // ✅ ИСПРАВЛЕНО: Останавливаем фоновую трансляцию GPS и плавающий виджет при завершении смены
+                    boundLocationService?.onLocationUpdated = null
+                    stopService(Intent(this@MainActivity, LocationService::class.java))
+                    stopService(Intent(this@MainActivity, FloatingWidgetService::class.java))
+
                     val intent = Intent(this@MainActivity, AccountSelectionActivity::class.java)
                     intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                     startActivity(intent)
@@ -578,12 +607,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             val currentNightMode = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
             val isNightMode = currentNightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES
 
-            // Если ночной режим — оставляем #2A2A2A, если светлый — вытаскиваем цвет driver_card_bg из ресурсов
-            val offlineBgColor = if (isNightMode) {
-                android.graphics.Color.parseColor("#2A2A2A")
-            } else {
-                androidx.core.content.ContextCompat.getColor(this, R.color.driver_card_bg)
-            }
+            val offlineBgColor = androidx.core.content.ContextCompat.getColor(this, R.color.driver_surface_elevated)
 
             switchThumbCard.setCardBackgroundColor(offlineBgColor)
             tvSwitchStatusText.text = "Офлайн"
@@ -728,7 +752,20 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             try {
                 val targetMode = if (isSearchActive) sessionManager.getSearchMode() else DriverSearchMode.MANUAL
 
-                // 🚀 ОПТИМИЗАЦИЯ: Никаких лишних сетевых GET-запросов перед отправкой!
+                // ✅ ИСПРАВЛЕНО: При активации поиска принудительно отправляем свежую точку GPS в LocationService,
+                // чтобы водитель гарантированно присутствовал в Redis drivers:geo!
+                if (isSearchActive) {
+                    boundLocationService?.forceSendLocationNow()
+                    val lat = currentDriverLocation?.latitude ?: 0.0
+                    val lng = currentDriverLocation?.longitude ?: 0.0
+                    if (lat != 0.0 && lng != 0.0) {
+                        try {
+                            ApiClient.getInstance().getApiService(this@MainActivity)
+                                .updateStatus(UpdateDriverStatusRequest(true, lat, lng))
+                        } catch (_: Exception) {}
+                    }
+                }
+
                 val req = DriverSearchSettingsDto(
                     mode = targetMode,
                     radius = currentSearchRadiusKm,
@@ -761,15 +798,24 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         sessionManager.saveHomeSectorIds(currentHomeSectorIds)
         drawSearchRadius()
 
-        val displayedMode = if (state.mode == DriverSearchMode.MANUAL) {
+        val rawMode = state.mode ?: DriverSearchMode.MANUAL
+        val displayedMode = if (rawMode == DriverSearchMode.MANUAL || rawMode == DriverSearchMode.OFFLINE) {
             isSearchActive = false
-            sessionManager.getSearchMode() ?: DriverSearchMode.CHAIN
+            val saved = sessionManager.getSearchMode()
+            if (saved == DriverSearchMode.HOME) DriverSearchMode.HOME else DriverSearchMode.CHAIN
         } else {
             isSearchActive = true
-            state.mode
+            if (!isDriverOnline) {
+                isDriverOnline = true
+                sessionManager.saveDriverOnlineStatus(true)
+                setOnlineVisualState(true, animate = false)
+            }
+            rawMode
         }
 
         when (displayedMode) {
+            DriverSearchMode.OFFLINE,
+            DriverSearchMode.BUSY,
             DriverSearchMode.MANUAL,
             DriverSearchMode.CHAIN -> {
                 tvSearchModeTitle.text = getString(R.string.main_search_chain_title)
@@ -817,8 +863,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             cardSearchContainer.cardElevation = 0f
             cardSearchContainer.clipToOutline = true
             cardSearchMode.setCardBackgroundColor(androidx.core.content.ContextCompat.getColor(this, R.color.driver_neon_teal))
-            tvSearchModeTitle.setTextColor(android.graphics.Color.WHITE)
-            tvSearchModeSubtitle.setTextColor(android.graphics.Color.parseColor("#E0E0E0"))
+            // Контрастный темный текст на яркой бирюзовой плашке (как в Uklon)
+            tvSearchModeTitle.setTextColor(android.graphics.Color.parseColor("#1A1C1E"))
+            tvSearchModeSubtitle.setTextColor(android.graphics.Color.parseColor("#232426"))
             tvSearchModeSubtitle.text = "Пошук замовлень..."
             borderAnimView.visibility = View.VISIBLE
             if (searchBorderAnimator == null) {
@@ -988,6 +1035,15 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 val response = ApiClient.getInstance().getApiService(this@MainActivity).getDriverProfile()
                 if (response.isSuccessful && response.body() != null) {
                     val profile = response.body()!!
+                    sessionManager.saveDriverId(profile.id)
+                    profile.isOnline?.let { srvOnline ->
+                        if (srvOnline != isDriverOnline) {
+                            isDriverOnline = srvOnline
+                            sessionManager.saveDriverOnlineStatus(srvOnline)
+                            setOnlineVisualState(srvOnline, animate = false)
+                            updateSearchStatusUI()
+                        }
+                    }
                     val serverName = profile.fullName ?: "Водій"
                     sessionManager.saveDriverName(serverName)
                     tvDriverName.text = extractFirstName(serverName)
@@ -1116,6 +1172,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         updateMapUI()
         centerMapOnUser()
+        drawSearchRadius()
     }
     private fun updateCustomDriverMarker(lat: Double, lng: Double) {
         if (!::map.isInitialized) return

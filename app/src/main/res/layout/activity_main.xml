@@ -74,7 +74,7 @@
                     android:layout_height="match_parent"
                     android:layout_gravity="start"
                     app:cardCornerRadius="20dp"
-                    app:cardBackgroundColor="@color/driver_card_bg"
+                    app:cardBackgroundColor="@color/driver_surface_elevated"
                     app:strokeWidth="0dp"
                     app:cardElevation="2dp">
 

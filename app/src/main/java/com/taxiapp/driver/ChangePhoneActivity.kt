@@ -86,11 +86,12 @@ class ChangePhoneActivity : AppCompatActivity() {
     }
 
     private fun requestNewCode() {
-        val phone = etNewPhone.text.toString()
-        if (phone.length < 10) {
+        val rawPhone = etNewPhone.text.toString().trim()
+        if (rawPhone.length < 9) {
             Toast.makeText(this, "Введіть коректний номер", Toast.LENGTH_SHORT).show()
             return
         }
+        val phone = if (rawPhone.startsWith("+380")) rawPhone else "+380${rawPhone.removePrefix("0")}"
         newPhoneNumber = phone
         lifecycleScope.launch {
             try {
@@ -114,8 +115,11 @@ class ChangePhoneActivity : AppCompatActivity() {
                 if (response.isSuccessful && response.body() != null) {
                     val loginResponse = response.body()!!
 
-                    // 1. Сохраняем НОВЫЙ токен
+                    // 1. Сохраняем НОВЫЙ токен и refreshToken
                     sessionManager.saveAuthToken(loginResponse.token)
+                    if (!loginResponse.refreshToken.isNullOrEmpty()) {
+                        sessionManager.saveRefreshToken(loginResponse.refreshToken)
+                    }
 
                     // 2. Сохраняем номер телефона (теперь поле phoneNumber доступно)
                     loginResponse.phoneNumber?.let {
