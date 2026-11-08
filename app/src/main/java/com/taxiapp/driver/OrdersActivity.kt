@@ -17,6 +17,8 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.cardview.widget.CardView
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -50,11 +52,23 @@ class OrdersActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_orders)
 
-        // 🛠️ ДОБАВЛЕНО: Безопасный отступ для сохранения Edge-to-Edge фона на Android 15
-        val rootView = findViewById<android.view.ViewGroup>(android.R.id.content).getChildAt(0)
-        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(rootView) { v, insets ->
-            val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+        val rootView = findViewById<View>(R.id.orders_root) ?: findViewById<ViewGroup>(android.R.id.content).getChildAt(0)
+        val headerContent = findViewById<View>(R.id.header_content)
+        val density = resources.displayMetrics.density
+
+        ViewCompat.setOnApplyWindowInsetsListener(rootView) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            if (headerContent != null) {
+                headerContent.setPadding(
+                    (16 * density).toInt(),
+                    systemBars.top + (28 * density).toInt(),
+                    (16 * density).toInt(),
+                    (12 * density).toInt()
+                )
+                v.setPadding(systemBars.left, 0, systemBars.right, systemBars.bottom)
+            } else {
+                v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            }
             insets
         }
 
@@ -62,46 +76,6 @@ class OrdersActivity : AppCompatActivity() {
         setupListeners()
     }
 
-    private val orderUpdateReceiver = object : android.content.BroadcastReceiver() {
-        override fun onReceive(context: android.content.Context?, intent: Intent?) {
-            if (viewPager.currentItem == 0) {
-                loadActiveOrder()
-            } else {
-                loadHistory()
-            }
-        }
-    }
-
-    override fun onStart() {
-        super.onStart()
-        val filter = android.content.IntentFilter().apply {
-            addAction("com.taxiapp.driver.ORDER_CANCELLED")
-            addAction("com.taxiapp.driver.ACTION_CLOSE_ORDER_OFFER")
-            addAction("com.taxiapp.driver.ACTION_ORDER_UPDATED")
-        }
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(orderUpdateReceiver, filter, android.content.Context.RECEIVER_NOT_EXPORTED)
-        } else {
-            @Suppress("UnspecifiedRegisterReceiverFlag")
-            registerReceiver(orderUpdateReceiver, filter)
-        }
-    }
-
-    override fun onStop() {
-        super.onStop()
-        try {
-            unregisterReceiver(orderUpdateReceiver)
-        } catch (_: Exception) {}
-    }
-
-    override fun onResume() {
-        super.onResume()
-        if (viewPager.currentItem == 0) {
-            loadActiveOrder()
-        } else {
-            loadHistory()
-        }
-    }
     private fun initViews() {
         tabLayout = findViewById(R.id.orders_tabs)
         viewPager = findViewById(R.id.orders_view_pager)
@@ -158,12 +132,10 @@ class OrdersActivity : AppCompatActivity() {
             holder.cardActiveOrder.visibility = View.VISIBLE
             holder.tvNoActive.visibility = View.GONE
 
-            // 1. Установка стоимости и тарифа поездки
             val fullPrice = order.getTotalFullPrice()
             holder.tvPrice.text = "${fullPrice.toInt()} ₴"
             holder.tvTariffBadge.text = order.tariffName
 
-            // 2. Расчет цены за км по логике короткого маршрута
             val meters = order.distanceMeters ?: 0
             if (meters >= 1000) {
                 val km = meters / 1000.0
@@ -175,11 +147,9 @@ class OrdersActivity : AppCompatActivity() {
                 holder.tvPricePerKm.visibility = View.VISIBLE
             }
 
-            // 3. Расстояние поездки
             holder.tvDistance.text = order.getFormattedDistance()
             holder.tvDistance.setTextColor(ContextCompat.getColor(this, R.color.driver_text_primary))
 
-            // 4. Логика адресов и секторов (Стандартное отображение: адрес крупно, сектор ниже)
             holder.tvAddressFrom.text = order.fromAddress
             if (!order.fromSector.isNullOrEmpty()) {
                 holder.tvSectorFrom.text = order.fromSector
@@ -196,11 +166,9 @@ class OrdersActivity : AppCompatActivity() {
                 holder.tvSectorTo.visibility = View.GONE
             }
 
-            // 5. Бонусные баллы активности за выполнение
             val bonus = order.activityBonus
             holder.tvActivityBonus.text = if (bonus >= 0) "+$bonus" else "$bonus"
 
-            // 6. Динамический рендеринг промежуточных остановок
             holder.stopsContainer.removeAllViews()
             if (!order.stops.isNullOrEmpty()) {
                 val inflater = LayoutInflater.from(this)
@@ -222,7 +190,6 @@ class OrdersActivity : AppCompatActivity() {
                 }
             }
 
-            // 7. Динамическое оформление типа оплаты и цвета плашки цены
             val method = order.paymentMethod ?: "CASH"
             if (method == "CASH") {
                 val neonTeal = ContextCompat.getColor(this, R.color.driver_neon_teal)
@@ -235,7 +202,6 @@ class OrdersActivity : AppCompatActivity() {
             holder.tvPrice.setTextColor(Color.BLACK)
             holder.ivPaymentIcon.setColorFilter(Color.BLACK)
 
-            // 8. Логика таймера/даты подачи для запланированных предварительных заказов
             if (order.isScheduled()) {
                 val scheduledDate = order.getScheduledDate()
                 if (scheduledDate != null) {
@@ -279,7 +245,6 @@ class OrdersActivity : AppCompatActivity() {
                 holder.tvScheduledTime.visibility = View.GONE
             }
 
-            // 9. Стилизация кнопки действия и сохранение состояний бизнес-статусов
             if (order.status == "OFFERING") {
                 holder.btnOpenActive.text = "Переглянути"
                 holder.btnOpenActive.backgroundTintList = ContextCompat.getColorStateList(this, R.color.driver_neon_teal)
@@ -344,7 +309,6 @@ class OrdersActivity : AppCompatActivity() {
             val tvNoActive: TextView = view.findViewById(R.id.tv_no_active)
             val btnOpenActive: Button = view.findViewById(R.id.btn_open_active)
 
-            // Новые поля из item_order разметки карточки
             val llPriceBg: LinearLayout = view.findViewById(R.id.ll_price_background)
             val ivPaymentIcon: ImageView = view.findViewById(R.id.iv_payment_icon)
             val tvPrice: TextView = view.findViewById(R.id.tv_price)
