@@ -1,51 +1,71 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal"
-    android:padding="16dp"
-    android:background="@drawable/bg_driver_input"
-    android:backgroundTint="@color/driver_card_bg"
-    android:layout_marginBottom="8dp"
-    android:gravity="center_vertical"
-    android:elevation="0dp">
+    android:layout_marginBottom="10dp"
+    app:cardBackgroundColor="@color/driver_black_bg"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="0dp"
+    app:strokeWidth="0dp">
 
     <LinearLayout
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:orientation="vertical">
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="18dp"
+        android:paddingVertical="16dp"
+        android:background="?attr/selectableItemBackground">
 
-        <!-- НАЙДИ И ЗАМЕНИ ЭТОТ БЛОК ВНУТРИ tvReason -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="12dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvReason"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:lineSpacingExtra="2dp"
+                android:textColor="@color/driver_text_primary"
+                android:textSize="17sp"
+                android:fontFamily="@font/app_font_family"
+                tools:text="Виконано. Досягнуто макс.\nзначення" />
+
+            <TextView
+                android:id="@+id/tvDate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textColor="@color/driver_text_secondary"
+                android:textSize="15sp"
+                android:fontFamily="@font/app_font_family"
+                tools:text="31 серпня 20:09" />
+        </LinearLayout>
+
         <TextView
-            android:id="@+id/tvReason"
+            android:id="@+id/tvPoints"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Замовлення"
-            android:textSize="16sp"
-            android:fontFamily="@font/app_font_family"
-            android:textColor="@color/driver_text_primary"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/tvDate"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="12.05.2024 14:30"
-            android:textSize="13sp"
-            android:fontFamily="@font/app_font_family"
             android:textColor="@color/driver_text_secondary"
-            android:layout_marginTop="4dp"/>
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:fontFamily="@font/app_font_family"
+            tools:text="+6" />
+
+        <ImageView
+            android:id="@+id/ivHistoryChevron"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_marginStart="10dp"
+            android:src="@drawable/ic_chevron"
+            app:tint="@color/driver_text_primary"
+            android:contentDescription="@null" />
+
     </LinearLayout>
-
-    <TextView
-        android:id="@+id/tvPoints"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="+5"
-        android:textSize="18sp"
-        android:fontFamily="@font/app_font_family"
-        android:textStyle="bold"
-        android:textColor="@color/activity_green"/>
-
-</LinearLayout>
+</com.google.android.material.card.MaterialCardView>

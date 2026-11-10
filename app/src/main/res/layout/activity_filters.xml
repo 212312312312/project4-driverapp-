@@ -2,66 +2,97 @@
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/filters_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/driver_black_bg">
+    android:background="@color/driver_card_bg">
 
-    <RelativeLayout
+    <!-- ВЕРХНЯ ШАПКА "ФІЛЬТРИ" У СТИЛІ UKLON (БЕЗ ЗАЙВИХ КНОПОК СПРАВА) -->
+    <com.google.android.material.card.MaterialCardView
         android:id="@+id/header_filters"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
-        android:layout_marginBottom="16dp"
-        android:layout_marginHorizontal="24dp"
+        android:layout_marginTop="-16dp"
+        app:cardBackgroundColor="@color/driver_black_bg"
+        app:cardCornerRadius="22dp"
+        app:cardElevation="4dp"
+        app:strokeWidth="0dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <ImageView
-            android:id="@+id/btn_back"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:src="@drawable/ic_arrow_back_black"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:clickable="true"
-            android:focusable="true"
-            app:tint="@color/driver_text_primary"
-            android:layout_centerVertical="true"
-            android:layout_alignParentStart="true"/>
-
-        <TextView
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:id="@+id/header_filters_inner"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/filters_title"
-            android:textSize="22sp"
-            android:textStyle="bold"
-            android:textColor="@color/driver_text_primary"
-            android:layout_centerVertical="true"
-            android:layout_toEndOf="@id/btn_back"
-            android:layout_marginStart="16dp"/>
-    </RelativeLayout>
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingTop="32dp"
+            android:paddingBottom="16dp"
+            android:paddingHorizontal="16dp">
 
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                app:cardBackgroundColor="@color/driver_surface_elevated"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp">
+
+                <ImageView
+                    android:id="@+id/btn_back"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:padding="10dp"
+                    android:src="@drawable/ic_arrow_back_black"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:clickable="true"
+                    android:focusable="true"
+                    app:tint="@color/driver_text_primary"
+                    android:contentDescription="@null" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:text="@string/filters_title"
+                android:textSize="20sp"
+                android:fontFamily="@font/app_font_family"
+                android:textStyle="bold"
+                android:textColor="@color/driver_text_primary" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- СПИСОК КАРТОК ФІЛЬТРІВ -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rv_filters"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginTop="24dp"
-        android:padding="12dp"
+        android:paddingHorizontal="10dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="16dp"
         android:clipToPadding="false"
+        android:overScrollMode="never"
         android:background="@color/driver_card_bg"
         app:layout_constraintTop_toBottomOf="@id/header_filters"
         app:layout_constraintBottom_toTopOf="@+id/bottom_actions"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent"
+        tools:listitem="@layout/item_filter" />
 
+    <!-- НИЖНЯ ПАНЕЛЬ З КНОПКОЮ "ВИМКНУТИ ВСІ" ТА КНОПКОЮ "+" -->
     <LinearLayout
         android:id="@+id/bottom_actions"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:paddingHorizontal="9dp"
-        android:paddingTop="16dp"
-        android:paddingBottom="16dp"
+        android:gravity="center_vertical"
+        android:background="@drawable/bg_bottom_sheet_driver"
+        android:paddingHorizontal="12dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="14dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
@@ -69,9 +100,10 @@
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/btn_disable_container"
             android:layout_width="0dp"
-            android:layout_height="60dp"
-            android:layout_weight="4"
-            android:background="@drawable/bg_driver_btn">
+            android:layout_height="54dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_round_button_gray"
+            android:backgroundTint="#A7AAB3">
 
             <androidx.appcompat.widget.AppCompatButton
                 android:id="@+id/btn_disable_all"
@@ -79,12 +111,13 @@
                 android:layout_height="match_parent"
                 android:text="@string/filters_btn_disable_all"
                 android:textAllCaps="false"
-                android:textSize="18sp"
+                android:textSize="17sp"
                 android:textStyle="bold"
                 android:textColor="@color/driver_text_black"
                 android:background="@android:color/transparent"
                 android:elevation="0dp"
                 android:stateListAnimator="@null"
+                android:fontFamily="@font/app_font_family"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
@@ -93,9 +126,8 @@
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/btn_add_container"
-            android:layout_width="0dp"
-            android:layout_height="60dp"
-            android:layout_weight="1"
+            android:layout_width="54dp"
+            android:layout_height="54dp"
             android:layout_marginStart="12dp"
             android:background="@drawable/bg_driver_btn">
 
@@ -105,12 +137,13 @@
                 android:layout_height="match_parent"
                 android:text="@string/filters_btn_add_symbol"
                 android:textAllCaps="false"
-                android:textSize="24sp"
-                android:textStyle="bold"
+                android:textSize="28sp"
                 android:textColor="@color/driver_text_black"
                 android:background="@android:color/transparent"
                 android:elevation="0dp"
                 android:stateListAnimator="@null"
+                android:includeFontPadding="false"
+                android:fontFamily="@font/app_font_family"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="parent"

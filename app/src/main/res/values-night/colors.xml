@@ -2,13 +2,13 @@
 <resources>
     <!-- Палітра Uklon Drive із збереженням архітектурних імен твого проекту: -->
     <!-- driver_black_bg використовується у всіх макетах для КАРТОК, ПАНЕЛЕЙ КАРТИ та КНОПОК (світлий сланцево-сірий, світліший за карту!) -->
-    <color name="driver_black_bg">#34373F</color>
+    <color name="driver_black_bg">#44464d</color>
 
     <!-- driver_card_bg використовується у боковому меню, ефірі та профілі як ТЕМНИЙ ФОН ЕКРАНУ (#232426) -->
-    <color name="driver_card_bg">#232426</color>
+    <color name="driver_card_bg">#2f2f30</color>
 
     <!-- Ще світліший сталево-сірий для внутрішніх кнопок (кнопка "Назад", повзунок "Офлайн") -->
-    <color name="driver_surface_elevated">#464954</color>
+    <color name="driver_surface_elevated">#363840</color>
 
     <!-- Тонкі розділювачі всередині карток -->
     <color name="driver_divider">#454854</color>

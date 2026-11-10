@@ -3,11 +3,13 @@ package com.taxiapp.driver
 import android.animation.ArgbEvaluator
 import android.animation.ValueAnimator
 import android.content.Intent
-import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
+import android.text.Spannable
+import android.text.SpannableString
 import android.text.TextWatcher
+import android.text.style.ForegroundColorSpan
 import android.view.View
 import android.view.animation.OvershootInterpolator
 import android.widget.EditText
@@ -16,19 +18,26 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.card.MaterialCardView
 import com.taxiapp.driver.network.ApiClient
 import com.taxiapp.driver.network.InitPaymentRequest
 import kotlinx.coroutines.launch
+import java.text.DecimalFormat
+import java.text.DecimalFormatSymbols
+import java.util.Locale
+import kotlin.math.abs
 
 class TopUpActivity : AppCompatActivity() {
 
     private lateinit var tvBalanceInteger: TextView
     private lateinit var tvBalanceFractional: TextView
     private lateinit var etAmount: EditText
+    private lateinit var amountInputCard: MaterialCardView
+    private lateinit var tvAmountHint: TextView
 
-    // Чекбоксы переведены на ссылки MaterialCardView для управления свечением обводки инпутов
     private lateinit var btnPayGoogle: MaterialCardView
     private lateinit var btnPayCard: MaterialCardView
     private lateinit var checkGoogle: MaterialCardView
@@ -36,21 +45,39 @@ class TopUpActivity : AppCompatActivity() {
     private lateinit var imgCheckGoogle: ImageView
     private lateinit var imgCheckCard: ImageView
 
-    // Главная кнопка действия
     private lateinit var btnContinueContainer: View
     private lateinit var btnContinue: TextView
 
-    private var selectedMethod: String = "CARD" // По дефолту выбрана карта ЛикПей
+    private var selectedMethod: String = "CARD"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_top_up)
 
+        val rootView = findViewById<View>(R.id.top_up_root) ?: findViewById(android.R.id.content)
+        val headerInner = findViewById<View>(R.id.header_top_up_inner)
+        val density = resources.displayMetrics.density
+
+        ViewCompat.setOnApplyWindowInsetsListener(rootView) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            if (headerInner != null) {
+                headerInner.setPadding(
+                    (16 * density).toInt(),
+                    systemBars.top + (24 * density).toInt(),
+                    (16 * density).toInt(),
+                    (16 * density).toInt()
+                )
+                v.setPadding(systemBars.left, 0, systemBars.right, systemBars.bottom)
+            } else {
+                v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            }
+            insets
+        }
+
         initViews()
         setupListeners()
         parseAndRenderBalance()
 
-        // Стартовое состояние выбора оплаты по умолчанию (Карта светится как активный инпут)
         animateCheckboxChange(btnPayCard, checkCard, imgCheckCard, true, false)
         validateForm()
     }
@@ -59,6 +86,8 @@ class TopUpActivity : AppCompatActivity() {
         tvBalanceInteger = findViewById(R.id.tv_balance_integer)
         tvBalanceFractional = findViewById(R.id.tv_balance_fractional)
         etAmount = findViewById(R.id.et_amount)
+        amountInputCard = findViewById(R.id.amount_input_card)
+        tvAmountHint = findViewById(R.id.tv_amount_hint)
 
         btnPayGoogle = findViewById(R.id.btn_pay_google)
         btnPayCard = findViewById(R.id.btn_pay_card)
@@ -72,31 +101,22 @@ class TopUpActivity : AppCompatActivity() {
     }
 
     private fun setupListeners() {
-        findViewById<ImageView>(R.id.btn_back).setOnClickListener { finish() }
-
-        // Слушатели тапов на строки выбора оплаты
-        /*
-        btnPayGoogle.setOnClickListener {
-            if (selectedMethod != "GOOGLE_PAY") {
-                selectedMethod = "GOOGLE_PAY"
-                animateCheckboxChange(btnPayGoogle, checkGoogle, imgCheckGoogle, true, true)
-                animateCheckboxChange(btnPayCard, checkCard, imgCheckCard, false, true)
-                validateForm()
-            }
-        }
-        */
+        findViewById<View>(R.id.btn_back).setOnClickListener { finish() }
 
         btnPayCard.setOnClickListener {
             if (selectedMethod != "CARD") {
                 selectedMethod = "CARD"
                 animateCheckboxChange(btnPayCard, checkCard, imgCheckCard, true, true)
-                // Анимацию скрытия Google Pay убираем, так как экран скрыт
-                // animateCheckboxChange(btnPayGoogle, checkGoogle, imgCheckGoogle, false, true)
                 validateForm()
             }
         }
 
-        // Валидация при вводе цифр
+        // Швидкі пресети суми поповнення (+200, +300, +500, 1000)
+        findViewById<View>(R.id.chip_amount_200)?.setOnClickListener { setPresetAmount(200) }
+        findViewById<View>(R.id.chip_amount_300)?.setOnClickListener { setPresetAmount(300) }
+        findViewById<View>(R.id.chip_amount_500)?.setOnClickListener { setPresetAmount(500) }
+        findViewById<View>(R.id.chip_amount_1000)?.setOnClickListener { setPresetAmount(1000) }
+
         etAmount.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
@@ -105,41 +125,83 @@ class TopUpActivity : AppCompatActivity() {
             override fun afterTextChanged(s: Editable?) {}
         })
 
-        // Клик по кнопке продолжить
         btnContinue.setOnClickListener {
             val amount = etAmount.text.toString().toDoubleOrNull()
-            if (amount != null) {
-                if (selectedMethod == "CARD") {
-                    initiatePayment(amount)
-                } else {
-                    Toast.makeText(this, "Google Pay: в розробці", Toast.LENGTH_SHORT).show()
-                }
+            if (amount != null && amount in 200.0..1000.0) {
+                initiatePayment(amount)
             }
         }
     }
 
-    // Парсинг и разделение суммы баланса счета
-    private fun parseAndRenderBalance() {
-        val balance = intent.getDoubleExtra("CURRENT_BALANCE", 0.0)
-        val integerPart = balance.toInt()
-        val fractionalPart = String.format(".%02d ₴", ((Math.abs(balance) - Math.abs(integerPart)) * 100).toInt())
-
-        tvBalanceInteger.text = integerPart.toString()
-        tvBalanceFractional.text = fractionalPart
-
-        if (balance < 0) {
-            tvBalanceInteger.setTextColor(getColor(R.color.driver_error_red))
-            tvBalanceFractional.setTextColor(getColor(R.color.driver_error_red))
-        } else {
-            tvBalanceInteger.setTextColor(getColor(R.color.driver_neon_teal))
-            tvBalanceFractional.setTextColor(getColor(R.color.driver_neon_teal))
-        }
+    private fun setPresetAmount(preset: Int) {
+        val text = preset.toString()
+        etAmount.setText(text)
+        etAmount.setSelection(text.length)
+        validateForm()
     }
 
-    // Валидация формы (ограничение от 200 до 1000 грн)
+    /**
+     * Відображає поточний баланс у стилі екрану "Баланс" (ціла частина білим + копійки сірим + знак ₴ білим).
+     */
+    private fun parseAndRenderBalance() {
+        val balance = intent.getDoubleExtra("CURRENT_BALANCE", 0.0)
+        val primaryColor = if (balance < 0) {
+            ContextCompat.getColor(this, R.color.driver_error_red)
+        } else {
+            ContextCompat.getColor(this, R.color.driver_text_primary)
+        }
+        val secondaryColor = ContextCompat.getColor(this, R.color.driver_text_secondary)
+
+        val symbols = DecimalFormatSymbols(Locale.US).apply {
+            groupingSeparator = ' '
+            decimalSeparator = '.'
+        }
+        val intPartFormat = DecimalFormat("#,##0", symbols)
+        val signPrefix = if (balance < -0.004) "-" else ""
+        val intPartStr = signPrefix + intPartFormat.format(abs(balance).toLong()) + "."
+        val cents = ((abs(balance) * 100.0) + 0.5).toLong() % 100L
+        val fracPartStr = String.format(Locale.US, "%02d ₴", cents)
+
+        tvBalanceInteger.text = intPartStr
+        tvBalanceInteger.setTextColor(primaryColor)
+
+        val spannableFrac = SpannableString(fracPartStr)
+        if (fracPartStr.length >= 2) {
+            spannableFrac.setSpan(
+                ForegroundColorSpan(secondaryColor),
+                0,
+                2,
+                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+            spannableFrac.setSpan(
+                ForegroundColorSpan(primaryColor),
+                2,
+                fracPartStr.length,
+                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+        }
+        tvBalanceFractional.text = spannableFrac
+    }
+
     private fun validateForm() {
-        val amount = etAmount.text.toString().toIntOrNull()
+        val raw = etAmount.text.toString().trim()
+        val amount = raw.toIntOrNull()
         val isValid = amount != null && amount in 200..1000
+
+        val neonTeal = ContextCompat.getColor(this, R.color.driver_neon_teal)
+        val errorRed = ContextCompat.getColor(this, R.color.driver_error_red)
+        val secondaryColor = ContextCompat.getColor(this, R.color.driver_text_secondary)
+
+        if (raw.isEmpty()) {
+            amountInputCard.strokeColor = secondaryColor
+            tvAmountHint.setTextColor(secondaryColor)
+        } else if (isValid) {
+            amountInputCard.strokeColor = neonTeal
+            tvAmountHint.setTextColor(secondaryColor)
+        } else {
+            amountInputCard.strokeColor = errorRed
+            tvAmountHint.setTextColor(errorRed)
+        }
 
         if (isValid) {
             btnContinueContainer.alpha = 1.0f
@@ -150,7 +212,6 @@ class TopUpActivity : AppCompatActivity() {
         }
     }
 
-    // Анимация строк выбора, имитирующая фокус EditText
     private fun animateCheckboxChange(
         rowCard: MaterialCardView,
         checkCard: MaterialCardView,
@@ -162,7 +223,6 @@ class TopUpActivity : AppCompatActivity() {
         val colorEnd = if (select) ContextCompat.getColor(this, R.color.driver_neon_teal) else ContextCompat.getColor(this, R.color.driver_text_secondary)
 
         if (animate) {
-            // Плавное перетекание цвета обводки всей строки-инпута за 250мс
             ValueAnimator.ofObject(ArgbEvaluator(), colorStart, colorEnd).apply {
                 duration = 250
                 addUpdateListener { animator ->

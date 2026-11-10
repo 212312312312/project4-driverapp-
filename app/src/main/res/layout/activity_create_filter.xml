@@ -2,371 +2,983 @@
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/create_filter_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/driver_black_bg">
+    android:background="@color/driver_card_bg">
 
-    <RelativeLayout
+    <!-- ВЕРХНЯ ШАПКА "НОВИЙ ФІЛЬТР" У СТИЛІ UKLON -->
+    <com.google.android.material.card.MaterialCardView
         android:id="@+id/header_create"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
-        android:layout_marginHorizontal="24dp"
-        android:paddingBottom="16dp"
+        android:layout_marginTop="-16dp"
+        app:cardBackgroundColor="@color/driver_black_bg"
+        app:cardCornerRadius="22dp"
+        app:cardElevation="4dp"
+        app:strokeWidth="0dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <ImageView
-            android:id="@+id/btn_back"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:src="@drawable/ic_arrow_back_black"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:clickable="true"
-            android:focusable="true"
-            app:tint="@color/driver_text_primary"
-            android:layout_centerVertical="true"
-            android:layout_alignParentStart="true"/>
-
-        <TextView
-            android:id="@+id/tv_header_title"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:id="@+id/header_create_inner"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/filter_create_title"
-            android:textSize="22sp"
-            android:textStyle="bold"
-            android:textColor="@color/driver_text_primary"
-            android:fontFamily="@font/app_font_family"
-            android:layout_centerVertical="true"
-            android:layout_toEndOf="@id/btn_back"
-            android:layout_marginStart="16dp"/>
-    </RelativeLayout>
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingTop="32dp"
+            android:paddingBottom="16dp"
+            android:paddingHorizontal="16dp">
 
-    <ScrollView
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                app:cardBackgroundColor="@color/driver_surface_elevated"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp">
+
+                <ImageView
+                    android:id="@+id/btn_back"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:padding="10dp"
+                    android:src="@drawable/ic_arrow_back_black"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:clickable="true"
+                    android:focusable="true"
+                    app:tint="@color/driver_text_primary"
+                    android:contentDescription="@null" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                android:id="@+id/tv_header_title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="16dp"
+                android:text="Новий фільтр"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColor="@color/driver_text_primary"
+                android:fontFamily="@font/app_font_family" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                app:cardBackgroundColor="@color/driver_surface_elevated"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp">
+
+                <ImageView
+                    android:id="@+id/btn_filter_info"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:padding="9dp"
+                    android:src="@drawable/ic_messages"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:clickable="true"
+                    android:focusable="true"
+                    app:tint="@color/driver_text_primary"
+                    android:contentDescription="@null" />
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- ОСНОВНИЙ СКРОЛ ІЗ КАРТКАМИ НАЛАШТУВАНЬ ФІЛЬТРА -->
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:fillViewport="true"
+        android:overScrollMode="never"
+        android:scrollbars="none"
+        android:clipToPadding="false"
         app:layout_constraintTop_toBottomOf="@id/header_create"
-        app:layout_constraintBottom_toTopOf="@id/btn_container_layout">
+        app:layout_constraintBottom_toTopOf="@+id/bottom_create_bar">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="20dp">
+            android:paddingHorizontal="10dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="20dp">
 
-            <EditText
-                android:id="@+id/et_filter_name"
-                android:layout_width="match_parent"
-                android:layout_height="55dp"
-                android:background="@drawable/bg_driver_input"
-                android:hint="@string/filter_name_hint"
-                android:paddingHorizontal="16dp"
-                android:textColor="@color/driver_text_primary"
-                android:textColorHint="@color/driver_text_secondary"
-                android:fontFamily="@font/app_font_family"
-                android:inputType="textCapSentences" />
-
-            <TextView
+            <!-- КАРТКА 1: НАЗВА ФІЛЬТРА ТА ЛІЧИЛЬНИК 0/100 -->
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:text="@string/filter_section_from"
-                android:textColor="@color/driver_neon_teal"
-                android:textSize="13sp"
-                android:fontFamily="@font/app_font_family"
-                android:textStyle="bold" />
+                android:layout_marginBottom="10dp"
+                app:cardBackgroundColor="@color/driver_black_bg"
+                app:cardCornerRadius="18dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp">
 
-            <RadioGroup
-                android:id="@+id/rg_from_type"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:orientation="horizontal">
-
-                <RadioButton
-                    android:id="@+id/rb_distance"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:checked="true"
-                    android:text="@string/filter_type_distance"
-                    android:buttonTint="@color/driver_neon_teal"
-                    android:fontFamily="@font/app_font_family"
-                    android:textColor="@color/driver_text_primary" />
-
-                <RadioButton
-                    android:id="@+id/rb_from_sectors"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/filter_type_sectors"
-                    android:buttonTint="@color/driver_neon_teal"
-                    android:fontFamily="@font/app_font_family"
-                    android:textColor="@color/driver_text_primary" />
-            </RadioGroup>
-
-            <LinearLayout
-                android:id="@+id/container_distance"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:orientation="vertical">
-
-                <TextView
-                    android:id="@+id/tv_distance_val"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/filter_radius_default"
-                    android:fontFamily="@font/app_font_family"
-                    android:textColor="@color/driver_text_primary" />
-
-                <SeekBar
-                    android:id="@+id/sb_distance"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:max="60"
-                    android:progress="10"
-                    android:thumbTint="@color/driver_neon_teal"
-                    android:progressTint="@color/driver_neon_teal"
-                    android:progressBackgroundTint="@color/driver_text_secondary" />
-            </LinearLayout>
+                    android:orientation="vertical"
+                    android:paddingHorizontal="14dp"
+                    android:paddingTop="14dp"
+                    android:paddingBottom="10dp">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_select_from_sectors"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="match_parent"
-                android:layout_height="50dp"
-                android:layout_marginTop="8dp"
-                android:text="@string/filter_btn_select_sectors"
-                android:fontFamily="@font/app_font_family"
-                android:textColor="@color/driver_text_primary"
-                android:visibility="gone"
-                app:strokeColor="@color/driver_neon_teal"
-                app:cornerRadius="8dp" />
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/card_input_name"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        app:cardBackgroundColor="@color/driver_surface_elevated"
+                        app:cardCornerRadius="14dp"
+                        app:cardElevation="0dp"
+                        app:strokeColor="#646876"
+                        app:strokeWidth="1.2dp">
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:text="@string/filter_section_to"
-                android:textColor="@color/driver_neon_teal"
-                android:textSize="13sp"
-                android:fontFamily="@font/app_font_family"
-                android:textStyle="bold" />
+                        <EditText
+                            android:id="@+id/et_filter_name"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:background="@android:color/transparent"
+                            android:hint="Назва фільтра *"
+                            android:maxLength="100"
+                            android:singleLine="true"
+                            android:paddingHorizontal="16dp"
+                            android:textColor="@color/driver_text_primary"
+                            android:textColorHint="@color/driver_text_secondary"
+                            android:textSize="17sp"
+                            android:fontFamily="@font/app_font_family"
+                            android:inputType="textCapSentences" />
+                    </com.google.android.material.card.MaterialCardView>
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_select_to_sectors"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="match_parent"
-                android:layout_height="50dp"
-                android:layout_marginTop="8dp"
-                android:text="@string/filter_btn_select_to_sectors"
-                android:fontFamily="@font/app_font_family"
-                android:textColor="@color/driver_text_primary"
-                app:strokeColor="@color/driver_neon_teal"
-                app:cornerRadius="8dp" />
+                    <TextView
+                        android:id="@+id/tv_name_counter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="end"
+                        android:layout_marginTop="6dp"
+                        android:layout_marginEnd="6dp"
+                        android:text="0/100"
+                        android:textColor="@color/driver_text_secondary"
+                        android:textSize="13sp"
+                        android:fontFamily="@font/app_font_family" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
-            <TextView
-                android:id="@+id/tv_selected_to_count"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="@string/filter_selected_count_default"
-                android:fontFamily="@font/app_font_family"
-                android:textColor="@color/driver_text_secondary"
-                android:textSize="12sp" />
-
-            <TextView
+            <!-- КАРТКА 2: ЗВІДКИ ([Відстань | Сектор] + Кнопки [-] 3.0 км [+] + Повзунок) -->
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:text="@string/filter_section_tariff"
-                android:textColor="@color/driver_neon_teal"
-                android:textSize="13sp"
-                android:fontFamily="@font/app_font_family"
-                android:textStyle="bold" />
+                android:layout_marginBottom="10dp"
+                app:cardBackgroundColor="@color/driver_black_bg"
+                app:cardCornerRadius="18dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp">
 
-            <RadioGroup
-                android:id="@+id/rg_tariff_type"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:orientation="horizontal">
-
-                <RadioButton
-                    android:id="@+id/rb_simple"
-                    android:layout_width="0dp"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:checked="true"
-                    android:text="@string/filter_tariff_simple"
-                    android:buttonTint="@color/driver_neon_teal"
-                    android:fontFamily="@font/app_font_family"
-                    android:textColor="@color/driver_text_primary" />
+                    android:orientation="vertical"
+                    android:padding="16dp">
 
-                <RadioButton
-                    android:id="@+id/rb_complex"
-                    android:layout_width="0dp"
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Звідки"
+                        android:textColor="@color/driver_text_primary"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:fontFamily="@font/app_font_family" />
+
+                    <!-- Прихована RadioGroup для зворотної сумісності -->
+                    <RadioGroup
+                        android:id="@+id/rg_from_type"
+                        android:layout_width="1dp"
+                        android:layout_height="1dp"
+                        android:visibility="gone">
+                        <RadioButton
+                            android:id="@+id/rb_distance"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checked="true" />
+                        <RadioButton
+                            android:id="@+id/rb_from_sectors"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" />
+                    </RadioGroup>
+
+                    <!-- Сегментний перемикач [ Відстань | Сектор ] -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="match_parent"
+                        android:layout_height="46dp"
+                        android:layout_marginTop="12dp"
+                        app:cardBackgroundColor="@color/driver_surface_elevated"
+                        app:cardCornerRadius="13dp"
+                        app:cardElevation="0dp"
+                        app:strokeWidth="0dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:orientation="horizontal"
+                            android:padding="2dp"
+                            android:weightSum="2">
+
+                            <com.google.android.material.card.MaterialCardView
+                                android:id="@+id/seg_from_distance"
+                                android:layout_width="0dp"
+                                android:layout_height="match_parent"
+                                android:layout_weight="1"
+                                android:clickable="true"
+                                android:focusable="true"
+                                app:cardBackgroundColor="#5A5E6D"
+                                app:cardCornerRadius="11dp"
+                                app:cardElevation="0dp"
+                                app:strokeColor="@color/driver_text_primary"
+                                app:strokeWidth="1dp">
+
+                                <TextView
+                                    android:id="@+id/tv_seg_from_distance"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:gravity="center"
+                                    android:text="Відстань"
+                                    android:textColor="@color/driver_text_primary"
+                                    android:textSize="16sp"
+                                    android:fontFamily="@font/app_font_family" />
+                            </com.google.android.material.card.MaterialCardView>
+
+                            <com.google.android.material.card.MaterialCardView
+                                android:id="@+id/seg_from_sector"
+                                android:layout_width="0dp"
+                                android:layout_height="match_parent"
+                                android:layout_weight="1"
+                                android:clickable="true"
+                                android:focusable="true"
+                                app:cardBackgroundColor="@android:color/transparent"
+                                app:cardCornerRadius="11dp"
+                                app:cardElevation="0dp"
+                                app:strokeColor="@android:color/transparent"
+                                app:strokeWidth="0dp">
+
+                                <TextView
+                                    android:id="@+id/tv_seg_from_sector"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:gravity="center"
+                                    android:text="Сектор"
+                                    android:textColor="@color/driver_text_secondary"
+                                    android:textSize="16sp"
+                                    android:fontFamily="@font/app_font_family" />
+                            </com.google.android.material.card.MaterialCardView>
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- Блок вибору радіуса: кнопки [-] 3.0 км [+] та повзунок (як на скріншоті) -->
+                    <LinearLayout
+                        android:id="@+id/container_distance"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="22dp"
+                        android:orientation="vertical">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center">
+
+                            <com.google.android.material.card.MaterialCardView
+                                android:id="@+id/btn_distance_minus"
+                                android:layout_width="52dp"
+                                android:layout_height="52dp"
+                                android:clickable="true"
+                                android:focusable="true"
+                                android:foreground="?attr/selectableItemBackground"
+                                app:cardBackgroundColor="@color/driver_surface_elevated"
+                                app:cardCornerRadius="14dp"
+                                app:cardElevation="0dp"
+                                app:strokeWidth="0dp">
+
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:gravity="center"
+                                    android:text="—"
+                                    android:textColor="@color/driver_text_primary"
+                                    android:textSize="22sp"
+                                    android:fontFamily="@font/app_font_family" />
+                            </com.google.android.material.card.MaterialCardView>
+
+                            <TextView
+                                android:id="@+id/tv_distance_val"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:minWidth="112dp"
+                                android:layout_marginHorizontal="18dp"
+                                android:gravity="center"
+                                android:text="3.0 км"
+                                android:textColor="@color/driver_text_primary"
+                                android:textSize="26sp"
+                                android:textStyle="bold"
+                                android:fontFamily="@font/app_font_family" />
+
+                            <com.google.android.material.card.MaterialCardView
+                                android:id="@+id/btn_distance_plus"
+                                android:layout_width="52dp"
+                                android:layout_height="52dp"
+                                android:clickable="true"
+                                android:focusable="true"
+                                android:foreground="?attr/selectableItemBackground"
+                                app:cardBackgroundColor="@color/driver_surface_elevated"
+                                app:cardCornerRadius="14dp"
+                                app:cardElevation="0dp"
+                                app:strokeWidth="0dp">
+
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:gravity="center"
+                                    android:text="+"
+                                    android:textColor="@color/driver_text_primary"
+                                    android:textSize="26sp"
+                                    android:includeFontPadding="false"
+                                    android:fontFamily="@font/app_font_family" />
+                            </com.google.android.material.card.MaterialCardView>
+                        </LinearLayout>
+
+                        <SeekBar
+                            android:id="@+id/sb_distance"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="20dp"
+                            android:layout_marginBottom="4dp"
+                            android:max="59"
+                            android:progress="5"
+                            android:thumbTint="@color/white"
+                            android:progressTint="@color/white"
+                            android:progressBackgroundTint="@color/driver_surface_elevated" />
+                    </LinearLayout>
+
+                    <!-- Кнопка вибору секторів подачі (коли обрано вкладку "Сектор") -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/card_from_sectors_selector"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:layout_marginTop="14dp"
+                        android:visibility="gone"
+                        app:cardBackgroundColor="@color/driver_surface_elevated"
+                        app:cardCornerRadius="14dp"
+                        app:cardElevation="0dp"
+                        app:strokeColor="#646876"
+                        app:strokeWidth="1.2dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:paddingHorizontal="16dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="+"
+                                android:textColor="@color/driver_text_primary"
+                                android:textSize="24sp"
+                                android:layout_marginEnd="12dp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_select_from_sectors"
+                                style="@style/Widget.MaterialComponents.Button.TextButton"
+                                android:layout_width="0dp"
+                                android:layout_height="match_parent"
+                                android:layout_weight="1"
+                                android:gravity="start|center_vertical"
+                                android:padding="0dp"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:text="Сектори подачі"
+                                android:textAllCaps="false"
+                                android:textColor="@color/driver_text_secondary"
+                                android:textSize="16sp"
+                                android:fontFamily="@font/app_font_family" />
+
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:src="@drawable/ic_chevron"
+                                app:tint="@color/driver_text_primary"
+                                android:contentDescription="@null" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- КАРТКА 3: КУДИ ("+ Сектори призначення >") -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                app:cardBackgroundColor="@color/driver_black_bg"
+                app:cardCornerRadius="18dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/filter_tariff_complex"
-                    android:buttonTint="@color/driver_neon_teal"
-                    android:fontFamily="@font/app_font_family"
-                    android:textColor="@color/driver_text_primary" />
-            </RadioGroup>
+                    android:orientation="vertical"
+                    android:padding="16dp">
 
-            <LinearLayout
-                android:id="@+id/container_simple_tariff"
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Куди"
+                        android:textColor="@color/driver_text_primary"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:fontFamily="@font/app_font_family" />
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/card_to_sectors_selector"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:layout_marginTop="12dp"
+                        app:cardBackgroundColor="@color/driver_surface_elevated"
+                        app:cardCornerRadius="14dp"
+                        app:cardElevation="0dp"
+                        app:strokeColor="#646876"
+                        app:strokeWidth="1.2dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:paddingHorizontal="16dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="+"
+                                android:textColor="@color/driver_text_primary"
+                                android:textSize="24sp"
+                                android:layout_marginEnd="12dp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_select_to_sectors"
+                                style="@style/Widget.MaterialComponents.Button.TextButton"
+                                android:layout_width="0dp"
+                                android:layout_height="match_parent"
+                                android:layout_weight="1"
+                                android:gravity="start|center_vertical"
+                                android:padding="0dp"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:text="Сектори призначення"
+                                android:textAllCaps="false"
+                                android:textColor="@color/driver_text_secondary"
+                                android:textSize="16sp"
+                                android:fontFamily="@font/app_font_family" />
+
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:src="@drawable/ic_chevron"
+                                app:tint="@color/driver_text_primary"
+                                android:contentDescription="@null" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <TextView
+                        android:id="@+id/tv_selected_to_count"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:visibility="gone"
+                        android:text="@string/filter_selected_count_default"
+                        android:fontFamily="@font/app_font_family"
+                        android:textColor="@color/driver_text_secondary"
+                        android:textSize="13sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- КАРТКА 4: ТАРИФ ([Простий | Складний] + Поля вводу + "Лише по місту") -->
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:orientation="vertical">
+                android:layout_marginBottom="10dp"
+                app:cardBackgroundColor="@color/driver_black_bg"
+                app:cardCornerRadius="18dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp">
 
-                <EditText
-                    android:id="@+id/et_min_price"
+                <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="50dp"
-                    android:background="@drawable/bg_driver_input"
-                    android:hint="@string/filter_hint_min_price"
-                    android:inputType="numberDecimal"
-                    android:paddingHorizontal="12dp"
-                    android:fontFamily="@font/app_font_family"
-                    android:textColor="@color/driver_text_primary"
-                    android:textColorHint="@color/driver_text_secondary" />
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
 
-                <EditText
-                    android:id="@+id/et_min_price_km"
-                    android:layout_width="match_parent"
-                    android:layout_height="50dp"
-                    android:layout_marginTop="12dp"
-                    android:background="@drawable/bg_driver_input"
-                    android:hint="@string/filter_hint_min_price_km"
-                    android:inputType="numberDecimal"
-                    android:paddingHorizontal="12dp"
-                    android:fontFamily="@font/app_font_family"
-                    android:textColor="@color/driver_text_primary"
-                    android:textColorHint="@color/driver_text_secondary" />
-            </LinearLayout>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Тариф"
+                        android:textColor="@color/driver_text_primary"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:fontFamily="@font/app_font_family" />
 
-            <LinearLayout
-                android:id="@+id/container_complex_tariff"
+                    <!-- Прихована RadioGroup для зворотної сумісності -->
+                    <RadioGroup
+                        android:id="@+id/rg_tariff_type"
+                        android:layout_width="1dp"
+                        android:layout_height="1dp"
+                        android:visibility="gone">
+                        <RadioButton
+                            android:id="@+id/rb_simple"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checked="true" />
+                        <RadioButton
+                            android:id="@+id/rb_complex"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" />
+                    </RadioGroup>
+
+                    <!-- Сегментний перемикач [ Простий | Складний ] -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="match_parent"
+                        android:layout_height="46dp"
+                        android:layout_marginTop="12dp"
+                        app:cardBackgroundColor="@color/driver_surface_elevated"
+                        app:cardCornerRadius="13dp"
+                        app:cardElevation="0dp"
+                        app:strokeWidth="0dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:orientation="horizontal"
+                            android:padding="2dp"
+                            android:weightSum="2">
+
+                            <com.google.android.material.card.MaterialCardView
+                                android:id="@+id/seg_tariff_simple"
+                                android:layout_width="0dp"
+                                android:layout_height="match_parent"
+                                android:layout_weight="1"
+                                android:clickable="true"
+                                android:focusable="true"
+                                app:cardBackgroundColor="#5A5E6D"
+                                app:cardCornerRadius="11dp"
+                                app:cardElevation="0dp"
+                                app:strokeColor="@color/driver_text_primary"
+                                app:strokeWidth="1dp">
+
+                                <TextView
+                                    android:id="@+id/tv_seg_tariff_simple"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:gravity="center"
+                                    android:text="Простий"
+                                    android:textColor="@color/driver_text_primary"
+                                    android:textSize="16sp"
+                                    android:fontFamily="@font/app_font_family" />
+                            </com.google.android.material.card.MaterialCardView>
+
+                            <com.google.android.material.card.MaterialCardView
+                                android:id="@+id/seg_tariff_complex"
+                                android:layout_width="0dp"
+                                android:layout_height="match_parent"
+                                android:layout_weight="1"
+                                android:clickable="true"
+                                android:focusable="true"
+                                app:cardBackgroundColor="@android:color/transparent"
+                                app:cardCornerRadius="11dp"
+                                app:cardElevation="0dp"
+                                app:strokeColor="@android:color/transparent"
+                                app:strokeWidth="0dp">
+
+                                <TextView
+                                    android:id="@+id/tv_seg_tariff_complex"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:gravity="center"
+                                    android:text="Складний"
+                                    android:textColor="@color/driver_text_secondary"
+                                    android:textSize="16sp"
+                                    android:fontFamily="@font/app_font_family" />
+                            </com.google.android.material.card.MaterialCardView>
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- Поля "Простий" тариф -->
+                    <LinearLayout
+                        android:id="@+id/container_simple_tariff"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:orientation="vertical">
+
+                        <com.google.android.material.card.MaterialCardView
+                            android:layout_width="match_parent"
+                            android:layout_height="56dp"
+                            app:cardBackgroundColor="@color/driver_surface_elevated"
+                            app:cardCornerRadius="14dp"
+                            app:cardElevation="0dp"
+                            app:strokeColor="#646876"
+                            app:strokeWidth="1.2dp">
+
+                            <EditText
+                                android:id="@+id/et_min_price"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:background="@android:color/transparent"
+                                android:hint="Мін. вартість"
+                                android:inputType="numberDecimal"
+                                android:paddingHorizontal="16dp"
+                                android:textSize="16sp"
+                                android:fontFamily="@font/app_font_family"
+                                android:textColor="@color/driver_text_primary"
+                                android:textColorHint="@color/driver_text_secondary" />
+                        </com.google.android.material.card.MaterialCardView>
+
+                        <com.google.android.material.card.MaterialCardView
+                            android:layout_width="match_parent"
+                            android:layout_height="56dp"
+                            android:layout_marginTop="12dp"
+                            app:cardBackgroundColor="@color/driver_surface_elevated"
+                            app:cardCornerRadius="14dp"
+                            app:cardElevation="0dp"
+                            app:strokeColor="#646876"
+                            app:strokeWidth="1.2dp">
+
+                            <EditText
+                                android:id="@+id/et_min_price_km"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:background="@android:color/transparent"
+                                android:hint="Мін. ціна ₴/км"
+                                android:inputType="numberDecimal"
+                                android:paddingHorizontal="16dp"
+                                android:textSize="16sp"
+                                android:fontFamily="@font/app_font_family"
+                                android:textColor="@color/driver_text_primary"
+                                android:textColorHint="@color/driver_text_secondary" />
+                        </com.google.android.material.card.MaterialCardView>
+                    </LinearLayout>
+
+                    <!-- Поля "Складний" тариф -->
+                    <LinearLayout
+                        android:id="@+id/container_complex_tariff"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:orientation="vertical"
+                        android:visibility="gone">
+
+                        <com.google.android.material.card.MaterialCardView
+                            android:layout_width="match_parent"
+                            android:layout_height="56dp"
+                            app:cardBackgroundColor="@color/driver_surface_elevated"
+                            app:cardCornerRadius="14dp"
+                            app:cardElevation="0dp"
+                            app:strokeColor="#646876"
+                            app:strokeWidth="1.2dp">
+
+                            <EditText
+                                android:id="@+id/et_complex_min_price"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:background="@android:color/transparent"
+                                android:hint="Мін. вартість (₴)"
+                                android:inputType="numberDecimal"
+                                android:paddingHorizontal="16dp"
+                                android:textSize="16sp"
+                                android:fontFamily="@font/app_font_family"
+                                android:textColor="@color/driver_text_primary"
+                                android:textColorHint="@color/driver_text_secondary" />
+                        </com.google.android.material.card.MaterialCardView>
+
+                        <com.google.android.material.card.MaterialCardView
+                            android:layout_width="match_parent"
+                            android:layout_height="56dp"
+                            android:layout_marginTop="12dp"
+                            app:cardBackgroundColor="@color/driver_surface_elevated"
+                            app:cardCornerRadius="14dp"
+                            app:cardElevation="0dp"
+                            app:strokeColor="#646876"
+                            app:strokeWidth="1.2dp">
+
+                            <EditText
+                                android:id="@+id/et_complex_km_in_min"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:background="@android:color/transparent"
+                                android:hint="Км у мінімалці (напр. 3)"
+                                android:inputType="numberDecimal"
+                                android:paddingHorizontal="16dp"
+                                android:textSize="16sp"
+                                android:fontFamily="@font/app_font_family"
+                                android:textColor="@color/driver_text_primary"
+                                android:textColorHint="@color/driver_text_secondary" />
+                        </com.google.android.material.card.MaterialCardView>
+
+                        <com.google.android.material.card.MaterialCardView
+                            android:layout_width="match_parent"
+                            android:layout_height="56dp"
+                            android:layout_marginTop="12dp"
+                            app:cardBackgroundColor="@color/driver_surface_elevated"
+                            app:cardCornerRadius="14dp"
+                            app:cardElevation="0dp"
+                            app:strokeColor="#646876"
+                            app:strokeWidth="1.2dp">
+
+                            <EditText
+                                android:id="@+id/et_complex_city"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:background="@android:color/transparent"
+                                android:hint="Мін. ціна ₴/км по місту"
+                                android:inputType="numberDecimal"
+                                android:paddingHorizontal="16dp"
+                                android:textSize="16sp"
+                                android:fontFamily="@font/app_font_family"
+                                android:textColor="@color/driver_text_primary"
+                                android:textColorHint="@color/driver_text_secondary" />
+                        </com.google.android.material.card.MaterialCardView>
+
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/card_complex_suburbs_input"
+                            android:layout_width="match_parent"
+                            android:layout_height="56dp"
+                            android:layout_marginTop="12dp"
+                            app:cardBackgroundColor="@color/driver_surface_elevated"
+                            app:cardCornerRadius="14dp"
+                            app:cardElevation="0dp"
+                            app:strokeColor="#646876"
+                            app:strokeWidth="1.2dp">
+
+                            <EditText
+                                android:id="@+id/et_complex_suburbs"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:background="@android:color/transparent"
+                                android:hint="Мін. ціна ₴/км за містом"
+                                android:inputType="numberDecimal"
+                                android:paddingHorizontal="16dp"
+                                android:textSize="16sp"
+                                android:fontFamily="@font/app_font_family"
+                                android:textColor="@color/driver_text_primary"
+                                android:textColorHint="@color/driver_text_secondary" />
+                        </com.google.android.material.card.MaterialCardView>
+                    </LinearLayout>
+
+                    <!-- Чекбокс "Лише по місту" + іконка (?) як на скріншоті image_e61be0.jpg -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <com.google.android.material.checkbox.MaterialCheckBox
+                            android:id="@+id/cb_city_only"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Лише по місту"
+                            android:paddingStart="8dp"
+                            android:paddingEnd="8dp"
+                            android:textColor="@color/driver_text_primary"
+                            android:textSize="16sp"
+                            android:fontFamily="@font/app_font_family"
+                            app:buttonTint="@color/driver_text_secondary" />
+
+                        <ImageView
+                            android:id="@+id/btn_city_only_help"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_messages"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:clickable="true"
+                            android:focusable="true"
+                            app:tint="@color/driver_text_secondary"
+                            android:contentDescription="@null" />
+                    </LinearLayout>
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- КАРТКА 5: ТИП ОПЛАТИ ([ Готівка | Будь-який | Безготівка ]) -->
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:orientation="vertical"
-                android:visibility="gone">
+                app:cardBackgroundColor="@color/driver_black_bg"
+                app:cardCornerRadius="18dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp">
 
-                <EditText
-                    android:id="@+id/et_complex_min_price"
+                <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="50dp"
-                    android:background="@drawable/bg_driver_input"
-                    android:hint="@string/filter_hint_min_price"
-                    android:inputType="numberDecimal"
-                    android:paddingHorizontal="12dp"
-                    android:fontFamily="@font/app_font_family"
-                    android:textColor="@color/driver_text_primary"
-                    android:textColorHint="@color/driver_text_secondary" />
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
 
-                <EditText
-                    android:id="@+id/et_complex_km_in_min"
-                    android:layout_width="match_parent"
-                    android:layout_height="50dp"
-                    android:layout_marginTop="12dp"
-                    android:background="@drawable/bg_driver_input"
-                    android:enabled="true"
-                    android:hint="@string/filter_hint_complex_km"
-                    android:inputType="numberDecimal"
-                    android:paddingHorizontal="12dp"
-                    android:fontFamily="@font/app_font_family"
-                    android:textColor="@color/driver_text_primary"
-                    android:textColorHint="@color/driver_text_secondary" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Тип оплати"
+                        android:textColor="@color/driver_text_primary"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:fontFamily="@font/app_font_family" />
 
-                <EditText
-                    android:id="@+id/et_complex_city"
-                    android:layout_width="match_parent"
-                    android:layout_height="50dp"
-                    android:layout_marginTop="12dp"
-                    android:background="@drawable/bg_driver_input"
-                    android:hint="@string/filter_hint_city_price"
-                    android:inputType="numberDecimal"
-                    android:paddingHorizontal="12dp"
-                    android:fontFamily="@font/app_font_family"
-                    android:textColor="@color/driver_text_primary"
-                    android:textColorHint="@color/driver_text_secondary" />
+                    <!-- Прихований Spinner для збереження сумісності -->
+                    <Spinner
+                        android:id="@+id/sp_payment_type"
+                        android:layout_width="1dp"
+                        android:layout_height="1dp"
+                        android:visibility="gone" />
 
-                <EditText
-                    android:id="@+id/et_complex_suburbs"
-                    android:layout_width="match_parent"
-                    android:layout_height="50dp"
-                    android:layout_marginTop="12dp"
-                    android:background="@drawable/bg_driver_input"
-                    android:enabled="true"
-                    android:hint="@string/filter_hint_suburb_price"
-                    android:inputType="numberDecimal"
-                    android:paddingHorizontal="12dp"
-                    android:fontFamily="@font/app_font_family"
-                    android:textColor="@color/driver_text_primary"
-                    android:textColorHint="@color/driver_text_secondary" />
-            </LinearLayout>
+                    <!-- 3-сегментний перемикач [ Готівка | Будь-який | Безготівка ] як на скріншоті -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="match_parent"
+                        android:layout_height="46dp"
+                        android:layout_marginTop="12dp"
+                        app:cardBackgroundColor="@color/driver_surface_elevated"
+                        app:cardCornerRadius="13dp"
+                        app:cardElevation="0dp"
+                        app:strokeWidth="0dp">
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:text="@string/filter_section_payment"
-                android:textColor="@color/driver_neon_teal"
-                android:textSize="13sp"
-                android:fontFamily="@font/app_font_family"
-                android:textStyle="bold" />
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:orientation="horizontal"
+                            android:padding="2dp"
+                            android:weightSum="3">
 
-            <Spinner
-                android:id="@+id/sp_payment_type"
-                android:layout_width="match_parent"
-                android:layout_height="55dp"
-                android:layout_marginTop="8dp"
-                android:background="@drawable/bg_driver_input"
-                android:popupBackground="@color/driver_black_bg" />
+                            <com.google.android.material.card.MaterialCardView
+                                android:id="@+id/seg_pay_cash"
+                                android:layout_width="0dp"
+                                android:layout_height="match_parent"
+                                android:layout_weight="1"
+                                android:clickable="true"
+                                android:focusable="true"
+                                app:cardBackgroundColor="@android:color/transparent"
+                                app:cardCornerRadius="11dp"
+                                app:cardElevation="0dp"
+                                app:strokeColor="@android:color/transparent"
+                                app:strokeWidth="0dp">
 
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="24dp" />
+                                <TextView
+                                    android:id="@+id/tv_seg_pay_cash"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:gravity="center"
+                                    android:text="Готівка"
+                                    android:textColor="@color/driver_text_secondary"
+                                    android:textSize="15sp"
+                                    android:fontFamily="@font/app_font_family" />
+                            </com.google.android.material.card.MaterialCardView>
+
+                            <com.google.android.material.card.MaterialCardView
+                                android:id="@+id/seg_pay_any"
+                                android:layout_width="0dp"
+                                android:layout_height="match_parent"
+                                android:layout_weight="1"
+                                android:clickable="true"
+                                android:focusable="true"
+                                app:cardBackgroundColor="#5A5E6D"
+                                app:cardCornerRadius="11dp"
+                                app:cardElevation="0dp"
+                                app:strokeColor="@color/driver_text_primary"
+                                app:strokeWidth="1dp">
+
+                                <TextView
+                                    android:id="@+id/tv_seg_pay_any"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:gravity="center"
+                                    android:text="Будь-який"
+                                    android:textColor="@color/driver_text_primary"
+                                    android:textSize="15sp"
+                                    android:fontFamily="@font/app_font_family" />
+                            </com.google.android.material.card.MaterialCardView>
+
+                            <com.google.android.material.card.MaterialCardView
+                                android:id="@+id/seg_pay_card"
+                                android:layout_width="0dp"
+                                android:layout_height="match_parent"
+                                android:layout_weight="1"
+                                android:clickable="true"
+                                android:focusable="true"
+                                app:cardBackgroundColor="@android:color/transparent"
+                                app:cardCornerRadius="11dp"
+                                app:cardElevation="0dp"
+                                app:strokeColor="@android:color/transparent"
+                                app:strokeWidth="0dp">
+
+                                <TextView
+                                    android:id="@+id/tv_seg_pay_card"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:gravity="center"
+                                    android:text="Безготівка"
+                                    android:textColor="@color/driver_text_secondary"
+                                    android:textSize="15sp"
+                                    android:fontFamily="@font/app_font_family" />
+                            </com.google.android.material.card.MaterialCardView>
+
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
         </LinearLayout>
-    </ScrollView>
+    </androidx.core.widget.NestedScrollView>
 
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/btn_container_layout"
+    <!-- НИЖНЯ ПАНЕЛЬ ІЗ КНОПКОЮ "СТВОРИТИ ФІЛЬТР" -->
+    <LinearLayout
+        android:id="@+id/bottom_create_bar"
         android:layout_width="match_parent"
-        android:layout_height="60dp"
-        android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="16dp"
-        android:layout_marginBottom="16dp"
-        android:background="@drawable/bg_driver_btn"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/bg_bottom_sheet_driver"
+        android:paddingHorizontal="12dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="14dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/btn_create_filter"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:text="@string/filter_btn_create"
-            android:textAllCaps="false"
-            android:textSize="18sp"
-            android:fontFamily="@font/app_font_family"
-            android:textStyle="bold"
-            android:textColor="@color/driver_text_black"
-            android:background="@android:color/transparent"
-            android:elevation="0dp"
-            android:stateListAnimator="@null"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent" />
-    </androidx.constraintlayout.widget.ConstraintLayout>
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/btn_container_layout"
+            android:layout_width="match_parent"
+            android:layout_height="54dp"
+            android:background="@drawable/bg_driver_btn">
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btn_create_filter"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:text="Створити фільтр"
+                android:textAllCaps="false"
+                android:textSize="17sp"
+                android:fontFamily="@font/app_font_family"
+                android:textStyle="bold"
+                android:textColor="@color/driver_text_black"
+                android:background="@android:color/transparent"
+                android:elevation="0dp"
+                android:stateListAnimator="@null"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

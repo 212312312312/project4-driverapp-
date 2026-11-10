@@ -4,69 +4,63 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.Context
-import com.taxiapp.driver.utils.LocaleHelper
-import com.taxiapp.driver.network.UpdateLocationRequest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.graphics.Bitmap
-import com.taxiapp.driver.utils.toFullImageUrl
 import android.graphics.Canvas
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import android.graphics.Color
 import android.graphics.Typeface
-import android.location.Location
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.os.Looper
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import android.widget.EditText
-import android.widget.ImageView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityOptionsCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.GravityCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.widget.addTextChangedListener
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.bumptech.glide.Glide
-import com.google.android.gms.location.*
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
 import com.google.android.material.bottomsheet.BottomSheetDialog
-import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.firebase.messaging.FirebaseMessaging
 import com.taxiapp.driver.network.ApiClient
-import com.taxiapp.driver.network.HeatmapZoneDto
-import com.taxiapp.driver.network.UpdateDriverStatusRequest
 import com.taxiapp.driver.network.DriverSearchMode
 import com.taxiapp.driver.network.DriverSearchSettingsDto
-import com.taxiapp.driver.network.FcmTokenDto
+import com.taxiapp.driver.network.HeatmapZoneDto
 import com.taxiapp.driver.network.Sector
 import com.taxiapp.driver.network.SectorPointDto
-import com.taxiapp.driver.service.LocationService
-import com.taxiapp.driver.utils.SessionManager
-import kotlinx.coroutines.launch
+import com.taxiapp.driver.network.UpdateDriverStatusRequest
+import com.taxiapp.driver.network.UpdateLocationRequest
 import com.taxiapp.driver.service.FloatingWidgetService
-import com.taxiapp.driver.ServiceMessagesActivity
+import com.taxiapp.driver.service.LocationService
+import com.taxiapp.driver.utils.LocaleHelper
+import com.taxiapp.driver.utils.SessionManager
+import com.taxiapp.driver.utils.toFullImageUrl
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
-    // --- Настройка целей выбора секторов ---
     enum class SelectionTarget { FILTER_FROM, FILTER_TO, HOME }
     private var currentSelectionTarget = SelectionTarget.FILTER_FROM
 
@@ -75,7 +69,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private val polygons = mutableMapOf<Long, Polygon>()
     private val sectorMarkersList = mutableListOf<Marker>()
     private var sectorsListAdapter: SectorsListAdapter? = null
-    // ----------------------------------------------
 
     private lateinit var tvSearchModeTitle: TextView
     private lateinit var tvSearchModeSubtitle: TextView
@@ -87,6 +80,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var sessionManager: SessionManager
     private lateinit var btnStatusToggle: View
     private var driverLocationMarker: Marker? = null
+    private var cachedDriverMarkerIcon: BitmapDescriptor? = null
+    private val cachedGlowBitmaps = mutableMapOf<Int, BitmapDescriptor>()
+
     private lateinit var switchThumbCard: com.google.android.material.card.MaterialCardView
     private lateinit var tvSwitchStatusText: TextView
     private var isDriverOnline = false
@@ -100,7 +96,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private var defaultMapPaddingBottom = 0
     private lateinit var mainScreenUiGroup: androidx.constraintlayout.widget.Group
-    private lateinit var btnSaveSelection: android.widget.ImageView
+    private lateinit var btnSaveSelection: ImageView
     private lateinit var sectorOverlay: View
     private lateinit var selectionTabs: com.google.android.material.tabs.TabLayout
     private lateinit var etSectorSearch: EditText
@@ -117,7 +113,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var navViewContent: View
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
-    private lateinit var locationCallback: LocationCallback
     private var boundLocationService: LocationService? = null
     private var isLocationServiceBound = false
 
@@ -128,9 +123,14 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             boundLocationService = locationService
             isLocationServiceBound = true
 
-            // Подписываемся на нашу лямбду из сервиса и передаем координаты в маркер карты
             locationService.onLocationUpdated = { lat, lng ->
-                updateCustomDriverMarker(lat, lng)
+                runOnUiThread {
+                    if (!sessionManager.isManualLocationActive()) {
+                        currentDriverLocation = LatLng(lat, lng)
+                        drawSearchRadius()
+                    }
+                    updateCustomDriverMarker(lat, lng)
+                }
             }
         }
 
@@ -144,7 +144,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private var overlayBackPressedCallback: androidx.activity.OnBackPressedCallback? = null
     private var originalContainerElevation: Float = -1f
     private var searchRadiusCircle: Circle? = null
-    // ЗАМЕНИТЬ СТРОКУ ОБЪЯВЛЕНИЯ В МЕСТАХ ИНИЦИАЛИЗАЦИИ ПЕРЕМЕННЫХ КЛАССА:
 
     private var currentSearchRadiusKm: Double = 3.0
     private var currentHomeSectorIds: List<Long> = emptyList()
@@ -162,7 +161,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private var systemBarsTopInset = 0
     private var systemBarsBottomInset = 0
 
-    internal var isSearchActive = false // 👈 Должна быть доступна для шторки из того же пакета
+    internal var isSearchActive = false
     private var restoreDialog: android.app.Dialog? = null
 
     companion object {
@@ -185,14 +184,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         if (fineLocation || coarseLocation) {
             updateMapUI()
             startLocationService()
-            startUILocationUpdates()
             if (::map.isInitialized) centerMapOnUser()
         } else {
             Toast.makeText(this, "Потрібен доступ до геолокації!", Toast.LENGTH_SHORT).show()
         }
     }
-
-
 
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(LocaleHelper.onAttach(newBase))
@@ -219,15 +215,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         setupUI()
 
-        // 🛠️ ДОБАВЛЕНО: Корректная обработка безопасных зон для Android 15 (API 35+)
-        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.root_container)) { _, insets ->
-            val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.root_container)) { _, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             val density = resources.displayMetrics.density
 
-            // 🟢 Сохраняем системные инсеты для использования при открытии оверлея
             systemBarsTopInset = systemBars.top
             systemBarsBottomInset = systemBars.bottom
-            // ...
+
             findViewById<View>(R.id.header_selection)?.let { view ->
                 view.setPadding(
                     (24 * density).toInt(),
@@ -236,47 +230,40 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     (16 * density).toInt()
                 )
             }
-            // Сдвигаем гамбургер-меню и плашку статуса "Онлайн/Офлайн" под статус-бар
             findViewById<View>(R.id.btn_menu_container)?.let { view ->
-                val params = view.layoutParams as android.view.ViewGroup.MarginLayoutParams
+                val params = view.layoutParams as ViewGroup.MarginLayoutParams
                 params.topMargin = systemBars.top + (16 * density).toInt()
                 view.layoutParams = params
             }
             findViewById<View>(R.id.btn_status_toggle)?.let { view ->
-                val params = view.layoutParams as android.view.ViewGroup.MarginLayoutParams
+                val params = view.layoutParams as ViewGroup.MarginLayoutParams
                 params.topMargin = systemBars.top + (16 * density).toInt()
                 view.layoutParams = params
             }
 
-            // Приподнимаем нижнее меню навигации над панелью системных жестов/кнопок
             findViewById<View>(R.id.bottom_nav_container)?.let { view ->
-                val params = view.layoutParams as android.view.ViewGroup.MarginLayoutParams
+                val params = view.layoutParams as ViewGroup.MarginLayoutParams
                 params.bottomMargin = systemBars.bottom + (12 * density).toInt()
                 view.layoutParams = params
             }
 
-            // Адаптируем под статус-бар шапку оверлея при выборе домашних секторов
-            // 🟢 Обновляем отступ хедера выборки секторов
             updateHeaderSelectionPadding()
 
-            // 🌟 НОВОЕ: Безопасные отступы для бокового меню (layout_drawer_content)
-            findViewById<android.widget.LinearLayout>(R.id.ll_menu_scroll_content)?.let { menuScrollContent ->
+            findViewById<LinearLayout>(R.id.ll_menu_scroll_content)?.let { menuScrollContent ->
                 menuScrollContent.setPadding(
                     menuScrollContent.paddingLeft,
-                    systemBars.top, // Защищаем карточку водителя от наезда статус-бара
+                    systemBars.top,
                     menuScrollContent.paddingRight,
                     menuScrollContent.paddingBottom
                 )
             }
 
-            findViewById<android.view.View>(R.id.btn_logout)?.let { btnLogout ->
-                val logoutParams = btnLogout.layoutParams as android.view.ViewGroup.MarginLayoutParams
-                logoutParams.bottomMargin = systemBars.bottom // Поднимаем кнопку "Выход" над полосой жестов
+            findViewById<View>(R.id.btn_logout)?.let { btnLogout ->
+                val logoutParams = btnLogout.layoutParams as ViewGroup.MarginLayoutParams
+                logoutParams.bottomMargin = systemBars.bottom
                 btnLogout.layoutParams = logoutParams
             }
 
-            // 🌟 ДИНАМИЧЕСКИЙ СДВИГ КАРТЫ: Пересчитываем отступ карты, чтобы логотип Google всегда был над панелями
-            // Складываем: bottom_nav (88dp) + её маргин (12dp) + инсет жестов (systemBars.bottom) + layoutSearchStatus (72dp) + её маргин (8dp) + 4dp зазор
             defaultMapPaddingBottom = systemBars.bottom + ((88 + 12 + 72 + 8 + 4) * density).toInt()
             if (::map.isInitialized && !sectorOverlay.isShown) {
                 map.setPadding(0, 0, 0, defaultMapPaddingBottom)
@@ -286,7 +273,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
 
         loadUserProfile()
-        setupLocationCallback()
 
         checkPermissionsAndStart()
         initSectorSelectionOverlay()
@@ -302,9 +288,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             sessionManager.saveFcmToken(token)
             lifecycleScope.launch {
                 try {
-                    // --- ИСПРАВЛЕНО: Передаем Map, соответствующий @RequestBody сервера ---
                     ApiClient.getInstance().getApiService(this@MainActivity).updateFcmToken(mapOf("token" to token))
-                    Log.d("FCM_UNIT", "✅ FCM Token successfully synchronized with server on MainActivity start.")
                 } catch (e: Exception) { e.printStackTrace() }
             }
         }
@@ -317,14 +301,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             return
         }
 
-        // Синхронизируем статус с сохранённым в сессии
         this.isDriverOnline = sessionManager.isDriverOnline()
         setOnlineVisualState(this.isDriverOnline, animate = false)
 
         updateLockIconState()
-        updateOrdersBadge()
-        checkActiveOrderOnStart()
-        startUILocationUpdates()
+        syncActiveOrderAndBadge()
         updateCommissionInfo()
 
         if (hasLocationPermission()) {
@@ -334,8 +315,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         if (::map.isInitialized) {
             updateMapUI()
         }
-        // ✅ ИСПРАВЛЕНО: Вызываем синхронизацию плашки поиска ВСЕГДА в onResume, не дожидаясь getMapAsync,
-        // чтобы плашка «Ланцюг замовлень» никогда не сбрасывалась при возврате из фона!
         updateSearchStatusUI()
         checkPhotoControlStatus()
     }
@@ -353,11 +332,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 }
             }
         }
-    }
-
-    override fun onPause() {
-        super.onPause()
-        fusedLocationClient.removeLocationUpdates(locationCallback)
     }
 
     override fun onDestroy() {
@@ -378,27 +352,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     fun onSearchSettingsUpdated() {
         updateSearchStatusUI()
-    }
-
-    private fun setupLocationCallback() {
-        locationCallback = object : LocationCallback() {
-            override fun onLocationResult(locationResult: LocationResult) {
-                val location = locationResult.lastLocation ?: return
-                if (!sessionManager.isManualLocationActive()) {
-                    currentDriverLocation = LatLng(location.latitude, location.longitude)
-                    drawSearchRadius()
-                }
-            }
-        }
-    }
-
-    @SuppressLint("MissingPermission")
-    private fun startUILocationUpdates() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) return
-        val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 3000)
-            .setMinUpdateDistanceMeters(5f)
-            .build()
-        fusedLocationClient.requestLocationUpdates(request, locationCallback, Looper.getMainLooper())
     }
 
     private fun drawSearchRadius() {
@@ -443,7 +396,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun updateHomeSectors(sectorIds: List<Long>) {
         lifecycleScope.launch {
             try {
-                // 🚀 ОПТИМИЗАЦИЯ: Используем сохраненный в памяти currentSearchRadiusKm вместо GET запроса
                 val req = DriverSearchSettingsDto(DriverSearchMode.HOME, currentSearchRadiusKm, sectorIds)
                 val response = ApiClient.getInstance().getApiService(this@MainActivity).updateSearchSettings(req)
                 if (response.isSuccessful && response.body() != null) {
@@ -470,7 +422,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         btnToggleSearchMode.setOnClickListener { toggleSearchActivation() }
 
         findViewById<View>(R.id.btnSearchSettings).setOnClickListener {
-            // --- ДОБАВЛЕНО: Блокировка настроек радиуса/Домой в оффлайне ---
             if (!isDriverOnline) {
                 Toast.makeText(this, "Переключіть режим на Онлайн", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
@@ -506,7 +457,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
 
         findViewById<View>(R.id.btn_nav_ether).setOnClickListener {
-            // --- ДОБАВЛЕНО: Офлайн водитель не может войти в Эфир ---
             if (!isDriverOnline) {
                 Toast.makeText(this, "Переключіть режим на Онлайн", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
@@ -569,11 +519,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             sessionManager.saveDriverOnlineStatus(false)
             lifecycleScope.launch {
                 try {
-                    // 🚀 Вызываем deleteLocation(), чтобы полностью удалить водителя из оперативного кэша диспетчера
                     ApiClient.getInstance().getApiService(this@MainActivity).deleteLocation()
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                 } finally {
-                    // ✅ ИСПРАВЛЕНО: Останавливаем фоновую трансляцию GPS и плавающий виджет при завершении смены
                     boundLocationService?.onLocationUpdated = null
                     stopService(Intent(this@MainActivity, LocationService::class.java))
                     stopService(Intent(this@MainActivity, FloatingWidgetService::class.java))
@@ -590,28 +538,22 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private fun setOnlineVisualState(online: Boolean, animate: Boolean) {
         this.isDriverOnline = online
-        val trackContainer = findViewById<android.view.ViewGroup>(R.id.switch_track_container)
+        val trackContainer = findViewById<ViewGroup>(R.id.switch_track_container)
         if (animate) {
             android.transition.TransitionManager.beginDelayedTransition(trackContainer)
         }
         val params = switchThumbCard.layoutParams as android.widget.FrameLayout.LayoutParams
         if (online) {
             params.gravity = android.view.Gravity.END
-            switchThumbCard.setCardBackgroundColor(androidx.core.content.ContextCompat.getColor(this, R.color.driver_neon_teal))
+            switchThumbCard.setCardBackgroundColor(ContextCompat.getColor(this, R.color.driver_neon_teal))
             tvSwitchStatusText.text = "Онлайн"
-            tvSwitchStatusText.setTextColor(android.graphics.Color.BLACK)
+            tvSwitchStatusText.setTextColor(Color.BLACK)
         } else {
             params.gravity = android.view.Gravity.START
-
-            // Динамически проверяем, включена ли темная тема в системе прямо сейчас
-            val currentNightMode = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
-            val isNightMode = currentNightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES
-
-            val offlineBgColor = androidx.core.content.ContextCompat.getColor(this, R.color.driver_surface_elevated)
-
+            val offlineBgColor = ContextCompat.getColor(this, R.color.driver_surface_elevated)
             switchThumbCard.setCardBackgroundColor(offlineBgColor)
             tvSwitchStatusText.text = "Офлайн"
-            tvSwitchStatusText.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.driver_text_primary))
+            tvSwitchStatusText.setTextColor(ContextCompat.getColor(this, R.color.driver_text_primary))
         }
         switchThumbCard.layoutParams = params
     }
@@ -638,7 +580,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val customView = layoutInflater.inflate(R.layout.dialog_sos_confirm, null)
         builder.setView(customView)
         val dialog = builder.create()
-        dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
+        dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
         val btnCancel = customView.findViewById<View>(R.id.btnCancelSos)
         val btnConfirm = customView.findViewById<View>(R.id.btnConfirmSos)
         btnCancel.setOnClickListener { dialog.dismiss() }
@@ -679,7 +621,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun toggleSearchActivation() {
-        // --- АВТОМАТИКА: Если оффлайн — сначала выводим в онлайн, а затем явно включаем нужный режим поиска ---
         if (!isDriverOnline) {
             setOnlineVisualState(true, animate = true)
             isDriverOnline = true
@@ -695,10 +636,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                         val response = ApiClient.getInstance().getApiService(this@MainActivity)
                             .updateStatus(UpdateDriverStatusRequest(true, loc?.latitude ?: 0.0, loc?.longitude ?: 0.0))
                         if (response.isSuccessful) {
-                            val targetMode = sessionManager.getSearchMode() ?: DriverSearchMode.CHAIN
-
-                            // 🚀 ОПТИМИЗАЦИЯ: Берем радиус и серилы прямо из памяти класса (SharedPrefs),
-                            // полностью предотвращая баг 400 Bad Request из-за пустых массивов [] при старте!
+                            val targetMode = sessionManager.getSearchMode()
                             val req = DriverSearchSettingsDto(mode = targetMode, radius = currentSearchRadiusKm, homeSectorIds = currentHomeSectorIds)
                             val settingsResponse = ApiClient.getInstance().getApiService(this@MainActivity).updateSearchSettings(req)
 
@@ -722,9 +660,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                         val response = ApiClient.getInstance().getApiService(this@MainActivity)
                             .updateStatus(UpdateDriverStatusRequest(true, 0.0, 0.0))
                         if (response.isSuccessful) {
-                            val targetMode = sessionManager.getSearchMode() ?: DriverSearchMode.CHAIN
-
-                            // 🚀 ОПТИМИЗАЦИЯ: И здесь страхуемся данными из памяти
+                            val targetMode = sessionManager.getSearchMode()
                             val req = DriverSearchSettingsDto(mode = targetMode, radius = currentSearchRadiusKm, homeSectorIds = currentHomeSectorIds)
                             val settingsResponse = ApiClient.getInstance().getApiService(this@MainActivity).updateSearchSettings(req)
 
@@ -744,7 +680,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             return
         }
 
-        // --- ЕСЛИ ВОДИТЕЛЬ УЖЕ ОНЛАЙН (Штатный клик по кнопке поиска) ---
         isSearchActive = !isSearchActive
         updateSearchBlockVisuals(isSearchActive)
 
@@ -752,8 +687,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             try {
                 val targetMode = if (isSearchActive) sessionManager.getSearchMode() else DriverSearchMode.MANUAL
 
-                // ✅ ИСПРАВЛЕНО: При активации поиска принудительно отправляем свежую точку GPS в LocationService,
-                // чтобы водитель гарантированно присутствовал в Redis drivers:geo!
                 if (isSearchActive) {
                     boundLocationService?.forceSendLocationNow()
                     val lat = currentDriverLocation?.latitude ?: 0.0
@@ -790,7 +723,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
-    // 🔥 ЕДИНЫЙ МЕТОД ОБНОВЛЕНИЯ СОСТОЯНИЯ И UI ИЗ ЛЮБОГО ИСТОЧНИКА
     private fun displaySearchState(state: com.taxiapp.driver.network.DriverSearchStateDto) {
         currentSearchRadiusKm = state.radius
         currentHomeSectorIds = state.homeSectorIds ?: emptyList()
@@ -798,8 +730,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         sessionManager.saveHomeSectorIds(currentHomeSectorIds)
         drawSearchRadius()
 
+        // ИСПРАВЛЕНО: state.mode является nullable (DriverSearchMode?), поэтому задаем дефолт MANUAL
         val rawMode = state.mode ?: DriverSearchMode.MANUAL
-        val displayedMode = if (rawMode == DriverSearchMode.MANUAL || rawMode == DriverSearchMode.OFFLINE) {
+        val displayedMode: DriverSearchMode = if (rawMode == DriverSearchMode.MANUAL || rawMode == DriverSearchMode.OFFLINE) {
             isSearchActive = false
             val saved = sessionManager.getSearchMode()
             if (saved == DriverSearchMode.HOME) DriverSearchMode.HOME else DriverSearchMode.CHAIN
@@ -820,8 +753,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             DriverSearchMode.CHAIN -> {
                 tvSearchModeTitle.text = getString(R.string.main_search_chain_title)
                 if (searchRadiusCircle != null) searchRadiusCircle?.isVisible = !sectorOverlay.isShown
-
-                // Для Ланцюжка в выключенном состоянии пишем радиус
                 if (!isSearchActive) {
                     tvSearchModeSubtitle.text = "Радіус: ${state.radius} км • Натисніть для старту"
                 }
@@ -830,18 +761,15 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 val sectorsText = if (state.homeSectorNames.isNullOrEmpty()) "не обрано" else state.homeSectorNames
                 tvSearchModeTitle.text = "Додому ($sectorsText)"
                 if (searchRadiusCircle != null) searchRadiusCircle?.isVisible = !sectorOverlay.isShown
-
-                // 🚀 ИСПРАВЛЕНО: Для Додому в выключенном состоянии всегда пишем чистый текст активации
                 if (!isSearchActive) {
                     tvSearchModeSubtitle.text = "Натисніть для активації"
                 }
             }
         }
 
-        // Если поиск активен — пишем статус поиска для всех режимов
         if (isSearchActive) {
             tvSearchModeSubtitle.text = "Пошук замовлень..."
-            tvSearchModeTitle.setTextColor(ContextCompat.getColor(this, R.color.driver_text_primary)) // или твой цвет активного режима
+            tvSearchModeTitle.setTextColor(ContextCompat.getColor(this, R.color.driver_text_primary))
         } else {
             tvSearchModeTitle.setTextColor(ContextCompat.getColor(this, R.color.driver_neon_teal))
         }
@@ -859,13 +787,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
 
         if (isActive) {
-            cardSearchContainer.setCardBackgroundColor(android.graphics.Color.TRANSPARENT)
+            cardSearchContainer.setCardBackgroundColor(Color.TRANSPARENT)
             cardSearchContainer.cardElevation = 0f
             cardSearchContainer.clipToOutline = true
-            cardSearchMode.setCardBackgroundColor(androidx.core.content.ContextCompat.getColor(this, R.color.driver_neon_teal))
-            // Контрастный темный текст на яркой бирюзовой плашке (как в Uklon)
-            tvSearchModeTitle.setTextColor(android.graphics.Color.parseColor("#1A1C1E"))
-            tvSearchModeSubtitle.setTextColor(android.graphics.Color.parseColor("#232426"))
+            cardSearchMode.setCardBackgroundColor(ContextCompat.getColor(this, R.color.driver_neon_teal))
+            tvSearchModeTitle.setTextColor(Color.parseColor("#1A1C1E"))
+            tvSearchModeSubtitle.setTextColor(Color.parseColor("#232426"))
             tvSearchModeSubtitle.text = "Пошук замовлень..."
             borderAnimView.visibility = View.VISIBLE
             if (searchBorderAnimator == null) {
@@ -879,11 +806,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 searchBorderAnimator?.start()
             }
         } else {
-            cardSearchContainer.setCardBackgroundColor(androidx.core.content.ContextCompat.getColor(this, R.color.driver_black_bg))
+            cardSearchContainer.setCardBackgroundColor(ContextCompat.getColor(this, R.color.driver_black_bg))
             cardSearchContainer.cardElevation = originalContainerElevation
-            cardSearchMode.setCardBackgroundColor(androidx.core.content.ContextCompat.getColor(this, R.color.driver_black_bg))
-            tvSearchModeTitle.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.driver_neon_teal))
-            tvSearchModeSubtitle.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.driver_text_secondary))
+            cardSearchMode.setCardBackgroundColor(ContextCompat.getColor(this, R.color.driver_black_bg))
+            tvSearchModeTitle.setTextColor(ContextCompat.getColor(this, R.color.driver_neon_teal))
+            tvSearchModeSubtitle.setTextColor(ContextCompat.getColor(this, R.color.driver_text_secondary))
             tvSearchModeSubtitle.text = "Натисніть для активації"
             searchBorderAnimator?.cancel()
             borderAnimView.visibility = View.GONE
@@ -892,16 +819,14 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private fun updateSearchStatusUI() {
         lifecycleScope.launch {
-            // --- Если водитель ОФЛАЙН: подтягиваем данные из кэша и сервера, но не запускаем поиск ---
             if (!isDriverOnline) {
                 isSearchActive = false
                 updateSearchBlockVisuals(false)
 
-                val cachedMode = sessionManager.getSearchMode() ?: DriverSearchMode.CHAIN
+                val cachedMode = sessionManager.getSearchMode()
                 currentHomeSectorIds = sessionManager.getHomeSectorIds()
 
                 try {
-                    // Делаем легкий запрос настроек, чтобы узнать имена секторов, сохраненные на сервере
                     val response = ApiClient.getInstance().getApiService(this@MainActivity).getSearchSettings()
                     if (response.isSuccessful && response.body() != null) {
                         val state = response.body()!!
@@ -911,13 +836,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                         if (cachedMode == DriverSearchMode.HOME) {
                             val sectorsText = if (state.homeSectorNames.isNullOrEmpty()) "не обрано" else state.homeSectorNames
                             tvSearchModeTitle.text = "Додому ($sectorsText)"
-                            tvSearchModeSubtitle.text = "Натисніть для активації" // 🚀 Спокойный текст без бликания радиуса
+                            tvSearchModeSubtitle.text = "Натисніть для активації"
                         } else {
                             tvSearchModeTitle.text = getString(R.string.main_search_chain_title)
                             tvSearchModeSubtitle.text = "Радіус: ${state.radius} км • Натисніть для старту"
                         }
                     } else {
-                        // Резервный откат на чистый кэш, если интернета совсем нет
                         if (cachedMode == DriverSearchMode.HOME) {
                             tvSearchModeTitle.text = "Додому"
                             tvSearchModeSubtitle.text = "Натисніть для активації"
@@ -927,7 +851,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                         }
                     }
                 } catch (e: Exception) {
-                    // Если упали по сети — показываем базовый кэш
                     if (cachedMode == DriverSearchMode.HOME) {
                         tvSearchModeTitle.text = "Додому"
                         tvSearchModeSubtitle.text = "Натисніть для активації"
@@ -941,7 +864,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 return@launch
             }
 
-            // --- Если водитель ОНЛАЙН: штатный режим работы ---
             try {
                 val response = ApiClient.getInstance().getApiService(this@MainActivity).getSearchSettings()
                 if (response.isSuccessful && response.body() != null) {
@@ -963,12 +885,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         lifecycleScope.launch {
             try {
                 val response = ApiClient.getInstance().getApiService(this@MainActivity).getActivePhotoControl()
-                Log.d("PHOTO_CONTROL", "HTTP Status: ${response.code()}, Body: ${response.body()}")
-
                 if (response.isSuccessful && response.body() != null) {
                     val pc = response.body()!!
                     activePhotoControlData = pc
-                    Log.d("PHOTO_CONTROL", "Знайдено фотоконтроль: status=${pc.status}, restricted=${pc.photoControlRestricted}")
 
                     if (pc.photoControlRestricted) {
                         cardPhotoControl.visibility = View.VISIBLE
@@ -981,7 +900,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                         cardPhotoControl.setCardBackgroundColor(Color.parseColor("#e67e22"))
                         tvPhotoControlTitle.text = "Потрібно пройти фотоконтроль"
 
-                        // 🛠️ ИСПРАВЛЕНИЕ: Корректный парсинг времени ЧЧ:ММ из ISO-строки (напр. 2026-07-29T22:12:00)
                         val timeFormatted = try {
                             val rawDate = pc.deadlineAt
                             if (!rawDate.isNullOrBlank()) {
@@ -990,7 +908,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                                     rawDate.contains(" ") -> rawDate.substringAfter(" ")
                                     else -> rawDate
                                 }
-                                timePart.take(5) // Берём ровно 5 символов HH:mm
+                                timePart.take(5)
                             } else ""
                         } catch (e: Exception) { "" }
 
@@ -1003,23 +921,21 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                         tvPhotoControlSubtitle.text = "Очікуйте рішення диспетчера"
                         btnPassPhotoControl.visibility = View.GONE
                     } else {
-                        // Если статус APPROVED / CANCELLED / EXPIRED — скрываем виджет
                         cardPhotoControl.visibility = View.GONE
                     }
                 } else {
-                    Log.d("PHOTO_CONTROL", "Активного фотоконтролю для цього водія немає")
                     cardPhotoControl.visibility = View.GONE
                 }
             } catch (e: Exception) {
                 Log.e("PHOTO_CONTROL", "Помилка перевірки фотоконтролю: ${e.message}")
-                e.printStackTrace()
             }
         }
     }
+
     private fun loadUserProfile() {
         val tvDriverName = navViewContent.findViewById<TextView>(R.id.tv_driver_name)
         val tvRating = navViewContent.findViewById<TextView>(R.id.tv_menu_rating)
-        val imgAvatar = navViewContent.findViewById<android.widget.ImageView>(R.id.img_avatar)
+        val imgAvatar = navViewContent.findViewById<ImageView>(R.id.img_avatar)
         val tvPlateNumber = navViewContent.findViewById<TextView>(R.id.tv_menu_plate_number)
 
         val savedName = sessionManager.getDriverName()
@@ -1075,7 +991,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         if (sectorOverlay.isShown) return
 
         if (sessionManager.isManualLocationActive()) {
-            try { map.isMyLocationEnabled = false } catch (e: Exception) {}
+            try { map.isMyLocationEnabled = false } catch (_: Exception) {}
             with(map.uiSettings) {
                 isRotateGesturesEnabled = false
                 isTiltGesturesEnabled = false
@@ -1092,11 +1008,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     manualLocationMarker = map.addMarker(MarkerOptions().position(latLng).title("Фіксована позиція").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN)))
                 } else manualLocationMarker?.position = latLng
 
-                // --- ИСПРАВЛЕНО: Сделали чуть дальше для фиксированной позиции (было 17f) ---
                 map.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15.5f))
             }
         } else {
-            manualLocationMarker?.remove(); manualLocationMarker = null
+            manualLocationMarker?.remove()
+            manualLocationMarker = null
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
                 map.isMyLocationEnabled = false
                 map.uiSettings.isMyLocationButtonEnabled = false
@@ -1105,8 +1021,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                         currentDriverLocation = LatLng(it.latitude, it.longitude)
                         drawSearchRadius()
                         updateCustomDriverMarker(it.latitude, it.longitude)
-
-                        // --- ИСПРАВЛЕНО: Сделали оптимальное отдаление для реальной локации (было 16f) ---
                         map.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(it.latitude, it.longitude), 14.5f))
                     }
                 }
@@ -1114,17 +1028,15 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
-    private fun getBitmapDescriptorFromDrawable(context: Context, drawableResId: Int): BitmapDescriptor? {
-        val drawable = ContextCompat.getDrawable(context, drawableResId) ?: return null
-
-        // --- ИСПРАВЛЕНО: Управляем размером точки прямо здесь (в dp) ---
-        val size = (12 * context.resources.displayMetrics.density).toInt()
+    private fun getCachedDriverDotDescriptor(): BitmapDescriptor? {
+        cachedDriverMarkerIcon?.let { return it }
+        val drawable = ContextCompat.getDrawable(this, R.drawable.bg_driver_location_dot) ?: return null
+        val size = (12 * resources.displayMetrics.density).toInt()
         val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
-
         drawable.setBounds(0, 0, canvas.width, canvas.height)
         drawable.draw(canvas)
-        return BitmapDescriptorFactory.fromBitmap(bitmap)
+        return BitmapDescriptorFactory.fromBitmap(bitmap).also { cachedDriverMarkerIcon = it }
     }
 
     override fun onMapReady(googleMap: GoogleMap) {
@@ -1135,27 +1047,14 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES -> true
                 androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO -> false
                 else -> {
-                    // Если в приложении переключатель стоит на "Системная тема" — смотрим на настройки Android
                     val currentNightMode = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
                     currentNightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES
                 }
             }
 
-            val styleRes = if (isNightMode) {
-                R.raw.map_style_dark
-            } else {
-                R.raw.map_style_standard
-            }
-
-            val success = googleMap.setMapStyle(
-                MapStyleOptions.loadRawResourceStyle(this, styleRes)
-            )
-            if (!success) {
-                android.util.Log.e("UNIT_MAP", "Не удалось распарсить JSON стиля карты.")
-            }
-        } catch (e: android.content.res.Resources.NotFoundException) {
-            android.util.Log.e("UNIT_MAP", "Файл стиля карты не найден в папке res/raw", e)
-        }
+            val styleRes = if (isNightMode) R.raw.map_style_dark else R.raw.map_style_standard
+            googleMap.setMapStyle(MapStyleOptions.loadRawResourceStyle(this, styleRes))
+        } catch (_: Exception) {}
 
         if (defaultMapPaddingBottom == 0) {
             val density = resources.displayMetrics.density
@@ -1174,13 +1073,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         centerMapOnUser()
         drawSearchRadius()
     }
+
     private fun updateCustomDriverMarker(lat: Double, lng: Double) {
         if (!::map.isInitialized) return
 
         val latLng = LatLng(lat, lng)
-        val customIcon = getBitmapDescriptorFromDrawable(this, R.drawable.bg_driver_location_dot)
-
         if (driverLocationMarker == null) {
+            val customIcon = getCachedDriverDotDescriptor()
             driverLocationMarker = map.addMarker(MarkerOptions()
                 .position(latLng)
                 .anchor(0.5f, 0.5f)
@@ -1191,9 +1090,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             driverLocationMarker?.position = latLng
         }
 
-        // ТОЧЕЧНОЕ ОБНОВЛЕНИЕ: Управляем видимостью реальной точки в зависимости от режима
         driverLocationMarker?.isVisible = !sessionManager.isManualLocationActive()
     }
+
     private fun resetHotspotsButton() {
         isHeatmapVisible = false
         clearHeatmapFromMap()
@@ -1208,19 +1107,20 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun generateGlowBitmap(color: Int): BitmapDescriptor {
+        cachedGlowBitmaps[color]?.let { return it }
         val size = 512
         val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         val paint = android.graphics.Paint()
         val radius = size / 2f
         val gradient = android.graphics.RadialGradient(radius, radius, radius, intArrayOf(color, color, Color.TRANSPARENT), floatArrayOf(0f, 0.4f, 1f), android.graphics.Shader.TileMode.CLAMP)
-        paint.shader = gradient; paint.isAntiAlias = true
+        paint.shader = gradient
+        paint.isAntiAlias = true
         canvas.drawCircle(radius, radius, radius, paint)
-        return BitmapDescriptorFactory.fromBitmap(bitmap)
+        return BitmapDescriptorFactory.fromBitmap(bitmap).also { cachedGlowBitmaps[color] = it }
     }
 
     private fun toggleHeatmap() {
-        // ✅ ИСПРАВЛЕНО: Используем новую чистую функцию сброса секторов
         if (isSectorsVisible) {
             resetSectorsButton()
         }
@@ -1243,7 +1143,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     val zones = response.body()!!
                     if (zones.isNotEmpty()) {
                         drawHeatmapGlow(zones)
-                        Toast.makeText(this@MainActivity, "Знайдено ${zones.size} active зон", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@MainActivity, "Знайдено ${zones.size} активних зон", Toast.LENGTH_SHORT).show()
                     } else {
                         Toast.makeText(this@MainActivity, "Зараз немає скупчень замовлень", Toast.LENGTH_SHORT).show()
                         resetHotspotsButton()
@@ -1274,12 +1174,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun toggleSectors() {
         if (isHeatmapVisible) resetHotspotsButton()
         if (isSectorsVisible) {
-            // ✅ ИСПРАВЛЕНО: Теперь при выключении кнопка корректно сбрасывает цвет в дефолтный
             resetSectorsButton()
             Toast.makeText(this, "Сектори приховано", Toast.LENGTH_SHORT).show()
         } else {
             isSectorsVisible = true
-            // ✅ ИСПРАВЛЕНО: При активации мгновенно красим иконку пазла в бирюзовый (неоновый) цвет
             btnSectors.imageTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_neon_teal))
             loadAndDrawSectors()
         }
@@ -1293,11 +1191,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     drawSectorsOnMap(response.body()!!)
                 } else {
                     Toast.makeText(this@MainActivity, "Помилка завантаження секторів", Toast.LENGTH_SHORT).show()
-                    // ✅ ИСПРАВЛЕНО: Если сервер ответил ошибкой — тушим бирюзовый цвет кнопки обратно
                     resetSectorsButton()
                 }
             } catch (e: Exception) {
-                // ✅ ИСПРАВЛЕНО: В случае падения сети также откатываем состояние кнопки
                 resetSectorsButton()
             }
         }
@@ -1315,9 +1211,17 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun createTextIcon(text: String): BitmapDescriptor {
-        val textView = TextView(this); textView.text = text; textView.setTextColor(Color.parseColor("#00ffaa")); textView.textSize = 14f; textView.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD); textView.setShadowLayer(3f, 1f, 1f, Color.BLACK)
-        textView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED); textView.layout(0, 0, textView.measuredWidth, textView.measuredHeight)
-        val bitmap = Bitmap.createBitmap(textView.measuredWidth, textView.measuredHeight, Bitmap.Config.ARGB_8888); val canvas = Canvas(bitmap); textView.draw(canvas)
+        val textView = TextView(this)
+        textView.text = text
+        textView.setTextColor(Color.parseColor("#00ffaa"))
+        textView.textSize = 14f
+        textView.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        textView.setShadowLayer(3f, 1f, 1f, Color.BLACK)
+        textView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
+        textView.layout(0, 0, textView.measuredWidth, textView.measuredHeight)
+        val bitmap = Bitmap.createBitmap(textView.measuredWidth, textView.measuredHeight, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        textView.draw(canvas)
         return BitmapDescriptorFactory.fromBitmap(bitmap)
     }
 
@@ -1329,18 +1233,17 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val hasPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
 
         if (sessionManager.isManualLocationActive()) {
-            try { map.isMyLocationEnabled = false } catch (e: Exception) {}
+            try { map.isMyLocationEnabled = false } catch (_: Exception) {}
             val manualLoc = sessionManager.getManualLocation()
             if (manualLoc != null) {
                 val latLng = LatLng(manualLoc.first, manualLoc.second)
                 currentDriverLocation = latLng
                 drawSearchRadius()
 
-                // Жестко тушим реальный маркер
                 driverLocationMarker?.isVisible = false
 
                 if (manualLocationMarker == null) {
-                    val customIcon = getBitmapDescriptorFromDrawable(this, R.drawable.bg_driver_location_dot)
+                    val customIcon = getCachedDriverDotDescriptor()
                     manualLocationMarker = map.addMarker(MarkerOptions()
                         .position(latLng)
                         .title("Фіксована позиція")
@@ -1354,8 +1257,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         } else {
             manualLocationMarker?.remove()
             manualLocationMarker = null
-
-            // ТОЧЕЧНОЕ ОБНОВЛЕНИЕ: Ручной режим отключен — возвращаем реальный маркер на карту
             driverLocationMarker?.isVisible = true
 
             if (hasPermission) {
@@ -1373,25 +1274,24 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             btnLockLocation.imageTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_text_primary))
         }
     }
-    // Оновлений варіант (без іконки)
+
     private data class BottomSheetOptionDto(val text: String, val onClick: () -> Unit)
+
     private fun handleLockLocationClick() {
         if (sessionManager.isManualLocationActive()) {
             showDisableManualLocationDialog()
-
         } else {
-            startActivity(Intent(this,  LockLocationActivity::class.java))
+            startActivity(Intent(this, LockLocationActivity::class.java))
         }
     }
 
     private fun showDisableManualLocationDialog() {
-        val bottomSheetDialog = com.google.android.material.bottomsheet.BottomSheetDialog(this)
+        val bottomSheetDialog = BottomSheetDialog(this)
         val view = layoutInflater.inflate(R.layout.layout_bottom_sheet_generic, null)
         bottomSheetDialog.setContentView(view)
 
         view.findViewById<TextView>(R.id.tv_sheet_title).text = "Вимкнути ручне закріплення?"
 
-        // Створюємо список опцій без прив'язки до drawable ресурсів іконок
         val options = listOf(
             BottomSheetOptionDto("Змінити позицію") {
                 bottomSheetDialog.dismiss()
@@ -1410,7 +1310,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         )
 
         val rvOptions = view.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.rv_sheet_options)
-        rvOptions.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this)
+        rvOptions.layoutManager = LinearLayoutManager(this)
 
         rvOptions.adapter = object : androidx.recyclerview.widget.RecyclerView.Adapter<androidx.recyclerview.widget.RecyclerView.ViewHolder>() {
 
@@ -1430,10 +1330,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 val h = holder as OptionVH
                 val item = options[position]
                 h.text.text = item.text
-
-                // КРИТИЧНО ВАЖЛИВО: повністю ховаємо іконку, щоб текст не мав зайвого відступу зліва
                 h.icon.visibility = View.GONE
-
                 h.container.setOnClickListener { item.onClick() }
                 h.divider.visibility = if (position == options.size - 1) View.GONE else View.VISIBLE
             }
@@ -1444,30 +1341,36 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         bottomSheetDialog.show()
     }
 
-    private fun updateOrdersBadge() {
+    private fun syncActiveOrderAndBadge() {
         lifecycleScope.launch {
             try {
                 val response = ApiClient.getInstance().getApiService(this@MainActivity).getActiveOrder()
-                orderBadgeDot.visibility = if (response.isSuccessful && response.body() != null) View.VISIBLE else View.GONE
-            } catch (e: Exception) { orderBadgeDot.visibility = View.GONE }
-        }
-    }
+                val order = if (response.isSuccessful) response.body() else null
 
-    private fun checkActiveOrderOnStart() {
-        lifecycleScope.launch {
-            try {
-                val response = ApiClient.getInstance().getApiService(this@MainActivity).getActiveOrder()
-                if (response.isSuccessful && response.body() != null) {
-                    val order = response.body()!!
+                orderBadgeDot.visibility = if (order != null) View.VISIBLE else View.GONE
+
+                if (order != null) {
                     if (order.status == "OFFERING") {
-                        val intent = Intent(this@MainActivity, OrderOfferActivity::class.java); intent.putExtra("EXTRA_ORDER", order); intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP; startActivity(intent)
-                    } else if (order.status == "ACCEPTED" || order.status == "DRIVER_ARRIVED" || order.status == "IN_PROGRESS") {
+                        val intent = Intent(this@MainActivity, OrderOfferActivity::class.java)
+                        intent.putExtra("EXTRA_ORDER", order)
+                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                        startActivity(intent)
+                    } else if (
+                        order.status == "ACCEPTED" ||
+                        order.status == "DRIVER_ARRIVED" ||
+                        order.status == "IN_PROGRESS" ||
+                        order.status == "ARRIVED_AT_WAYPOINT"
+                    ) {
                         if (!sessionManager.isOrderMinimized()) {
-                            val intent = Intent(this@MainActivity, OrderProgressActivity::class.java); intent.putExtra("EXTRA_ORDER", order); startActivity(intent)
+                            val intent = Intent(this@MainActivity, OrderProgressActivity::class.java)
+                            intent.putExtra("EXTRA_ORDER", order)
+                            startActivity(intent)
                         }
                     }
                 }
-            } catch (e: Exception) { e.printStackTrace() }
+            } catch (e: Exception) {
+                orderBadgeDot.visibility = View.GONE
+            }
         }
     }
 
@@ -1489,8 +1392,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     sessionManager.saveDriverOnlineStatus(!isOnline)
                 } else {
                     sessionManager.saveDriverOnlineStatus(isOnline)
-
-                    // --- ТОЧЕЧНОЕ ДОБАВЛЕНИЕ: Мгновенно тушим или перерасчитываем UI поиска ---
                     updateSearchStatusUI()
                 }
             } catch (e: Exception) {
@@ -1506,11 +1407,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val intent = Intent(this, LocationService::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent) else startService(intent)
 
-        // --- ДОБАВЛЕНО: Привязываем MainActivity к сервису для обмена координатами ---
-        try {
-            bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
-        } catch (e: Exception) {
-            e.printStackTrace()
+        if (!isLocationServiceBound) {
+            try {
+                bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
@@ -1520,7 +1422,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val allGranted = permissionsToRequest.all { ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED }
         if (allGranted) {
             startLocationService()
-            startUILocationUpdates()
         } else requestPermissionLauncher.launch(permissionsToRequest.toTypedArray())
     }
 
@@ -1547,13 +1448,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         if (::btnSaveSelection.isInitialized) {
             if (selectedCount > 0) {
                 btnSaveSelection.isEnabled = true
-                btnSaveSelection.imageTintList = android.content.res.ColorStateList.valueOf(
-                    androidx.core.content.ContextCompat.getColor(this, R.color.driver_neon_teal)
+                btnSaveSelection.imageTintList = ColorStateList.valueOf(
+                    ContextCompat.getColor(this, R.color.driver_neon_teal)
                 )
             } else {
                 btnSaveSelection.isEnabled = false
-                btnSaveSelection.imageTintList = android.content.res.ColorStateList.valueOf(
-                    androidx.core.content.ContextCompat.getColor(this, R.color.driver_text_secondary)
+                btnSaveSelection.imageTintList = ColorStateList.valueOf(
+                    ContextCompat.getColor(this, R.color.driver_text_secondary)
                 )
             }
         }
@@ -1564,10 +1465,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         restoreDialog = android.app.Dialog(this)
         restoreDialog?.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
         restoreDialog?.setContentView(R.layout.dialog_restore_account)
-        restoreDialog?.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
+        restoreDialog?.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
         restoreDialog?.window?.setLayout(
-            android.view.ViewGroup.LayoutParams.MATCH_PARENT,
-            android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
         )
         restoreDialog?.setCancelable(false)
 
@@ -1598,7 +1499,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 if (response.isSuccessful) {
                     sessionManager.setPendingDeletion(false)
                     restoreDialog?.dismiss()
-                    Toast.makeText(this@MainActivity, "Акаунт успешно відновлено!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@MainActivity, "Акаунт успішно відновлено!", Toast.LENGTH_SHORT).show()
                     recreate()
                 } else {
                     Toast.makeText(this@MainActivity, "Помилка відновлення", Toast.LENGTH_SHORT).show()
@@ -1613,30 +1514,24 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
-    // 🛠️ ДОБАВЛЕНО: Проверка условий для Android 10+ и вызов диалога
-
-
-    // 🛠️ ДОБАВЛЕНО: Официальное диалоговое окно Prominent Disclosure для прохождения модерации Google
-
-
     private fun hasLocationPermission(): Boolean {
         return ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
                 ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
     }
+
     fun startHomeSectorSelection(preSelectedIds: List<Long>?) {
         currentSelectionTarget = SelectionTarget.HOME
         selectedIds.clear()
         preSelectedIds?.forEach { selectedIds.add(it) }
 
         selectionTabs.getTabAt(0)?.select()
-        sectorOverlay.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+        sectorOverlay.setBackgroundColor(Color.TRANSPARENT)
         etSectorSearch.setText("")
 
         sectorOverlay.visibility = View.VISIBLE
         mainScreenUiGroup.visibility = View.GONE
 
         if (::map.isInitialized) {
-            // 🟢 Применяем нижний отступ, чтобы логотип Google был над панелью жестов
             map.setPadding(0, 0, 0, systemBarsBottomInset)
             if (searchRadiusCircle != null) searchRadiusCircle?.isVisible = false
             drawOverlaySectorsOnMap()
@@ -1645,6 +1540,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         updateSectorSaveButtonState(selectedIds.size)
         overlayBackPressedCallback?.isEnabled = true
     }
+
     private fun updateHeaderSelectionPadding() {
         val header = findViewById<View>(R.id.header_selection) ?: return
         val density = resources.displayMetrics.density
@@ -1652,7 +1548,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val baseBottom = (16 * density).toInt()
         val baseTop = (12 * density).toInt()
 
-        // 🟢 Берем либо сохраненный инсет, либо считываем напрямую у окна
         val topInset = if (systemBarsTopInset > 0) {
             systemBarsTopInset
         } else {
@@ -1660,9 +1555,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             windowInsets?.getInsets(WindowInsetsCompat.Type.systemBars())?.top ?: (28 * density).toInt()
         }
 
-        // Устанавливаем точный отступ: Высота статус-бара + 12dp
         header.setPadding(baseHorizontal, topInset + baseTop, baseHorizontal, baseBottom)
     }
+
     private fun loadSectorsDataSilently() {
         lifecycleScope.launch {
             try {
@@ -1732,7 +1627,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private fun initSectorSelectionOverlay() {
         mainScreenUiGroup = findViewById(R.id.main_screen_ui_group)
-        btnSaveSelection = findViewById<android.widget.ImageView>(R.id.btn_save_selection)
+        btnSaveSelection = findViewById(R.id.btn_save_selection)
         sectorOverlay = findViewById(R.id.sector_selection_overlay)
         selectionTabs = findViewById(R.id.selection_tabs)
         etSectorSearch = findViewById(R.id.et_search_query)
@@ -1746,7 +1641,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         selectionTabs.addOnTabSelectedListener(object : com.google.android.material.tabs.TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: com.google.android.material.tabs.TabLayout.Tab) {
                 if (tab.position == 0) {
-                    sectorOverlay.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                    sectorOverlay.setBackgroundColor(Color.TRANSPARENT)
                     etSectorSearch.visibility = View.GONE
                     rvSectorsList.visibility = View.GONE
                 } else {
@@ -1826,14 +1721,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             initialArray.forEach { selectedIds.add(it) }
 
             selectionTabs.getTabAt(0)?.select()
-            sectorOverlay.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+            sectorOverlay.setBackgroundColor(Color.TRANSPARENT)
             etSectorSearch.setText("")
 
             sectorOverlay.visibility = View.VISIBLE
             mainScreenUiGroup.visibility = View.GONE
 
             if (::map.isInitialized) {
-                // 🟢 Синхронизировали: карта на весь экран, но логотип Google над системными жестами
                 map.setPadding(0, 0, 0, systemBarsBottomInset)
                 if (searchRadiusCircle != null) searchRadiusCircle?.isVisible = false
                 drawOverlaySectorsOnMap()

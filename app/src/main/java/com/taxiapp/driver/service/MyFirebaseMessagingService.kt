@@ -56,15 +56,14 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             "ORDER_CANCEL" -> {
                 wakeUpScreen()
                 val orderUuid = data["orderId"]
-                // 1. Мгновенно оповещаем все активные экраны (OrderProgressActivity, OrderOfferActivity)
                 ChatEventBus.triggerOrderCancelled(orderUuid)
                 val cancelBroadcast = Intent("com.taxiapp.driver.ORDER_CANCELLED").apply {
                     setPackage(packageName)
                     putExtra("CANCELLED_ORDER_UUID", orderUuid)
+                    putExtra("EXTRA_ORDER_ID", orderUuid)
                 }
                 sendBroadcast(cancelBroadcast)
 
-                // 2. Убираем висящее уведомление оффера из шторки, если заказ отменили во время предложения
                 try {
                     val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
                     if (orderUuid != null) {
@@ -72,7 +71,6 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                     }
                 } catch (_: Exception) {}
 
-                // 3. Выводим системное уведомление об отмене
                 showCancelNotification(data)
             }
         }
@@ -111,21 +109,30 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             val addressValue = data["address"] ?: "Адреса не вказана"
             val toAddressValue = data["toAddress"]
             val distanceKm = data["distance"]?.toDoubleOrNull() ?: 0.0
-            val distanceMetersValue = (distanceKm * 1000).toInt()
+            val distanceMetersValue = data["distanceMeters"]?.toIntOrNull() ?: (distanceKm * 1000).toInt()
             val scheduledAtValue = data["time"]
 
+            // ИСПРАВЛЕНО: Извлекаем полный набор полей заказа из обогащенного FCM-пуша
             val order = Order(
                 id = orderId,
                 idLong = idLongStr?.toLongOrNull(),
                 price = priceValue,
+                tariffName = data["tariffName"],
                 fromAddress = addressValue,
                 toAddress = toAddressValue,
+                polyline = data["polyline"]?.takeIf { it.isNotBlank() },
                 distanceMeters = distanceMetersValue,
+                originLat = data["originLat"]?.toDoubleOrNull(),
+                originLng = data["originLng"]?.toDoubleOrNull(),
+                destLat = data["destLat"]?.toDoubleOrNull(),
+                destLng = data["destLng"]?.toDoubleOrNull(),
+                paymentMethod = data["paymentMethod"] ?: "CASH",
+                fromSector = data["fromSector"]?.takeIf { it.isNotBlank() },
+                toSector = data["toSector"]?.takeIf { it.isNotBlank() },
+                comment = data["comment"]?.takeIf { it.isNotBlank() },
                 scheduledAt = scheduledAtValue,
-                status = if (type == "ORDER_CONFIRMATION") "SCHEDULED" else "PENDING"
+                status = if (type == "ORDER_CONFIRMATION") "SCHEDULED" else "OFFERING"
             )
-
-            Log.d("FCM_UNIT", "✅ Об'єкт Order успішно зібрано з UUID: ID=${order.id}, idLong=${order.idLong}")
 
             if (type == "ORDER_CONFIRMATION") {
                 showConfirmationNotification(order)
@@ -220,7 +227,6 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
         try {
             startActivity(intent)
-            Log.d("FCM_UNIT", "🚀 OrderOfferActivity запущена напрямую!")
         } catch (e: Exception) {
             Log.d("FCM_UNIT", "Фоновый запуск через FullScreenIntent: ${e.message}")
         }
@@ -237,7 +243,6 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
         try {
             startActivity(intent)
-            Log.d("FCM_UNIT", "🚀 OrderConfirmationActivity запущена напрямую!")
         } catch (e: Exception) {
             Log.d("FCM_UNIT", "Фоновый запуск подтверждения через FullScreenIntent: ${e.message}")
         }
@@ -264,7 +269,6 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // ✅ ИСПРАВЛЕНО: Добавлен настоящий setFullScreenIntent и CATEGORY_CALL для пробуждения экрана блокировки
         val builder = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(title)
@@ -278,7 +282,6 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             .setTimeoutAfter(20000L)
 
         notificationManager.notify(notifId, builder.build())
-        Log.d("FCM_UNIT", "🔔 FullScreen / Heads-Up сповіщення успішно надіслано. ID: $notifId")
     }
 
     private fun showCancelNotification(data: Map<String, String>) {
@@ -321,13 +324,10 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             .setContentIntent(pendingIntent)
 
         notificationManager.notify(notifId, builder.build())
-        Log.d("FCM_UNIT", "🔔 Системное уведомление об отмене успешно выведено! ID: $notifId")
     }
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        Log.d("FCM_UNIT", "🔄 Google generated a new FCM token")
-
         val sessionManager = SessionManager(applicationContext)
         sessionManager.saveFcmToken(token)
 
@@ -335,7 +335,6 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             serviceScope.launch {
                 try {
                     ApiClient.getInstance().getApiService(applicationContext).updateFcmToken(mapOf("token" to token))
-                    Log.d("FCM_UNIT", "✅ Automatically updated new FCM token on server via onNewToken.")
                 } catch (e: Exception) {
                     Log.e("FCM_UNIT", "❌ Failed to update fcm token via onNewToken: ${e.message}")
                 }

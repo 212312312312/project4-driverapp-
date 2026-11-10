@@ -8,7 +8,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ProgressBar
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -16,6 +15,7 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
+import com.google.gson.Gson
 import com.taxiapp.driver.network.ApiClient
 import com.taxiapp.driver.network.Order
 import com.taxiapp.driver.utils.SessionManager
@@ -29,14 +29,15 @@ import org.json.JSONObject
 import ua.naiksoftware.stomp.Stomp
 import ua.naiksoftware.stomp.StompClient
 import java.util.concurrent.CopyOnWriteArrayList
+import kotlin.random.Random
 
 class EtherActivity : AppCompatActivity() {
 
     private var stompClient: StompClient? = null
     private val compositeDisposable = CompositeDisposable()
     private lateinit var sessionManager: SessionManager
+    private val gson = Gson()
 
-    // Два отдельных адаптера для параллельного независимого отображения списков
     private lateinit var activeAdapter: OrderAdapter
     private lateinit var scheduledAdapter: OrderAdapter
 
@@ -45,7 +46,6 @@ class EtherActivity : AppCompatActivity() {
     private lateinit var pbLoading: ProgressBar
     private lateinit var tabLayout: TabLayout
 
-    // Потокобезопасный список во избежание ConcurrentModificationException при быстрых пушах сокета
     private val allOrdersList = CopyOnWriteArrayList<Order>()
     private var currentTabIndex = 0
     private var syncJob: Job? = null
@@ -158,14 +158,13 @@ class EtherActivity : AppCompatActivity() {
     }
 
     /**
-     * Дебаунс-синхронизация с сервером при событиях ADD/UPDATE в сокете Эфира:
-     * гарантирует 100% соблюдение активных фильтров водителя (сектора, радиус, тарифы, цена/км),
-     * которые рассчитываются на сервере в getFilteredOrdersForDriver().
+     * HIGH-LOAD FIX: Дебаунс со случайным джиттером (300..750 мс) против эффекта толпы (Thundering Herd),
+     * чтобы тысячи телефонов не били по серверу в одну миллисекунду.
      */
     private fun scheduleFilteredSync() {
         syncJob?.cancel()
         syncJob = lifecycleScope.launch {
-            delay(250)
+            delay(Random.nextLong(300L, 750L))
             fetchOrders(showLoader = false)
         }
     }
@@ -200,14 +199,24 @@ class EtherActivity : AppCompatActivity() {
                     val msgObj = JSONObject(payload)
                     val action = msgObj.optString("action")
                     val orderId = msgObj.optString("orderId")
+                    val orderJson = msgObj.optJSONObject("order")?.toString()
 
                     when (action) {
                         "REMOVE" -> {
                             removeOrderFromList(orderId)
                         }
-                        "ADD", "UPDATE" -> {
-                            // Синхронизируем список через серверный фильтр водителя,
-                            // чтобы в Эфир попадали только заказы, проходящие по фильтрам и тарифам водителя
+                        "UPDATE" -> {
+                            // Если заказ уже есть в списке (например, клиент поднял цену), обновляем его in-place без HTTP-запроса!
+                            val existingIdx = allOrdersList.indexOfFirst { it.id == orderId }
+                            if (existingIdx >= 0 && orderJson != null) {
+                                val updatedOrder = gson.fromJson(orderJson, Order::class.java)
+                                allOrdersList[existingIdx] = updatedOrder
+                                filterAndShowOrders()
+                            } else {
+                                scheduleFilteredSync()
+                            }
+                        }
+                        "ADD" -> {
                             scheduleFilteredSync()
                         }
                     }

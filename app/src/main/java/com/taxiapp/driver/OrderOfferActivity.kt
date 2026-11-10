@@ -36,8 +36,6 @@ import com.google.maps.android.PolyUtil
 import com.taxiapp.driver.network.ApiClient
 import com.taxiapp.driver.network.Order
 import com.taxiapp.driver.utils.SessionManager
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.launch
 
 class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
@@ -49,10 +47,10 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private var mediaPlayer: android.media.MediaPlayer? = null
     private var vibrator: android.os.Vibrator? = null
-    // UI Elements
+
     private lateinit var tvTimer: TextView
     private lateinit var btnAcceptContainer: CardView
-    private lateinit var btnRejectContainer: LinearLayout // ИСПРАВЛЕНО: Новый контейнер вместо btnBackCard
+    private lateinit var btnRejectContainer: LinearLayout
 
     private lateinit var llPriceBackground: LinearLayout
     private lateinit var ivPaymentIcon: ImageView
@@ -79,7 +77,6 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_order_offer)
 
-        // 🛠️ ДОБАВЛЕНО: Безопасный отступ для сохранения Edge-to-Edge фона на Android 15
         val rootView = findViewById<android.view.ViewGroup>(android.R.id.content).getChildAt(0)
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(rootView) { v, insets ->
             val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
@@ -109,6 +106,10 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
         mapFragment.getMapAsync(this)
         startOfferSound()
         observeCancellationEvents()
+
+        // Если заказ пришел из FCM с неполными данными (например, без промежуточных точек или клиента),
+        // асинхронно догружаем полную модель заказа с сервера
+        fetchFullOrderDetailsIfNeeded()
     }
 
     companion object {
@@ -116,9 +117,34 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
         var activeOfferedOrderId: String? = null
     }
 
+    private fun fetchFullOrderDetailsIfNeeded() {
+        val order = currentOrder ?: return
+        val isIncomplete = order.client == null || order.polyline.isNullOrEmpty() || order.toAddress.isNullOrEmpty()
+        if (!isIncomplete) return
+
+        lifecycleScope.launch {
+            try {
+                val response = ApiClient.getInstance().getApiService(this@OrderOfferActivity).getOrderById(order.id)
+                if (response.isSuccessful && response.body() != null) {
+                    val fullOrder = response.body()!!
+                    if (fullOrder.status == "CANCELLED") {
+                        handleCancelledByClient()
+                        return@launch
+                    }
+                    currentOrder = fullOrder
+                    setupUI()
+                    if (::map.isInitialized) {
+                        renderOrderOnMap()
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+    }
+
     private val cancelReceiver = object : android.content.BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val cancelledUuid = intent?.getStringExtra("CANCELLED_ORDER_UUID")
+                ?: intent?.getStringExtra("EXTRA_ORDER_ID")
             if (cancelledUuid == null || cancelledUuid == currentOrder?.id) {
                 handleCancelledByClient()
             }
@@ -141,7 +167,10 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun observeCancellationEvents() {
         activeOfferedOrderId = currentOrder?.id
 
-        val filter = android.content.IntentFilter("com.taxiapp.driver.ORDER_CANCELLED")
+        val filter = android.content.IntentFilter().apply {
+            addAction("com.taxiapp.driver.ORDER_CANCELLED")
+            addAction("com.taxiapp.driver.ACTION_CLOSE_ORDER_OFFER")
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(cancelReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
         } else {
@@ -149,7 +178,6 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
             registerReceiver(cancelReceiver, filter)
         }
 
-        // ✅ ИСПРАВЛЕНО: Слушаем без repeatOnLifecycle(STARTED), чтобы ловить отмену даже на заблокированном экране!
         lifecycleScope.launch {
             ChatEventBus.cancelledOrders.collect { cancelledUuid ->
                 if (cancelledUuid == null || cancelledUuid == currentOrder?.id) {
@@ -158,6 +186,7 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
             }
         }
     }
+
     private fun turnScreenOnAndKeyguardOff() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true)
@@ -182,7 +211,7 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun initViews() {
         tvTimer = findViewById(R.id.tv_timer)
         btnAcceptContainer = findViewById(R.id.btn_accept_container)
-        btnRejectContainer = findViewById(R.id.btn_reject_container) // ИСПРАВЛЕНО: Находим новый элемент макета
+        btnRejectContainer = findViewById(R.id.btn_reject_container)
 
         llPriceBackground = findViewById(R.id.ll_price_background)
         ivPaymentIcon = findViewById(R.id.iv_payment_icon)
@@ -205,7 +234,7 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
         tvCommentText = findViewById(R.id.tv_comment_text)
 
         btnAcceptContainer.setOnClickListener { acceptOrder() }
-        btnRejectContainer.setOnClickListener { rejectOrder() } // Нажатие на крестик/штраф отклоняет заказ
+        btnRejectContainer.setOnClickListener { rejectOrder() }
     }
 
     private fun setupUI() {
@@ -305,58 +334,36 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
-    private fun fetchRouteToPickup(driverLat: Double, driverLng: Double) {
+    private fun updatePickupDistanceAndCamera(driverLat: Double, driverLng: Double) {
         val pickupLat = currentOrder?.originLat ?: return
         val pickupLng = currentOrder?.originLng ?: return
-        val apiKey = getString(R.string.google_maps_key)
+        if (pickupLat == 0.0 && pickupLng == 0.0) return
 
-        lifecycleScope.launch {
-            try {
-                val origin = "$driverLat,$driverLng"
-                val dest = "$pickupLat,$pickupLng"
+        // Мгновенный локальный расчет расстояния и времени подачи (без платных запросов в Google Directions API)
+        updateDistanceUIFallback(driverLat, driverLng, pickupLat, pickupLng)
 
-                val response = ApiClient.getInstance().getGoogleMapsApi().getDirections(
-                    origin = origin, destination = dest, apiKey = apiKey
-                )
+        val builder = LatLngBounds.Builder()
+            .include(LatLng(driverLat, driverLng))
+            .include(LatLng(pickupLat, pickupLng))
 
-                if (response.routes.isNotEmpty()) {
-                    val route = response.routes[0]
-                    val leg = route.legs[0]
-
-                    tvPickupDistance.text = "Подача: ${leg.duration.text} (${leg.distance.text})"
-
-                    val points = PolyUtil.decode(route.overview_polyline.points)
-                    val polylineOptions = PolylineOptions()
-                        .addAll(points)
-                        .width(8f)
-                        .color(Color.GRAY)
-                        .pattern(listOf(Dash(20f), Gap(10f)))
-
-                    map.addPolyline(polylineOptions)
-
-                    val builder = LatLngBounds.Builder()
-                        .include(LatLng(driverLat, driverLng))
-                        .include(LatLng(pickupLat, pickupLng))
-
-                    currentOrder?.polyline?.let {
-                        if (it.isNotEmpty()) {
-                            PolyUtil.decode(it).forEach { pt -> builder.include(pt) }
-                        }
-                    }
-                    map.animateCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 120))
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                updateDistanceUIFallback(driverLat, driverLng, pickupLat, pickupLng)
+        currentOrder?.polyline?.let {
+            if (it.isNotEmpty()) {
+                try {
+                    PolyUtil.decode(it).forEach { pt -> builder.include(pt) }
+                } catch (_: Exception) {}
             }
         }
+        try {
+            map.animateCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 120))
+        } catch (_: Exception) {}
     }
 
     private fun updateDistanceUIFallback(lat1: Double, lon1: Double, lat2: Double, lon2: Double) {
         val results = FloatArray(1)
         Location.distanceBetween(lat1, lon1, lat2, lon2, results)
-        val distMeters = results[0]
-        tvPickupDistance.text = "Подача: ~${(distMeters / 1000).toInt()} км"
+        val roadKm = (results[0] / 1000.0) * 1.35
+        val estMinutes = ((roadKm / 30.0) * 60.0).toInt().coerceAtLeast(1)
+        tvPickupDistance.text = String.format(java.util.Locale.US, "Подача: ~%d хв (%.1f км)", estMinutes, roadKm)
     }
 
     override fun onMapReady(googleMap: GoogleMap) {
@@ -373,7 +380,14 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
             val currentNightMode = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
             val styleRes = if (currentNightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES) R.raw.map_style_dark else R.raw.map_style_standard
             map.setMapStyle(MapStyleOptions.loadRawResourceStyle(this, styleRes))
-        } catch (e: Exception) {}
+        } catch (_: Exception) {}
+
+        renderOrderOnMap()
+    }
+
+    private fun renderOrderOnMap() {
+        if (!::map.isInitialized) return
+        map.clear()
 
         val order = currentOrder ?: return
         val polylineString = order.polyline
@@ -381,20 +395,37 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
         if (!polylineString.isNullOrEmpty()) {
             try {
                 val path = PolyUtil.decode(polylineString)
-                map.addPolyline(PolylineOptions()
-                    .addAll(path)
-                    .width(12f)
-                    .color(ContextCompat.getColor(this, R.color.driver_neon_teal)))
+                map.addPolyline(
+                    PolylineOptions()
+                        .addAll(path)
+                        .width(12f)
+                        .color(ContextCompat.getColor(this, R.color.driver_neon_teal))
+                )
 
                 if (path.isNotEmpty()) {
                     var currentNumber = 1
-                    map.addMarker(MarkerOptions().position(path.first()).icon(BitmapDescriptorFactory.fromBitmap(createCustomMarkerBitmap(currentNumber++, R.color.driver_neon_teal))).anchor(0.5f, 0.5f))
+                    map.addMarker(
+                        MarkerOptions()
+                            .position(path.first())
+                            .icon(BitmapDescriptorFactory.fromBitmap(createCustomMarkerBitmap(currentNumber++, R.color.driver_neon_teal)))
+                            .anchor(0.5f, 0.5f)
+                    )
                     order.stops?.sortedBy { it.stopOrder }?.forEach { stop ->
-                        map.addMarker(MarkerOptions().position(LatLng(stop.lat, stop.lng)).icon(BitmapDescriptorFactory.fromBitmap(createCustomMarkerBitmap(currentNumber++, R.color.taxi_yellow))).anchor(0.5f, 0.5f))
+                        map.addMarker(
+                            MarkerOptions()
+                                .position(LatLng(stop.lat, stop.lng))
+                                .icon(BitmapDescriptorFactory.fromBitmap(createCustomMarkerBitmap(currentNumber++, R.color.taxi_yellow)))
+                                .anchor(0.5f, 0.5f)
+                        )
                     }
-                    map.addMarker(MarkerOptions().position(path.last()).icon(BitmapDescriptorFactory.fromBitmap(createCustomMarkerBitmap(currentNumber, R.color.driver_error))).anchor(0.5f, 0.5f))
+                    map.addMarker(
+                        MarkerOptions()
+                            .position(path.last())
+                            .icon(BitmapDescriptorFactory.fromBitmap(createCustomMarkerBitmap(currentNumber, R.color.driver_error)))
+                            .anchor(0.5f, 0.5f)
+                    )
                 }
-            } catch (e: Exception) {}
+            } catch (_: Exception) {}
         }
 
         getCurrentLocation()
@@ -404,21 +435,21 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) return
 
         if (sessionManager.isManualLocationActive()) {
-            val manual = sessionManager.getManualLocation()!!
-            fetchRouteToPickup(manual.first, manual.second)
+            sessionManager.getManualLocation()?.let { manual ->
+                updatePickupDistanceAndCamera(manual.first, manual.second)
+            }
         } else {
             LocationServices.getFusedLocationProviderClient(this).lastLocation.addOnSuccessListener { location ->
                 if (location != null) {
-                    fetchRouteToPickup(location.latitude, location.longitude)
+                    updatePickupDistanceAndCamera(location.latitude, location.longitude)
                 }
             }
         }
     }
 
-    // --- ИСПРАВЛЕНО: Перехватчик повторных интентов для защиты от дублирования экранов ---
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        setIntent(intent) // Обновляем интент активности новым прилетевшим payload-ом
+        setIntent(intent)
 
         val newOrder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             intent.getSerializableExtra("EXTRA_ORDER", Order::class.java)
@@ -428,34 +459,45 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
         }
 
         if (newOrder != null) {
-            // На ладони: сначала проверяем на дубликат. Если это он — звук НЕ трогаем, он продолжает играть!
             if (newOrder.id == currentOrder?.id) {
-                android.util.Log.d("FCM_UNIT", "Защита: Сработал дубликат пуша для заказа ${newOrder.id}. Игнорируем.")
+                // ИСПРАВЛЕНО: Если тот же заказ прилетел по WebSocket с более полными данными (полилайн/клиент/остановки)
+                // после первичного FCM-пуша — обновляем UI и карту без сброса таймера и звука!
+                val hadNoPolyline = currentOrder?.polyline.isNullOrEmpty() && !newOrder.polyline.isNullOrEmpty()
+                val hadNoClient = currentOrder?.client == null && newOrder.client != null
+                if (hadNoPolyline || hadNoClient) {
+                    currentOrder = newOrder
+                    setupUI()
+                    if (::map.isInitialized) {
+                        renderOrderOnMap()
+                    }
+                }
                 return
             }
 
-            // ФОЛБЕК СЦЕНАРИЙ: Если пришел действительно НОВЫЙ (перебивающий) заказ:
-            stopOfferSound() // Глушим звук старого заказа
-            timer?.cancel()  // Сбрасываем текущий таймер (используем 'timer' из твоего кода)
+            stopOfferSound()
+            timer?.cancel()
 
             currentOrder = newOrder
+            activeOfferedOrderId = newOrder.id
             setupUI()
             startTimer()
-            startOfferSound() // Запускаем звук для нового заказа заново
+            startOfferSound()
 
             if (::map.isInitialized) {
-                onMapReady(map) // Перезапускаем логику карты под новый маршрут
+                renderOrderOnMap()
             }
+            fetchFullOrderDetailsIfNeeded()
         }
     }
+
     private fun startTimer() {
         timer = object : CountDownTimer(20000, 1000) {
             override fun onTick(millisUntilFinished: Long) {
-                tvTimer.text = (millisUntilFinished / 1000).toString() // Используем tvTimer
+                tvTimer.text = (millisUntilFinished / 1000).toString()
                 if (millisUntilFinished < 5000) tvTimer.setTextColor(Color.RED)
             }
             override fun onFinish() {
-                stopOfferSound() // 👈 Выключаем звук, когда время вышло
+                stopOfferSound()
                 rejectOrder()
             }
         }.start()
@@ -473,17 +515,14 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
                 if (response.isSuccessful && response.body() != null) {
                     Toast.makeText(this@OrderOfferActivity, "Прийнято!", Toast.LENGTH_SHORT).show()
 
-                    // Слой 1: Жестко создаем абсолютно чистый таск ОС, закладывая в фундамент главный экран
                     val mainIntent = Intent(this@OrderOfferActivity, MainActivity::class.java).apply {
                         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                     }
                     startActivity(mainIntent)
 
-                    // Слой 2: Накладываем поверх главного экрана список заказов
                     val ordersIntent = Intent(this@OrderOfferActivity, OrdersActivity::class.java)
                     startActivity(ordersIntent)
 
-                    // Слой 3: На самый верх кладем экран выполнения, который сейчас увидит водитель
                     val progressIntent = Intent(this@OrderOfferActivity, OrderProgressActivity::class.java).apply {
                         putExtra("EXTRA_ORDER", response.body()!!)
                     }
@@ -493,7 +532,9 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
                 } else {
                     finish()
                 }
-            } catch (e: Exception) { finish() }
+            } catch (e: Exception) {
+                finish()
+            }
         }
     }
 
@@ -502,8 +543,10 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
         timer?.cancel()
         val orderId = currentOrder?.id ?: return
         lifecycleScope.launch {
-            try { ApiClient.getInstance().getApiService(this@OrderOfferActivity).rejectOffer(orderId) } catch (e: Exception) {}
-            finally {
+            try {
+                ApiClient.getInstance().getApiService(this@OrderOfferActivity).rejectOffer(orderId)
+            } catch (_: Exception) {
+            } finally {
                 val intent = Intent(this@OrderOfferActivity, MainActivity::class.java)
                 intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
                 startActivity(intent)
@@ -528,7 +571,6 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun startOfferSound() {
         if (mediaPlayer == null) {
             try {
-                // Создаем плеер напрямую через конструктор, чтобы иметь возможность накрутить AudioAttributes до вызова prepare/start
                 mediaPlayer = android.media.MediaPlayer().apply {
                     val assetFileDescriptor = resources.openRawResourceFd(R.raw.incoming_offer)
                     setDataSource(assetFileDescriptor.fileDescriptor, assetFileDescriptor.startOffset, assetFileDescriptor.length)
@@ -536,8 +578,6 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
 
                     isLooping = true
 
-                    // На ладони: принудительно пускаем звук через поток Будильника (USAGE_ALARM).
-                    // Это позволяет пробивать стандартный беззвучный режим на большинстве устройств!
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                         setAudioAttributes(
                             android.media.AudioAttributes.Builder()
@@ -557,24 +597,23 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
                 e.printStackTrace()
             }
         }
-        startHeavyVibration() // 👈 Запускаем агрессивную тряску
+        startHeavyVibration()
     }
 
     private fun startHeavyVibration() {
         if (vibrator == null) {
             vibrator = getSystemService(Context.VIBRATOR_SERVICE) as android.os.Vibrator
         }
-        // Паттерн: 0мс ждем, 600мс трясем, 200мс отдыхаем, 600мс трясем...
         val pattern = longArrayOf(0, 600, 200, 600, 200)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            // Индекс '1' означает циклически повторять паттерн, начиная с первого элемента (с вибрации)
             vibrator?.vibrate(android.os.VibrationEffect.createWaveform(pattern, 1))
         } else {
             @Suppress("DEPRECATION")
             vibrator?.vibrate(pattern, 1)
         }
     }
+
     private fun stopHeavyVibration() {
         try {
             vibrator?.cancel()
@@ -586,7 +625,7 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun stopOfferSound() {
-        stopHeavyVibration() // 👈 Мгновенно тушим вибрацию при любом исходе
+        stopHeavyVibration()
         try {
             mediaPlayer?.let {
                 if (it.isPlaying) {
@@ -606,7 +645,7 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private fun cancelOfferNotification() {
         try {
-            val nm = getSystemService(android.content.Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+            val nm = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
             val notifId = currentOrder?.idLong?.toInt() ?: currentOrder?.id?.hashCode()
             if (notifId != null) {
                 nm.cancel(notifId)
@@ -626,5 +665,8 @@ class OrderOfferActivity : AppCompatActivity(), OnMapReadyCallback {
         timer?.cancel()
         super.onDestroy()
     }
-    override fun onBackPressed() { Toast.makeText(this, "Тисніть хрестик!", Toast.LENGTH_SHORT).show() }
+
+    override fun onBackPressed() {
+        Toast.makeText(this, "Тисніть хрестик!", Toast.LENGTH_SHORT).show()
+    }
 }

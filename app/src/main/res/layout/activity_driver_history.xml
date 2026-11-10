@@ -1,52 +1,84 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/driver_history_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="@color/driver_black_bg">
+    android:background="@color/driver_card_bg">
 
-    <RelativeLayout
+    <!-- ВЕРХНЯ ШАПКА "ІСТОРІЯ ЗМІН АКТИВНОСТІ" У СТИЛІ UKLON -->
+    <com.google.android.material.card.MaterialCardView
         android:id="@+id/layoutHeader"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
-        android:layout_marginBottom="16dp"
-        android:layout_marginHorizontal="24dp">
+        android:layout_marginTop="-16dp"
+        app:cardBackgroundColor="@color/driver_black_bg"
+        app:cardCornerRadius="22dp"
+        app:cardElevation="4dp"
+        app:strokeWidth="0dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
-        <ImageView
-            android:id="@+id/btnBack"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:src="@drawable/ic_arrow_back_black"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:clickable="true"
-            android:focusable="true"
-            app:tint="@color/driver_text_primary"
-            android:layout_centerVertical="true"
-            android:layout_alignParentStart="true" />
-
-        <TextView
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:id="@+id/header_history_inner"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/history_title"
-            android:textSize="22sp"
-            android:fontFamily="@font/app_font_family"
-            android:textStyle="bold"
-            android:textColor="@color/driver_text_primary"
-            android:layout_centerVertical="true"
-            android:layout_toEndOf="@id/btnBack"
-            android:layout_marginStart="16dp" />
-    </RelativeLayout>
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingTop="32dp"
+            android:paddingBottom="16dp"
+            android:paddingHorizontal="16dp">
 
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                app:cardBackgroundColor="@color/driver_surface_elevated"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp">
+
+                <ImageView
+                    android:id="@+id/btnBack"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:padding="10dp"
+                    android:src="@drawable/ic_arrow_back_black"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:clickable="true"
+                    android:focusable="true"
+                    app:tint="@color/driver_text_primary"
+                    android:contentDescription="@null" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:text="Історія змін Активності"
+                android:textSize="20sp"
+                android:fontFamily="@font/app_font_family"
+                android:textStyle="bold"
+                android:textColor="@color/driver_text_primary" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- СПИСОК КАРТОК ІСТОРІЇ ЗМІН АКТИВНОСТІ -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerHistory"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_weight="1"
-        android:paddingHorizontal="24dp"
+        android:paddingHorizontal="10dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="24dp"
         android:clipToPadding="false"
         android:overScrollMode="never"
-        android:paddingBottom="24dp" />
+        app:layout_constraintTop_toBottomOf="@id/layoutHeader"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        tools:listitem="@layout/item_activity_history" />
 
-</LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,17 +1,24 @@
 package com.taxiapp.driver
 
+import android.graphics.Canvas
+import android.graphics.ColorFilter
+import android.graphics.Paint
+import android.graphics.PixelFormat
+import android.graphics.drawable.Drawable
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView // Добавлен импорт
+import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.core.content.ContextCompat // Добавлен импорт для работы с цветами
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.taxiapp.driver.network.Order
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
 import java.util.Locale
 
 class HistoryOrderAdapter(private val onClick: (Order) -> Unit) :
@@ -33,67 +40,80 @@ class HistoryOrderAdapter(private val onClick: (Order) -> Unit) :
         private val tvDate: TextView = itemView.findViewById(R.id.tv_date)
         private val tvDistance: TextView = itemView.findViewById(R.id.tv_distance)
 
-        // --- НОВЫЕ КОМПОНЕНТЫ ДЛЯ СВЯЗЫВАНИЯ СТРУКТУРЫ ТРЕХСЕКЦИОННОГО ФУТЕРА ---
+        private val ivIconFrom: ImageView? = itemView.findViewById(R.id.iv_icon_from)
+        private val ivIconTo: ImageView? = itemView.findViewById(R.id.iv_icon_to)
+
         private val ivPaymentIcon: ImageView = itemView.findViewById(R.id.iv_payment_icon)
         private val tvActivityBonus: TextView = itemView.findViewById(R.id.tv_activity_bonus)
+        private val ivActivityIcon: ImageView? = itemView.findViewById(R.id.iv_activity_icon)
         private val llPriceBackground: View = itemView.findViewById(R.id.ll_price_background)
-        private val stopsContainer: android.widget.LinearLayout = itemView.findViewById(R.id.ll_stops_container)
+        private val stopsContainer: LinearLayout = itemView.findViewById(R.id.ll_stops_container)
+
         fun bind(order: Order) {
             val context = itemView.context
+            val secondaryColor = ContextCompat.getColor(context, R.color.driver_text_secondary)
+            val primaryColor = ContextCompat.getColor(context, R.color.driver_text_primary)
+            val neonTeal = ContextCompat.getColor(context, R.color.driver_neon_teal)
+            val errorRed = ContextCompat.getColor(context, R.color.driver_error_red)
+            val blackText = ContextCompat.getColor(context, R.color.driver_text_black)
 
+            // 1. Векторні іконки точок маршруту (верхнє кільце з крапкою всередині та нижнє порожнисте кільце)
+            ivIconFrom?.apply {
+                imageTintList = null
+                setImageDrawable(RoutePinDrawable(hasInnerDot = true, strokeColor = secondaryColor))
+            }
+            ivIconTo?.apply {
+                imageTintList = null
+                setImageDrawable(RoutePinDrawable(hasInnerDot = false, strokeColor = secondaryColor))
+            }
+
+            // 2. Адреси, ціна та дистанція (з комою як на скріншоті: "13,73 км")
             tvFrom.text = order.fromAddress ?: "Адреса не вказана"
             tvTo.text = order.toAddress ?: "Адреса не вказана"
-            tvPrice.text = order.getFormattedPrice()
-            tvDistance.text = order.getFormattedDistance()
+            tvPrice.text = "${order.getTotalFullPrice().toInt()} ₴"
+            tvDistance.text = order.getFormattedDistance().replace('.', ',')
 
-            // 1. ДИНАМИЧЕСКАЯ АКТИВНОСТЬ: Выводим реальные баллы из пакетного запроса сервера
+            // 3. Бали активності
             val bonus = order.activityBonus
             tvActivityBonus.text = if (bonus >= 0) "+$bonus" else "$bonus"
+            val bonusColor = if (bonus >= 0) neonTeal else errorRed
+            tvActivityBonus.setTextColor(bonusColor)
+            ivActivityIcon?.setColorFilter(bonusColor)
 
-            // 2. СВЯЗЫВАНИЕ ТИПА ОПЛАТЫ И СМЕНЫ ТЕМ ПРИЛОЖЕНИЯ
+            // 4. Плашка ціни та іконка методу оплати
             if (order.paymentMethod == "CARD" || order.paymentMethod == "ELECTRONIC") {
-                // Безналичный расчет: Карточка, Яркий бирюзовый фон плашки, Черный текст и иконка
                 ivPaymentIcon.setImageResource(R.drawable.ic_payment_card)
                 llPriceBackground.backgroundTintList = ContextCompat.getColorStateList(context, R.color.driver_neon_teal)
-                ivPaymentIcon.imageTintList = ContextCompat.getColorStateList(context, R.color.black)
-                tvPrice.setTextColor(ContextCompat.getColor(context, R.color.black))
+                ivPaymentIcon.imageTintList = android.content.res.ColorStateList.valueOf(blackText)
+                tvPrice.setTextColor(blackText)
             } else {
-                // Наличные (CASH): Кошелек/Деньги, Фоновый цвет карточки (driver_card_bg), Адаптивный белый текст
                 ivPaymentIcon.setImageResource(R.drawable.ic_payment_cash)
-                llPriceBackground.backgroundTintList = ContextCompat.getColorStateList(context, R.color.driver_card_bg)
-                ivPaymentIcon.imageTintList = ContextCompat.getColorStateList(context, R.color.driver_text_primary)
-                tvPrice.setTextColor(ContextCompat.getColor(context, R.color.driver_text_primary))
+                llPriceBackground.backgroundTintList = ContextCompat.getColorStateList(context, R.color.driver_surface_elevated)
+                ivPaymentIcon.imageTintList = android.content.res.ColorStateList.valueOf(primaryColor)
+                tvPrice.setTextColor(primaryColor)
             }
 
-            // Форматирование даты: 12 січ. 14:30
-            if (order.arrivedAt != null) {
-                try {
-                    val parsedDate = LocalDateTime.parse(order.arrivedAt)
-                    val formatter = DateTimeFormatter.ofPattern("dd MMM HH:mm", Locale("uk"))
-                    tvDate.text = parsedDate.format(formatter)
-                } catch (e: Exception) {
-                    tvDate.text = "---"
-                }
-            } else {
-                tvDate.text = "---"
-            }
+            // 5. Форматування дати у форматі "31 серп. 19:47"
+            val rawDateStr = order.arrivedAt ?: order.startedAt ?: order.scheduledAt
+            tvDate.text = formatArchiveOrderDate(rawDateStr)
+
+            // 6. Проміжні зупинки маршруту (виносимо stopsList у локальну val)
+            val stopsList = order.stops
             stopsContainer.removeAllViews()
-            if (!order.stops.isNullOrEmpty()) {
+            if (!stopsList.isNullOrEmpty()) {
                 val inflater = LayoutInflater.from(context)
-                val sortedStops = order.stops.sortedBy { it.stopOrder }
+                val sortedStops = stopsList.sortedBy { it.stopOrder }
                 for (stop in sortedStops) {
                     val stopView = inflater.inflate(R.layout.item_route_point, stopsContainer, false)
                     val tvAddress = stopView.findViewById<TextView>(R.id.tv_point_address)
                     val ivIcon = stopView.findViewById<ImageView>(R.id.iv_point_icon)
-
                     val lineTop = stopView.findViewById<View>(R.id.view_line_top)
                     val lineBottom = stopView.findViewById<View>(R.id.view_line_bottom)
 
                     tvAddress.text = stop.address
-                    ivIcon.setImageResource(R.drawable.ic_marker_waypoint)
-                    ivIcon.clearColorFilter()
-
-                    // Скрываем полу-линии, так как сквозная view_route_line в макете истории отрабатывает идеально
+                    tvAddress.textSize = 15f
+                    ivIcon.imageTintList = null
+                    ivIcon.setImageDrawable(RoutePinDrawable(hasInnerDot = false, strokeColor = secondaryColor))
                     lineTop.visibility = View.GONE
                     lineBottom.visibility = View.GONE
 
@@ -103,6 +123,78 @@ class HistoryOrderAdapter(private val onClick: (Order) -> Unit) :
 
             itemView.setOnClickListener { onClick(order) }
         }
+
+        private fun formatArchiveOrderDate(raw: String?): String {
+            if (raw.isNullOrBlank()) return "---"
+            val clean = raw.trim()
+            val patterns = arrayOf(
+                "yyyy-MM-dd'T'HH:mm:ss.SSSSSS",
+                "yyyy-MM-dd'T'HH:mm:ss.SSS",
+                "yyyy-MM-dd'T'HH:mm:ss",
+                "yyyy-MM-dd HH:mm:ss"
+            )
+            var parsed: Date? = null
+            for (p in patterns) {
+                try {
+                    parsed = SimpleDateFormat(p, Locale.US).parse(clean.take(26))
+                    if (parsed != null) break
+                } catch (_: Exception) {}
+            }
+            if (parsed == null) return clean.take(16).replace('T', ' ')
+
+            val cal = Calendar.getInstance().apply { time = parsed }
+            val day = cal.get(Calendar.DAY_OF_MONTH)
+            val monthIdx = cal.get(Calendar.MONTH)
+            val timeStr = SimpleDateFormat("HH:mm", Locale.US).format(parsed)
+            val monthsShort = arrayOf(
+                "січ.", "лют.", "бер.", "квіт.", "трав.", "черв.",
+                "лип.", "серп.", "вер.", "жовт.", "лист.", "груд."
+            )
+            val monthName = monthsShort.getOrElse(monthIdx) { "" }
+            return "$day $monthName $timeStr"
+        }
+    }
+
+    private class RoutePinDrawable(
+        private val hasInnerDot: Boolean,
+        private val strokeColor: Int
+    ) : Drawable() {
+        private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = strokeColor
+            style = Paint.Style.STROKE
+        }
+        private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = strokeColor
+            style = Paint.Style.FILL
+        }
+
+        override fun draw(canvas: Canvas) {
+            val b = bounds
+            if (b.isEmpty) return
+            val cx = b.exactCenterX()
+            val cy = b.exactCenterY()
+            val r = minOf(b.width(), b.height()) / 2f
+
+            strokePaint.strokeWidth = (r * 0.26f).coerceAtLeast(1.8f)
+            canvas.drawCircle(cx, cy, r * 0.80f, strokePaint)
+
+            if (hasInnerDot) {
+                canvas.drawCircle(cx, cy, r * 0.28f, fillPaint)
+            }
+        }
+
+        override fun setAlpha(alpha: Int) {
+            strokePaint.alpha = alpha
+            fillPaint.alpha = alpha
+        }
+
+        override fun setColorFilter(colorFilter: ColorFilter?) {
+            strokePaint.colorFilter = colorFilter
+            fillPaint.colorFilter = colorFilter
+        }
+
+        @Deprecated("Deprecated in Java")
+        override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
     }
 
     class HistoryDiffCallback : DiffUtil.ItemCallback<Order>() {

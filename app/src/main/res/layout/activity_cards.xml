@@ -2,68 +2,217 @@
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://tools.android.com/tools"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/cards_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/driver_black_bg">
+    android:background="@color/driver_card_bg">
 
-    <RelativeLayout
+    <!-- ВЕРХНЯ ШАПКА "ВАШІ КАРТКИ" -->
+    <com.google.android.material.card.MaterialCardView
         android:id="@+id/layout_header_cards"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/driver_black_bg"
-        android:paddingTop="32dp"
-        android:paddingBottom="16dp"
-        android:paddingHorizontal="24dp"
+        android:layout_marginTop="-16dp"
+        app:cardBackgroundColor="@color/driver_black_bg"
+        app:cardCornerRadius="22dp"
+        app:cardElevation="4dp"
+        app:strokeWidth="0dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <ImageView
-            android:id="@+id/btn_back_cards"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:src="@drawable/ic_arrow_back_black"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:clickable="true"
-            android:focusable="true"
-            app:tint="@color/driver_text_primary"
-            android:layout_centerVertical="true"
-            android:layout_alignParentStart="true"
-            android:contentDescription="@null" />
-
-        <TextView
-            android:id="@+id/tv_title_cards"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:id="@+id/header_cards_inner"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Ваші картки"
-            android:textSize="22sp"
-            android:fontFamily="@font/app_font_family"
-            android:textStyle="bold"
-            android:textColor="@color/driver_text_primary"
-            android:layout_centerVertical="true"
-            android:layout_toEndOf="@id/btn_back_cards"
-            android:layout_marginStart="16dp" />
-    </RelativeLayout>
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingTop="32dp"
+            android:paddingBottom="16dp"
+            android:paddingHorizontal="16dp">
 
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                app:cardBackgroundColor="@color/driver_surface_elevated"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp">
+
+                <ImageView
+                    android:id="@+id/btn_back_cards"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:padding="10dp"
+                    android:src="@drawable/ic_arrow_back_black"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:clickable="true"
+                    android:focusable="true"
+                    app:tint="@color/driver_text_primary"
+                    android:contentDescription="@null" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                android:id="@+id/tv_title_cards"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:text="Ваші картки"
+                android:textSize="20sp"
+                android:fontFamily="@font/app_font_family"
+                android:textStyle="bold"
+                android:textColor="@color/driver_text_primary" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- ІНТЕРАКТИВНА 3D-КАРТКА ВОДІЯ (У СТИЛІ BANKING APPS З ТИСНЕНИМ ЛОГОТИПОМ ДОДАТКУ) -->
+    <FrameLayout
+        android:id="@+id/card_3d_stage"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        android:paddingHorizontal="20dp"
+        android:paddingTop="18dp"
+        android:paddingBottom="8dp"
+        app:layout_constraintTop_toBottomOf="@id/layout_header_cards"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/card_3d_view"
+            android:layout_width="match_parent"
+            android:layout_height="202dp"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="16dp"
+            app:strokeWidth="0dp"
+            app:cardBackgroundColor="@android:color/transparent">
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/card_3d_surface"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/bg_wallet_credit_card"
+                android:padding="22dp">
+
+                <!-- Металевий EMV-чіп зліва -->
+                <ImageView
+                    android:id="@+id/iv_3d_card_chip"
+                    android:layout_width="48dp"
+                    android:layout_height="36dp"
+                    android:layout_marginTop="24dp"
+                    android:src="@drawable/ic_payment_card"
+                    android:contentDescription="@null"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintStart_toStartOf="parent" />
+
+                <!-- Тиснений логотип додатку (@drawable/ic_unit_logo) у правому верхньому куті -->
+                <ImageView
+                    android:id="@+id/iv_3d_card_emblem"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:src="@drawable/ic_unit_logo"
+                    android:contentDescription="@null"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent" />
+
+                <!-- Номер прив'язаної картки з тисненням -->
+                <TextView
+                    android:id="@+id/tv_3d_card_number"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    tools:text="4441  ••••  ••••  7160"
+                    android:textColor="#ECEEF2"
+                    android:textSize="19sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.12"
+                    android:shadowColor="#99000000"
+                    android:shadowDx="0"
+                    android:shadowDy="2"
+                    android:shadowRadius="3"
+                    android:fontFamily="@font/app_font_family"
+                    app:layout_constraintTop_toBottomOf="@id/iv_3d_card_chip"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent" />
+
+                <!-- Ім'я власника картки (реальне ім'я водія у стилі CARD HOLDER) -->
+                <TextView
+                    android:id="@+id/tv_3d_card_holder"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="12dp"
+                    tools:text="CARD HOLDER"
+                    android:textColor="#8A8E99"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.16"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:shadowColor="#B3000000"
+                    android:shadowDx="0"
+                    android:shadowDy="1"
+                    android:shadowRadius="1.5"
+                    android:fontFamily="monospace"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toStartOf="@+id/iv_3d_card_network" />
+
+                <!-- Динамічний логотип платіжної системи (Visa / Mastercard) -->
+                <ImageView
+                    android:id="@+id/iv_3d_card_network"
+                    android:layout_width="72dp"
+                    android:layout_height="46dp"
+                    android:src="@drawable/ic_payment_card"
+                    android:contentDescription="@null"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+        </com.google.android.material.card.MaterialCardView>
+    </FrameLayout>
+
+    <!-- Підпис "Отримувати виплати на:" -->
+    <TextView
+        android:id="@+id/tv_payout_cards_label"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="10dp"
+        android:text="Отримувати виплати на:"
+        android:textColor="@color/driver_text_secondary"
+        android:textSize="16sp"
+        android:fontFamily="@font/app_font_family"
+        app:layout_constraintTop_toBottomOf="@id/card_3d_stage"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Список прив'язаних карток -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rv_cards"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:background="@color/driver_black_bg"
-        android:padding="8dp"
-        app:layout_constraintTop_toBottomOf="@id/layout_header_cards"
+        android:layout_marginTop="6dp"
+        android:clipToPadding="false"
+        android:overScrollMode="never"
+        android:paddingBottom="16dp"
+        app:layout_constraintTop_toBottomOf="@id/tv_payout_cards_label"
         app:layout_constraintBottom_toTopOf="@+id/bottom_button_block"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent"
+        tools:listitem="@layout/item_driver_card" />
 
+    <!-- НИЖНІЙ БЛОК З КНОПКОЮ "ДОДАТИ" (без кнопки ФОП) -->
     <LinearLayout
         android:id="@+id/bottom_button_block"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:background="@color/driver_black_bg"
+        android:background="@drawable/bg_bottom_sheet_driver"
+        android:paddingTop="14dp"
         android:paddingBottom="16dp"
+        android:paddingHorizontal="12dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
@@ -71,24 +220,22 @@
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/btn_container_layout"
             android:layout_width="match_parent"
-            android:layout_height="60dp"
-            android:layout_marginHorizontal="9dp"
-            android:layout_marginTop="16dp"
-            android:layout_marginBottom="4dp"
+            android:layout_height="54dp"
             android:background="@drawable/bg_driver_btn">
 
             <androidx.appcompat.widget.AppCompatButton
                 android:id="@+id/btn_add_card"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
-                android:text="Додати картку"
+                android:text="Додати"
                 android:textAllCaps="false"
-                android:textSize="18sp"
+                android:textSize="17sp"
                 android:textStyle="bold"
                 android:textColor="@color/driver_text_black"
                 android:background="@android:color/transparent"
                 android:elevation="0dp"
                 android:stateListAnimator="@null"
+                android:fontFamily="@font/app_font_family"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="parent"

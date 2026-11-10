@@ -1,107 +1,146 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.google.android.material.card.MaterialCardView
+<LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    app:cardCornerRadius="0dp"
-    app:cardElevation="0dp"
-    app:strokeWidth="0dp"
-    app:cardBackgroundColor="@color/driver_black_bg">
+    android:orientation="vertical"
+    android:background="@color/driver_black_bg">
 
-    <LinearLayout
+    <!-- Заголовок дати (показується для першої операції за день, напр. "31 серп. 2026") -->
+    <TextView
+        android:id="@+id/tv_date_header"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
+        android:gravity="center"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp"
+        android:textColor="@color/driver_text_secondary"
+        android:textSize="15sp"
+        android:fontFamily="@font/app_font_family"
+        android:visibility="gone"
+        tools:text="31 серп. 2026"
+        tools:visibility="visible" />
+
+    <!-- Основний рядок транзакції -->
+    <LinearLayout
+        android:id="@+id/tx_row_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingHorizontal="16dp"
+        android:paddingTop="14dp"
+        android:paddingBottom="14dp"
         android:background="?attr/selectableItemBackground">
 
+        <!-- Кругла іконка « або » на рівні часу -->
+        <ImageView
+            android:id="@+id/img_tx_icon"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginEnd="10dp"
+            android:src="@drawable/ic_double_chevron"
+            android:contentDescription="@null" />
+
+        <!-- Центральна колонка з часом, сумою, назвою, залишком та ID замовлення -->
         <LinearLayout
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:paddingHorizontal="16dp"
-            android:paddingVertical="14dp">
+            android:layout_weight="1"
+            android:orientation="vertical">
 
-            <ImageView
-                android:id="@+id/img_tx_icon"
-                android:layout_width="42dp"
-                android:layout_height="42dp"
-                android:src="@drawable/ic_wallet"
-                android:background="@drawable/bg_driver_input"
-                android:backgroundTint="@color/driver_surface_elevated"
-                android:padding="10dp"
-                android:layout_marginEnd="16dp"
-                android:contentDescription="@null" />
-
+            <!-- Верхній рядок: Час зліва + Сума справа -->
             <LinearLayout
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:layout_marginEnd="12dp">
-
-                <TextView
-                    android:id="@+id/tv_tx_type"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    tools:text="Комісія"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:fontFamily="@font/app_font_family"
-                    android:textColor="@color/driver_text_primary" />
-
-                <TextView
-                    android:id="@+id/tv_tx_desc"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    tools:text="Замовлення #123"
-                    android:textSize="14sp"
-                    android:fontFamily="@font/app_font_family"
-                    android:textColor="@color/driver_text_secondary"
-                    android:maxLines="1"
-                    android:ellipsize="end"
-                    android:layout_marginTop="2dp" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
 
                 <TextView
                     android:id="@+id/tv_tx_date"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    tools:text="12.05 14:30"
-                    android:textSize="12sp"
+                    android:layout_weight="1"
+                    tools:text="20:09"
+                    android:textSize="14sp"
                     android:fontFamily="@font/app_font_family"
-                    android:textColor="@color/driver_text_secondary"
-                    android:layout_marginTop="4dp" />
+                    android:textColor="@color/driver_text_secondary" />
 
                 <TextView
-                    android:id="@+id/tv_tx_balance_after"
+                    android:id="@+id/tv_tx_amount"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    tools:text="Залишок: 1450.00 ₴"
-                    android:textSize="12sp"
+                    tools:text="-93.50"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
                     android:fontFamily="@font/app_font_family"
-                    android:textColor="@color/driver_text_secondary"
-                    android:layout_marginTop="2dp"
-                    android:visibility="gone" />
+                    android:textColor="@color/driver_error_red" />
             </LinearLayout>
 
-            <TextView
-                android:id="@+id/tv_tx_amount"
-                android:layout_width="wrap_content"
+            <!-- Назва операції + стрілка переходу справа -->
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                tools:text="-15.00 ₴"
-                android:textSize="17sp"
-                android:textStyle="bold"
-                android:fontFamily="@font/app_font_family"
-                android:textColor="@color/driver_error_red" />
+                android:layout_marginTop="4dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:layout_marginEnd="8dp">
+
+                    <TextView
+                        android:id="@+id/tv_tx_type"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        tools:text="Списання вартості замовлення"
+                        android:textSize="17sp"
+                        android:textStyle="bold"
+                        android:fontFamily="@font/app_font_family"
+                        android:textColor="@color/driver_text_primary" />
+
+                    <TextView
+                        android:id="@+id/tv_tx_balance_after"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        tools:text="Залишок: 262.27 ₴"
+                        android:textSize="14sp"
+                        android:fontFamily="@font/app_font_family"
+                        android:textColor="@color/driver_text_secondary" />
+
+                    <TextView
+                        android:id="@+id/tv_tx_desc"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        tools:text="ID замовлення: **** 0933e4"
+                        android:textSize="14sp"
+                        android:fontFamily="@font/app_font_family"
+                        android:textColor="@color/driver_text_secondary"
+                        android:maxLines="1"
+                        android:ellipsize="end" />
+                </LinearLayout>
+
+                <ImageView
+                    android:id="@+id/iv_tx_chevron"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_chevron"
+                    app:tint="@color/driver_text_secondary"
+                    android:contentDescription="@null" />
+            </LinearLayout>
 
         </LinearLayout>
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:layout_marginHorizontal="16dp"
-            android:background="@color/driver_divider" />
     </LinearLayout>
-</com.google.android.material.card.MaterialCardView>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/driver_divider" />
+
+</LinearLayout>

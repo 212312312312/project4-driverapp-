@@ -3,22 +3,26 @@ package com.taxiapp.driver
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.taxiapp.driver.network.ActivityHistoryItemDto
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 class HistoryActivityAdapter(
     private var items: List<ActivityHistoryItemDto>,
-    private val onItemClick: (String) -> Unit // 👈 Добавлено для обработки кликов
+    private val onItemClick: (String) -> Unit
 ) : RecyclerView.Adapter<HistoryActivityAdapter.ViewHolder>() {
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val tvReason: TextView = view.findViewById(R.id.tvReason)
         val tvDate: TextView = view.findViewById(R.id.tvDate)
         val tvPoints: TextView = view.findViewById(R.id.tvPoints)
+        val ivChevron: ImageView? = view.findViewById(R.id.ivHistoryChevron)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -27,43 +31,70 @@ class HistoryActivityAdapter(
         return ViewHolder(view)
     }
 
-    // НАЙДИ И ОБНОВИ ВНУТРЕННОСТЬ МЕТОДА onBindViewHolder
-    // НАЙДИ И ЗАМЕНИ ТОЛЬКО ЭТOТ МЕТОД ВНУТРИ КЛАССА HistoryActivityAdapter
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = items[position]
         val context = holder.itemView.context
 
-        // Если есть UUID заказа, красиво форматируем строку причины
-        if (!item.orderUuid.isNullOrBlank()) {
-            val shortUuid = if (item.orderUuid.length >= 6) item.orderUuid.takeLast(6) else item.orderUuid
-            holder.tvReason.text = "${item.reason} (****${shortUuid.uppercase()})"
-        } else {
-            holder.tvReason.text = item.reason
-        }
+        // Чистий текст причини без технічного UUID у дужках (як на референсному скріншоті)
+        val cleanReason = item.reason.replace(Regex("\\s*\\(\\*{2,}[A-Za-z0-9-]+\\)"), "").trim()
+        holder.tvReason.text = cleanReason.ifEmpty { item.reason }
 
-        // Форматирование даты
-        try {
-            val parsed = LocalDateTime.parse(item.date)
-            holder.tvDate.text = parsed.format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"))
-        } catch (e: Exception) {
-            holder.tvDate.text = item.date
-        }
+        // Форматування дати з повною українською назвою місяця ("31 серпня 20:09")
+        holder.tvDate.text = formatUkrainianFullMonthDate(item.date)
 
-        // Подгрузка системных цветов в зависимости от знака баллов
+        // Відображення балів та стрілки переходу
+        val orderUuidVal = item.orderUuid
+        val hasOrderLink = !orderUuidVal.isNullOrBlank()
+
         if (item.change > 0) {
             holder.tvPoints.text = "+${item.change}"
-            holder.tvPoints.setTextColor(ContextCompat.getColor(context, R.color.activity_green))
-        } else {
+            holder.tvPoints.setTextColor(ContextCompat.getColor(context, R.color.driver_text_secondary))
+        } else if (item.change < 0) {
             holder.tvPoints.text = "${item.change}"
-            holder.tvPoints.setTextColor(ContextCompat.getColor(context, R.color.activity_red))
+            holder.tvPoints.setTextColor(ContextCompat.getColor(context, R.color.driver_error_red))
+        } else {
+            holder.tvPoints.text = "0"
+            holder.tvPoints.setTextColor(ContextCompat.getColor(context, R.color.driver_text_secondary))
         }
 
-        // Логика клика: передаем UUID вверх в Активити только при положительном балансе (> 0)
+        holder.ivChevron?.visibility = if (hasOrderLink) View.VISIBLE else View.GONE
+
         holder.itemView.setOnClickListener {
-            if (item.change > 0 && !item.orderUuid.isNullOrBlank()) {
-                onItemClick(item.orderUuid)
+            if (!orderUuidVal.isNullOrBlank()) {
+                onItemClick(orderUuidVal)
             }
         }
+    }
+
+    private fun formatUkrainianFullMonthDate(raw: String): String {
+        val clean = raw.trim()
+        val patterns = arrayOf(
+            "yyyy-MM-dd'T'HH:mm:ss.SSSSSS",
+            "yyyy-MM-dd'T'HH:mm:ss.SSS",
+            "yyyy-MM-dd'T'HH:mm:ss",
+            "yyyy-MM-dd HH:mm:ss",
+            "dd.MM.yyyy HH:mm"
+        )
+        var parsed: Date? = null
+        for (p in patterns) {
+            try {
+                parsed = SimpleDateFormat(p, Locale.US).parse(clean.take(26))
+                if (parsed != null) break
+            } catch (_: Exception) {}
+        }
+        if (parsed == null) return clean
+
+        val cal = Calendar.getInstance().apply { time = parsed }
+        val day = cal.get(Calendar.DAY_OF_MONTH)
+        val monthIdx = cal.get(Calendar.MONTH)
+        val timeStr = SimpleDateFormat("HH:mm", Locale.US).format(parsed)
+
+        val monthsFullGenitive = arrayOf(
+            "січня", "лютого", "березня", "квітня", "травня", "червня",
+            "липня", "серпня", "вересня", "жовтня", "листопада", "грудня"
+        )
+        val monthName = monthsFullGenitive.getOrElse(monthIdx) { "" }
+        return "$day $monthName $timeStr"
     }
 
     override fun getItemCount() = items.size

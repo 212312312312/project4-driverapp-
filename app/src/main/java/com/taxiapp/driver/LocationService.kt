@@ -21,7 +21,6 @@ import com.google.gson.Gson
 import com.taxiapp.driver.BuildConfig
 import com.taxiapp.driver.ChatEventBus
 import com.taxiapp.driver.MainActivity
-import com.taxiapp.driver.OrderConfirmationActivity
 import com.taxiapp.driver.OrderOfferActivity
 import com.taxiapp.driver.R
 import com.taxiapp.driver.network.ApiClient
@@ -46,6 +45,8 @@ import ua.naiksoftware.stomp.Stomp
 import ua.naiksoftware.stomp.StompClient
 import ua.naiksoftware.stomp.dto.LifecycleEvent
 import ua.naiksoftware.stomp.dto.StompHeader
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.math.min
 
 class LocationService : Service() {
 
@@ -55,10 +56,12 @@ class LocationService : Service() {
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var heartbeatJob: Job? = null
+    private var reconnectJob: Job? = null
 
-    // ✅ ДОБАВЛЕНО: Постоянный STOMP WebSocket-клиент в фоновом сервисе для мгновенного приема заказов и отмен
     private var stompClient: StompClient? = null
     private val wsDisposable = CompositeDisposable()
+    private val isWsConnecting = AtomicBoolean(false)
+    private var wsReconnectAttempt = 0
     private val gson = Gson()
 
     private var isForegroundStarted = false
@@ -132,11 +135,33 @@ class LocationService : Service() {
         sendInitialLocation()
         requestLocationUpdates()
         startHeartbeatLoop()
-        connectDriverOrderWebSocket()
+        ensureDriverIdAndConnectWebSocket()
     }
 
-    // ✅ ДОБАВЛЕНО: Независимый Heartbeat каждые 25 секунд, чтобы стоящий на месте водитель
-    // никогда не удалялся сервером из Redis (drivers:geo / drivers:meta)!
+    /**
+     * Если при первом старте сервиса driverId еще не был сохранен в SessionManager,
+     * автоматически подгружаем профиль и подключаемся к персональному сокету заказов.
+     */
+    private fun ensureDriverIdAndConnectWebSocket() {
+        val currentId = sessionManager.getDriverId()
+        if (currentId > 0L) {
+            connectDriverOrderWebSocket()
+            return
+        }
+        serviceScope.launch {
+            try {
+                val response = ApiClient.getInstance().getApiService(applicationContext).getDriverProfile()
+                if (response.isSuccessful && response.body() != null) {
+                    val fetchedId = response.body()!!.id
+                    sessionManager.saveDriverId(fetchedId)
+                    connectDriverOrderWebSocket()
+                }
+            } catch (e: Exception) {
+                Log.w("LocationService", "Не вдалося отримати driverId для WS: ${e.message}")
+            }
+        }
+    }
+
     @SuppressLint("MissingPermission")
     private fun startHeartbeatLoop() {
         heartbeatJob?.cancel()
@@ -177,12 +202,26 @@ class LocationService : Service() {
         }
     }
 
-    // ✅ ДОБАВЛЕНО: Подписка на персональный WebSocket-топик водителя /topic/drivers/{driverId}/orders
-    // Работает в фоновом сервисе и мгновенно открывает OrderOfferActivity или закрывает заказ при отмене!
+    private fun scheduleWebSocketReconnect() {
+        if (!isServiceRunning || sessionManager.fetchAuthToken() == null) return
+        if (reconnectJob?.isActive == true) return
+
+        reconnectJob = serviceScope.launch {
+            val backoffMs = min(30_000L, 3_000L * (1 shl min(wsReconnectAttempt, 3)))
+            wsReconnectAttempt++
+            delay(backoffMs)
+            if (isServiceRunning && sessionManager.fetchAuthToken() != null) {
+                connectDriverOrderWebSocket()
+            }
+        }
+    }
+
     private fun connectDriverOrderWebSocket() {
         val token = sessionManager.fetchAuthToken() ?: return
         val driverId = sessionManager.getDriverId()
         if (driverId <= 0L) return
+
+        if (!isWsConnecting.compareAndSet(false, true)) return
 
         try {
             wsDisposable.clear()
@@ -216,7 +255,6 @@ class LocationService : Service() {
                     val orderJson = msgObj.optJSONObject("order")?.toString()
 
                     if (action == "REMOVE") {
-                        Log.d("LocationService", "🛑 [WS] Получен сигнал REMOVE для заказа $orderId")
                         handleRemoteOrderCancellation(orderId)
                         return@subscribe
                     }
@@ -225,11 +263,9 @@ class LocationService : Service() {
                         val order = gson.fromJson(orderJson, Order::class.java)
                         when (order.status) {
                             "OFFERING" -> {
-                                Log.d("LocationService", "🚀 [WS] Прилетел персональный оффер заказа ${order.id}!")
                                 launchOrderOfferFromBackground(order)
                             }
                             "CANCELLED" -> {
-                                Log.d("LocationService", "🛑 [WS] Заказ ${order.id} отменен!")
                                 handleRemoteOrderCancellation(order.id)
                             }
                             else -> {
@@ -254,15 +290,15 @@ class LocationService : Service() {
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe { event ->
                 when (event.type) {
-                    LifecycleEvent.Type.OPENED -> Log.d("LocationService", "✅ Персональный WebSocket водителя подключен")
+                    LifecycleEvent.Type.OPENED -> {
+                        wsReconnectAttempt = 0
+                        isWsConnecting.set(false)
+                        Log.d("LocationService", "✅ Персональный WebSocket водителя подключен")
+                    }
                     LifecycleEvent.Type.CLOSED, LifecycleEvent.Type.ERROR -> {
-                        Log.w("LocationService", "⚠️ WebSocket водителя отключен, переподключение через 5 сек...")
-                        serviceScope.launch {
-                            delay(5000L)
-                            if (isServiceRunning && sessionManager.fetchAuthToken() != null) {
-                                connectDriverOrderWebSocket()
-                            }
-                        }
+                        isWsConnecting.set(false)
+                        Log.w("LocationService", "⚠️ WebSocket водителя отключен, планируем реконнект...")
+                        scheduleWebSocketReconnect()
                     }
                     else -> {}
                 }
@@ -292,12 +328,11 @@ class LocationService : Service() {
     }
 
     private fun launchOrderOfferFromBackground(order: Order) {
-        if (OrderOfferActivity.activeOfferedOrderId == order.id) {
-            Log.d("LocationService", "Оффер ${order.id} уже открыт на экране, пропускаем дубликат.")
-            return
-        }
+        val isAlreadyOpen = OrderOfferActivity.activeOfferedOrderId == order.id
 
-        wakeUpScreen()
+        if (!isAlreadyOpen) {
+            wakeUpScreen()
+        }
 
         val intent = Intent(this, OrderOfferActivity::class.java).apply {
             putExtra("EXTRA_ORDER", order)
@@ -305,13 +340,14 @@ class LocationService : Service() {
         }
 
         try {
+            // Даже если экран уже был открыт из FCM с частичными данными, передаем полный Order в onNewIntent
             startActivity(intent)
-            Log.d("LocationService", "🚀 OrderOfferActivity запущена из LocationService!")
         } catch (e: Exception) {
             Log.e("LocationService", "Не удалось запустить OrderOfferActivity напрямую: ${e.message}")
         }
 
-        // Дополнительно вешаем FullScreenIntent уведомление для гарантированного пробития блокировки экрана
+        if (isAlreadyOpen) return
+
         val notifId = order.idLong?.toInt() ?: order.id.hashCode()
         val channelId = "offer_fullscreen_channel_v5"
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -385,8 +421,6 @@ class LocationService : Service() {
             this.isReminderTriggered = false
         }
         this.trackingOrder = order
-        Log.d("LocationService", "Tracking order: ID=${order?.id}, Status=${order?.status}")
-
         requestLocationUpdates()
     }
 
@@ -416,7 +450,6 @@ class LocationService : Service() {
         if (targetLoc.latitude == 0.0 && targetLoc.longitude == 0.0) return
 
         val distance = currentLoc.distanceTo(targetLoc)
-
         if (distance < 300) {
             isReminderTriggered = true
             sendProximityNotification()
@@ -424,9 +457,6 @@ class LocationService : Service() {
     }
 
     private fun sendProximityNotification() {
-        val title = "Статус замовлення"
-        val message = "Майже на місці"
-
         val notificationManager = getSystemService(NotificationManager::class.java)
         val channelId = "driver_alert_channel"
 
@@ -442,8 +472,8 @@ class LocationService : Service() {
         )
 
         val notification = NotificationCompat.Builder(this, channelId)
-            .setContentTitle(title)
-            .setContentText(message)
+            .setContentTitle("Статус замовлення")
+            .setContentText("Майже на місці")
             .setSmallIcon(R.drawable.ic_place_small)
             .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -499,12 +529,11 @@ class LocationService : Service() {
                 (trackingOrder?.status == "ACCEPTED" ||
                         trackingOrder?.status == "IN_PROGRESS" ||
                         trackingOrder?.status == "DRIVER_ARRIVED" ||
+                        trackingOrder?.status == "ARRIVED_AT_WAYPOINT" ||
                         trackingOrder?.status == "ARRIVED")
 
-        val interval = if (isWithOrder) 5000L else 10000L
+        val interval = if (isWithOrder) 4000L else 8000L
 
-        // ✅ КРИТИЧЕСКИЙ ФИКС: Ставим minUpdateDistanceMeters(0f)!
-        // Раньше стояло 25f, из-за чего на стоящем телефоне FusedLocationProvider вообще не вызывал onLocationResult!
         val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, interval)
             .setMinUpdateDistanceMeters(0f)
             .setWaitForAccurateLocation(false)
@@ -516,7 +545,6 @@ class LocationService : Service() {
                 locationCallback,
                 Looper.getMainLooper()
             )
-            Log.d("LocationService", "GPS интервал изменен: заказ=$isWithOrder, интервал=${interval}мс")
         } catch (e: SecurityException) {
             Log.e("LocationService", "SecurityException при requestLocationUpdates: ${e.message}")
         }
@@ -542,11 +570,7 @@ class LocationService : Service() {
         serviceScope.launch {
             try {
                 val request = UpdateLocationRequest(latToSend, lngToSend, bearing)
-                val response = ApiClient.getInstance().getApiService(applicationContext).updateLocation(request)
-
-                if (!response.isSuccessful) {
-                    Log.e("LocationService", "Сервер відхилив локацію: Код=${response.code()}")
-                }
+                ApiClient.getInstance().getApiService(applicationContext).updateLocation(request)
             } catch (e: Exception) {
                 Log.e("LocationService", "Помилка мережі при відправці локації: ${e.message}")
             }
@@ -556,8 +580,6 @@ class LocationService : Service() {
     override fun onTaskRemoved(rootIntent: Intent?) {
         super.onTaskRemoved(rootIntent)
         isServiceRunning = false
-        // ✅ ИСПРАВЛЕНО: Сбрасываем локальный статус онлайн при смахивании приложения,
-        // чтобы при следующем запуске тумблер на экране не обманывал водителя!
         sessionManager.saveDriverOnlineStatus(false)
         val token = sessionManager.fetchAuthToken()
 
@@ -567,14 +589,10 @@ class LocationService : Service() {
                     withTimeoutOrNull(2500L) {
                         try {
                             ApiClient.getInstance().getApiService(applicationContext).deleteLocation()
-                            Log.d("LocationService", "✅ Сигнал выхода из приложения успешно отправлен")
-                        } catch (e: Exception) {
-                            Log.e("LocationService", "Помилка відправки статусу offline: ${e.message}")
-                        }
+                        } catch (_: Exception) {}
                     }
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
+            } catch (_: Exception) {
             } finally {
                 stopSelf()
             }
@@ -588,7 +606,7 @@ class LocationService : Service() {
             startForegroundService()
         }
         if (stompClient == null || stompClient?.isConnected == false) {
-            connectDriverOrderWebSocket()
+            ensureDriverIdAndConnectWebSocket()
         }
         return START_STICKY
     }
@@ -648,9 +666,7 @@ class LocationService : Service() {
     }
 
     private fun shouldSendLocation(location: Location): Boolean {
-        // ✅ ИСПРАВЛЕНО: В DEBUG-сборке разрешаем тестовые/эмуляторные координаты, чтобы можно было тестировать!
         if (location.isFromMockProvider && !BuildConfig.DEBUG) {
-            Log.w("LocationService", "🚨 Обнаружена поддельная локация в релизе! Игнорируем.")
             return false
         }
 
@@ -665,6 +681,7 @@ class LocationService : Service() {
                 (trackingOrder?.status == "ACCEPTED" ||
                         trackingOrder?.status == "IN_PROGRESS" ||
                         trackingOrder?.status == "DRIVER_ARRIVED" ||
+                        trackingOrder?.status == "ARRIVED_AT_WAYPOINT" ||
                         trackingOrder?.status == "ARRIVED")
 
         val lastLocation = Location("last").apply {
@@ -682,7 +699,6 @@ class LocationService : Service() {
                 return false
             }
         } else {
-            // ✅ ИСПРАВЛЕНО: Шлем Keep-Alive каждые 25 секунд (вместо 60 сек), чтобы Redis никогда не удалял водителя!
             if (isStanding && distance < 15f && timePassed < 25000L) {
                 return false
             }
@@ -694,8 +710,10 @@ class LocationService : Service() {
         super.onDestroy()
         isForegroundStarted = false
         isServiceRunning = false
+        isWsConnecting.set(false)
         onLocationUpdated = null
         heartbeatJob?.cancel()
+        reconnectJob?.cancel()
         try {
             wsDisposable.clear()
             stompClient?.disconnect()

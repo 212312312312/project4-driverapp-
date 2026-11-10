@@ -4,7 +4,13 @@ import android.content.res.ColorStateList
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.ColorFilter
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.PixelFormat
 import android.graphics.PorterDuff
+import android.graphics.RectF
+import android.graphics.drawable.Drawable
 import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -14,14 +20,25 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
-import com.google.android.gms.maps.model.*
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.LatLngBounds
+import com.google.android.gms.maps.model.MapStyleOptions
+import com.google.android.gms.maps.model.MarkerOptions
+import com.google.android.gms.maps.model.PolylineOptions
 import com.google.maps.android.PolyUtil
 import com.taxiapp.driver.databinding.ActivityHistoryDetailsBinding
 import com.taxiapp.driver.network.Order
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 class HistoryDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
 
@@ -32,18 +49,28 @@ class HistoryDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Инициализация Binding
         binding = ActivityHistoryDetailsBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // 🛠️ ДОБАВЛЕНО: Автоматический отступ контента от системных панелей для Android 15
-        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.root) { v, insets ->
-            val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+        val headerInner = findViewById<View>(R.id.header_history_inner)
+        val density = resources.displayMetrics.density
+
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            if (headerInner != null) {
+                headerInner.setPadding(
+                    (16 * density).toInt(),
+                    systemBars.top + (14 * density).toInt(),
+                    (16 * density).toInt(),
+                    (14 * density).toInt()
+                )
+                v.setPadding(systemBars.left, 0, systemBars.right, systemBars.bottom)
+            } else {
+                v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            }
             insets
         }
 
-        // Получаем объект Order (безопасно)
         val receivedOrder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             intent.getSerializableExtra("EXTRA_ORDER", Order::class.java)
         } else {
@@ -67,106 +94,211 @@ class HistoryDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun setupUI() {
-        binding.tvPriceDetail.text = order.getFormattedPrice()
-        binding.tvDistanceDetail.text = order.getFormattedDistance()
-        binding.tvFromDetail.text = order.fromAddress ?: "---"
-        binding.tvToDetail.text = order.toAddress ?: "---"
+        val currentOrder = order
+        val secondaryColor = ContextCompat.getColor(this, R.color.driver_text_secondary)
+        val primaryColor = ContextCompat.getColor(this, R.color.driver_text_primary)
+        val neonTeal = ContextCompat.getColor(this, R.color.driver_neon_teal)
+        val errorRed = ContextCompat.getColor(this, R.color.driver_error_red)
+        val blackText = ContextCompat.getColor(this, R.color.driver_text_black)
 
-        binding.tvTariffName.text = order.tariffName ?: "Standard"
-        binding.tvCarModel.text = order.carModel ?: "Авто"
-        binding.tvCarPlate.text = order.carPlate ?: "---"
-        binding.tvCarClass.text = order.tariffName ?: "Class"
+        // 1. Векторні іконки точок маршруту та іконки секцій ("Транзакції в замовленні" і "Бали за замовлення")
+        findViewById<ImageView>(R.id.iv_detail_from_pin)?.apply {
+            imageTintList = null
+            setImageDrawable(DetailRoutePinDrawable(hasInnerDot = true, strokeColor = secondaryColor))
+        }
+        findViewById<ImageView>(R.id.iv_detail_to_pin)?.apply {
+            imageTintList = null
+            setImageDrawable(DetailRoutePinDrawable(hasInnerDot = false, strokeColor = secondaryColor))
+        }
+        findViewById<ImageView>(R.id.iv_finance_wallet_icon)?.apply {
+            imageTintList = null
+            setImageDrawable(DetailSectionIconDrawable(isWallet = true, strokeColor = secondaryColor))
+        }
+        findViewById<ImageView>(R.id.iv_activity_trend_icon)?.apply {
+            imageTintList = null
+            setImageDrawable(DetailSectionIconDrawable(isWallet = false, strokeColor = secondaryColor))
+        }
 
-        // --- ЛОГИКА ОТОБРАЖЕНИЯ СОКРАЩЕННОГО UUID ДЛЯ ДИСПЕТЧЕРА ---
-        val fullUuid = order.id
-        val shortUuid = if (fullUuid.length >= 6) fullUuid.takeLast(6) else fullUuid
-        binding.tvOrderUuidShort.text = "Код замовлення: ****$shortUuid"
+        // 2. Адреси, ціна, дистанція та дата
+        val fullPrice = currentOrder.getTotalFullPrice()
+        binding.tvPriceDetail.text = "${fullPrice.toInt()} ₴"
+        binding.tvDistanceDetail.text = currentOrder.getFormattedDistance().replace('.', ',')
+        binding.tvFromDetail.text = currentOrder.fromAddress ?: "---"
+        binding.tvToDetail.text = currentOrder.toAddress ?: "---"
 
-        // --- ДИНАМИЧЕСКОЕ И ЧЕСТНОЕ ОТОБРАЖЕНИЕ БАЛЛОВ АКТИВНОСТИ ---
-        val activityBonus = order.activityBonus
-        when {
-            activityBonus > 0 -> {
-                binding.tvActivityScore.text = "+$activityBonus"
-                binding.tvActivityScore.setTextColor(ContextCompat.getColor(this, R.color.driver_neon_teal))
-            }
-            activityBonus < 0 -> {
-                binding.tvActivityScore.text = activityBonus.toString()
-                binding.tvActivityScore.setTextColor(ContextCompat.getColor(this, R.color.driver_error))
-            }
-            else -> {
-                binding.tvActivityScore.text = "0"
-                binding.tvActivityScore.setTextColor(ContextCompat.getColor(this, R.color.driver_text_secondary))
+        binding.tvTariffName.text = currentOrder.tariffName ?: "Standard"
+        binding.tvCarModel.text = currentOrder.carModel ?: "Авто"
+        binding.tvCarPlate.text = currentOrder.carPlate ?: "---"
+        binding.tvCarClass.text = currentOrder.tariffName ?: "Standard"
+
+        val rawDate = currentOrder.arrivedAt ?: currentOrder.startedAt ?: currentOrder.scheduledAt
+        findViewById<TextView>(R.id.tv_date_detail)?.text = formatOrderDetailDate(rawDate)
+
+        // Проміжні зупинки маршруту (виносимо в локальну val stopsList для Smart Cast)
+        val stopsList = currentOrder.stops
+        val stopsContainer = findViewById<android.widget.LinearLayout>(R.id.ll_detail_stops_container)
+        stopsContainer?.removeAllViews()
+        if (!stopsList.isNullOrEmpty() && stopsContainer != null) {
+            val inflater = LayoutInflater.from(this)
+            val sortedStops = stopsList.sortedBy { it.stopOrder }
+            for (stop in sortedStops) {
+                val stopView = inflater.inflate(R.layout.item_route_point, stopsContainer, false)
+                val tvAddress = stopView.findViewById<TextView>(R.id.tv_point_address)
+                val ivIcon = stopView.findViewById<ImageView>(R.id.iv_point_icon)
+                val lineTop = stopView.findViewById<View>(R.id.view_line_top)
+                val lineBottom = stopView.findViewById<View>(R.id.view_line_bottom)
+
+                tvAddress.text = stop.address
+                tvAddress.textSize = 15f
+                ivIcon.imageTintList = null
+                ivIcon.setImageDrawable(DetailRoutePinDrawable(hasInnerDot = false, strokeColor = secondaryColor))
+                lineTop.visibility = View.GONE
+                lineBottom.visibility = View.GONE
+
+                stopsContainer.addView(stopView)
             }
         }
 
-        // --- ЛОГИКА ОТОБРАЖЕНИЯ ФИНАНСОВОЙ ДЕТАЛИЗАЦИИ ---
-        // Копируем во внутренние val для безопасного Smart Cast
-        val serviceCommission = order.serviceCommission
-        val amountToBalance = order.amountToBalance
-        val bankCommission = order.bankCommission
-        val transferToCard = order.transferToCard
-
-        val hasFinanceData = serviceCommission != null ||
-                amountToBalance != null ||
-                bankCommission != null ||
-                transferToCard != null
-
-        if (!hasFinanceData) {
-            binding.tvLabelFinance.visibility = View.GONE
-            binding.layoutFinanceContainer.visibility = View.GONE
+        // 3. Колір плашки ціни та іконка оплати
+        val llPriceBadge = findViewById<View>(R.id.ll_price_detail_badge)
+        val ivPayIcon = findViewById<ImageView>(R.id.iv_payment_detail_icon)
+        if (currentOrder.paymentMethod == "CARD" || currentOrder.paymentMethod == "ELECTRONIC") {
+            ivPayIcon?.setImageResource(R.drawable.ic_payment_card)
+            llPriceBadge?.backgroundTintList = ColorStateList.valueOf(neonTeal)
+            ivPayIcon?.imageTintList = ColorStateList.valueOf(blackText)
+            binding.tvPriceDetail.setTextColor(blackText)
         } else {
-            binding.tvLabelFinance.visibility = View.VISIBLE
-            binding.layoutFinanceContainer.visibility = View.VISIBLE
+            ivPayIcon?.setImageResource(R.drawable.ic_payment_cash)
+            llPriceBadge?.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.driver_surface_elevated))
+            ivPayIcon?.imageTintList = ColorStateList.valueOf(primaryColor)
+            binding.tvPriceDetail.setTextColor(primaryColor)
+        }
 
-            // 1. Комиссия Сервиса
-            if (serviceCommission != null) {
-                binding.rowServiceCommission.visibility = View.VISIBLE
-                binding.tvServiceCommission.text = "-${serviceCommission.toInt()} ₴"
+        // 4. Короткий ID замовлення ("****0933e4", виносимо idLong в локальну val для Smart Cast)
+        val fullUuid = currentOrder.id
+        val idLongVal = currentOrder.idLong
+        val shortUuid = when {
+            idLongVal != null && idLongVal > 0L -> String.format(Locale.US, "%06x", idLongVal)
+            fullUuid.length >= 6 -> fullUuid.takeLast(6)
+            else -> fullUuid
+        }
+        binding.tvOrderUuidShort.text = "****$shortUuid"
+
+        // 5. Блок "Зміни Активності" ("Бали за замовлення")
+        val activityBonus = currentOrder.activityBonus
+        val formattedScore = when {
+            activityBonus > 0 -> "+$activityBonus"
+            activityBonus < 0 -> activityBonus.toString()
+            else -> "0"
+        }
+        binding.tvActivityScore.text = formattedScore
+        findViewById<TextView>(R.id.tv_activity_score_breakdown)?.apply {
+            text = formattedScore
+            setTextColor(if (activityBonus >= 0) neonTeal else errorRed)
+        }
+        findViewById<TextView>(R.id.tv_activity_subtitle)?.text = when {
+            activityBonus > 0 -> "Нараховано за виконання замовлення"
+            activityBonus < 0 -> "Списано за скасування замовлення"
+            else -> "Без змін активності"
+        }
+
+        val layoutActivityHeader = findViewById<View>(R.id.layout_activity_header)
+        val layoutActivityDetails = findViewById<View>(R.id.layout_activity_details)
+        val ivActivityChevron = findViewById<ImageView>(R.id.iv_activity_chevron)
+        layoutActivityHeader?.setOnClickListener {
+            if (layoutActivityDetails?.visibility == View.VISIBLE) {
+                layoutActivityDetails.visibility = View.GONE
+                ivActivityChevron?.animate()?.rotation(90f)?.setDuration(200)?.start()
             } else {
-                binding.rowServiceCommission.visibility = View.GONE
+                layoutActivityDetails?.visibility = View.VISIBLE
+                ivActivityChevron?.animate()?.rotation(270f)?.setDuration(200)?.start()
             }
+        }
 
-            // 2. Начислено на баланс
-            if (amountToBalance != null) {
-                binding.rowAmountToBalance.visibility = View.VISIBLE
-                binding.tvAmountToBalance.text = "+${amountToBalance.toInt()} ₴"
+        // 6. Блок "Рух коштів на балансі" ("Транзакції в замовленні")
+        val serviceCommission = currentOrder.serviceCommission
+        val amountToBalance = currentOrder.amountToBalance
+        val bankCommission = currentOrder.bankCommission
+        val transferToCard = currentOrder.transferToCard
+
+        binding.tvLabelFinance.visibility = View.VISIBLE
+        binding.layoutFinanceContainer.visibility = View.VISIBLE
+
+        findViewById<TextView>(R.id.tv_finance_base_price)?.text = "${fullPrice.toInt()} ₴"
+
+        if (serviceCommission != null) {
+            binding.rowServiceCommission.visibility = View.VISIBLE
+            binding.tvServiceCommission.text = "-${serviceCommission.toInt()} ₴"
+        } else {
+            binding.rowServiceCommission.visibility = View.GONE
+        }
+
+        if (amountToBalance != null) {
+            binding.rowAmountToBalance.visibility = View.VISIBLE
+            binding.tvAmountToBalance.text = "+${amountToBalance.toInt()} ₴"
+        } else {
+            binding.rowAmountToBalance.visibility = View.GONE
+        }
+
+        if (bankCommission != null) {
+            binding.rowBankCommission.visibility = View.VISIBLE
+            binding.tvBankCommission.text = "-${String.format(Locale.US, "%.2f", bankCommission)} ₴"
+        } else {
+            binding.rowBankCommission.visibility = View.GONE
+        }
+
+        if (transferToCard != null) {
+            binding.rowTransferToCard.visibility = View.VISIBLE
+            binding.tvTransferToCard.text = "${String.format(Locale.US, "%.2f", transferToCard)} ₴"
+        } else {
+            binding.rowTransferToCard.visibility = View.GONE
+        }
+
+        binding.layoutFinanceHeader.setOnClickListener {
+            if (binding.layoutFinanceDetails.visibility == View.VISIBLE) {
+                binding.layoutFinanceDetails.visibility = View.GONE
+                binding.ivFinanceChevron.animate().rotation(90f).setDuration(200).start()
             } else {
-                binding.rowAmountToBalance.visibility = View.GONE
-            }
-
-            // 3. Комиссия LiqPay (с копейками)
-            if (bankCommission != null) {
-                binding.rowBankCommission.visibility = View.VISIBLE
-                binding.tvBankCommission.text = "-${String.format("%.2f", bankCommission)} ₴"
-            } else {
-                binding.rowBankCommission.visibility = View.GONE
-            }
-
-            // 4. Фактический перевод на карту (с копейками)
-            if (transferToCard != null) {
-                binding.rowTransferToCard.visibility = View.VISIBLE
-                binding.tvTransferToCard.text = "${String.format("%.2f", transferToCard)} ₴"
-            } else {
-                binding.rowTransferToCard.visibility = View.GONE
-            }
-
-            // Обработка раскрытия / закрытия с микро-анимацией стрелки
-            binding.layoutFinanceHeader.setOnClickListener {
-                if (binding.layoutFinanceDetails.visibility == View.VISIBLE) {
-                    binding.layoutFinanceDetails.visibility = View.GONE
-                    binding.ivFinanceChevron.animate().rotation(0f).setDuration(200).start()
-                } else {
-                    binding.layoutFinanceDetails.visibility = View.VISIBLE
-                    binding.ivFinanceChevron.animate().rotation(180f).setDuration(200).start()
-                }
+                binding.layoutFinanceDetails.visibility = View.VISIBLE
+                binding.ivFinanceChevron.animate().rotation(270f).setDuration(200).start()
             }
         }
     }
 
+    private fun formatOrderDetailDate(raw: String?): String {
+        if (raw.isNullOrBlank()) return "---"
+        val clean = raw.trim()
+        val patterns = arrayOf(
+            "yyyy-MM-dd'T'HH:mm:ss.SSSSSS",
+            "yyyy-MM-dd'T'HH:mm:ss.SSS",
+            "yyyy-MM-dd'T'HH:mm:ss",
+            "yyyy-MM-dd HH:mm:ss"
+        )
+        var parsed: Date? = null
+        for (p in patterns) {
+            try {
+                parsed = SimpleDateFormat(p, Locale.US).parse(clean.take(26))
+                if (parsed != null) break
+            } catch (_: Exception) {}
+        }
+        if (parsed == null) return clean.take(16).replace('T', ' ')
+
+        val cal = Calendar.getInstance().apply { time = parsed }
+        val day = cal.get(Calendar.DAY_OF_MONTH)
+        val monthIdx = cal.get(Calendar.MONTH)
+        val timeStr = SimpleDateFormat("HH:mm", Locale.US).format(parsed)
+        val monthsShort = arrayOf(
+            "січ.", "лют.", "бер.", "квіт.", "трав.", "черв.",
+            "лип.", "серп.", "вер.", "жовт.", "лист.", "груд."
+        )
+        val monthName = monthsShort.getOrElse(monthIdx) { "" }
+        return "$day $monthName $timeStr"
+    }
+
     override fun onMapReady(googleMap: GoogleMap) {
         map = googleMap
+        val currentOrder = order
 
-        // 🛠️ 1. Очищаем карту от лишнего мусора Google (компас, кнопки +/-, панель инструментов)
         map.uiSettings.apply {
             isScrollGesturesEnabled = true
             isZoomGesturesEnabled = true
@@ -177,83 +309,74 @@ class HistoryDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
             isIndoorLevelPickerEnabled = false
         }
 
-        // 🛠️ 2. Интеллектуальное определение темы (проверяет и настройки приложения UNIT, и систему Android)
         try {
             val isNightMode = when (androidx.appcompat.app.AppCompatDelegate.getDefaultNightMode()) {
                 androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES -> true
                 androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO -> false
                 else -> {
-                    // Если в приложении выставлено "Следовать системе" — смотрим на настройки шторки телефона
                     val currentNightMode = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
                     currentNightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES
                 }
             }
 
-            val styleRes = if (isNightMode) {
-                R.raw.map_style_dark
-            } else {
-                R.raw.map_style_standard
-            }
-
-            val success = googleMap.setMapStyle(
-                MapStyleOptions.loadRawResourceStyle(this, styleRes)
-            )
-            if (!success) {
-                android.util.Log.e("UNIT_MAP", "Не удалось распарсить JSON стиля карты.")
-            }
-        } catch (e: android.content.res.Resources.NotFoundException) {
-            android.util.Log.e("UNIT_MAP", "Файл стиля карты не найден в папке res/raw", e)
+            val styleRes = if (isNightMode) R.raw.map_style_dark else R.raw.map_style_standard
+            googleMap.setMapStyle(MapStyleOptions.loadRawResourceStyle(this, styleRes))
+        } catch (e: Exception) {
+            android.util.Log.e("UNIT_MAP", "Map style load error", e)
         }
 
-        val polylineString = order.polyline
+        val polylineString = currentOrder.polyline
 
         if (!polylineString.isNullOrEmpty()) {
             try {
-                // Декодируем строку маршрута
                 val path: List<LatLng> = PolyUtil.decode(polylineString)
 
-                // Рисуем линию
-                map.addPolyline(PolylineOptions()
-                    .addAll(path)
-                    .width(12f)
-                    .color(ContextCompat.getColor(this, R.color.driver_neon_teal))
-                    .geodesic(true))
+                map.addPolyline(
+                    PolylineOptions()
+                        .addAll(path)
+                        .width(12f)
+                        .color(Color.parseColor("#F5D033"))
+                        .geodesic(true)
+                )
 
                 if (path.isNotEmpty()) {
                     var currentNumber = 1
 
-                    // Точка А (Start)
                     val startBitmap = createCustomMarkerBitmap(currentNumber++, R.color.driver_neon_teal)
-                    map.addMarker(MarkerOptions()
-                        .position(path.first())
-                        .icon(BitmapDescriptorFactory.fromBitmap(startBitmap))
-                        .anchor(0.5f, 0.5f)
-                        .zIndex(2f))
-
-                    // Промежуточные остановки
-                    order.stops?.sortedBy { it.stopOrder }?.forEach { stop ->
-                        val stopBitmap = createCustomMarkerBitmap(currentNumber++, R.color.taxi_yellow)
-                        map.addMarker(MarkerOptions()
-                            .position(LatLng(stop.lat, stop.lng))
-                            .icon(BitmapDescriptorFactory.fromBitmap(stopBitmap))
+                    map.addMarker(
+                        MarkerOptions()
+                            .position(path.first())
+                            .icon(BitmapDescriptorFactory.fromBitmap(startBitmap))
                             .anchor(0.5f, 0.5f)
-                            .zIndex(2f))
+                            .zIndex(2f)
+                    )
+
+                    val stopsList = currentOrder.stops
+                    stopsList?.sortedBy { it.stopOrder }?.forEach { stop ->
+                        val stopBitmap = createCustomMarkerBitmap(currentNumber++, R.color.taxi_yellow)
+                        map.addMarker(
+                            MarkerOptions()
+                                .position(LatLng(stop.lat, stop.lng))
+                                .icon(BitmapDescriptorFactory.fromBitmap(stopBitmap))
+                                .anchor(0.5f, 0.5f)
+                                .zIndex(2f)
+                        )
                     }
 
-                    // Точка Б (End)
-                    val endBitmap = createCustomMarkerBitmap(currentNumber, R.color.driver_error)
-                    map.addMarker(MarkerOptions()
-                        .position(path.last())
-                        .icon(BitmapDescriptorFactory.fromBitmap(endBitmap))
-                        .anchor(0.5f, 0.5f)
-                        .zIndex(2f))
+                    val endBitmap = createCustomMarkerBitmap(currentNumber, R.color.activity_green)
+                    map.addMarker(
+                        MarkerOptions()
+                            .position(path.last())
+                            .icon(BitmapDescriptorFactory.fromBitmap(endBitmap))
+                            .anchor(0.5f, 0.5f)
+                            .zIndex(2f)
+                    )
 
-                    // Фокусируем камеру на всем маршруте
                     val builder = LatLngBounds.Builder()
                     path.forEach { builder.include(it) }
 
                     try {
-                        map.moveCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 100))
+                        map.moveCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 110))
                     } catch (e: Exception) {
                         map.moveCamera(CameraUpdateFactory.newLatLngZoom(path.first(), 13f))
                     }
@@ -268,25 +391,28 @@ class HistoryDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun drawFallbackMarkers() {
-        val origin = LatLng(order.originLat ?: 0.0, order.originLng ?: 0.0)
-        val dest = LatLng(order.destLat ?: 0.0, order.destLng ?: 0.0)
+        val currentOrder = order
+        val origin = LatLng(currentOrder.originLat ?: 0.0, currentOrder.originLng ?: 0.0)
+        val dest = LatLng(currentOrder.destLat ?: 0.0, currentOrder.destLng ?: 0.0)
 
         if (origin.latitude == 0.0 && dest.latitude == 0.0) return
 
-        map.addMarker(MarkerOptions().position(origin).title("A"))
-        map.addMarker(MarkerOptions().position(dest).title("B"))
+        val startBitmap = createCustomMarkerBitmap(1, R.color.driver_neon_teal)
+        val endBitmap = createCustomMarkerBitmap(2, R.color.activity_green)
+
+        map.addMarker(MarkerOptions().position(origin).icon(BitmapDescriptorFactory.fromBitmap(startBitmap)).anchor(0.5f, 0.5f))
+        map.addMarker(MarkerOptions().position(dest).icon(BitmapDescriptorFactory.fromBitmap(endBitmap)).anchor(0.5f, 0.5f))
 
         val builder = LatLngBounds.Builder()
         builder.include(origin)
         builder.include(dest)
         try {
-            map.moveCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 100))
+            map.moveCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 110))
         } catch (e: Exception) {
             map.moveCamera(CameraUpdateFactory.newLatLngZoom(origin, 13f))
         }
     }
 
-    // Функция создания красивого маркера с цифрой
     private fun createCustomMarkerBitmap(number: Int, colorResId: Int): Bitmap {
         val inflater = LayoutInflater.from(this)
         val view = inflater.inflate(R.layout.layout_custom_marker, null)
@@ -302,5 +428,107 @@ class HistoryDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
         val canvas = Canvas(bitmap)
         view.draw(canvas)
         return bitmap
+    }
+
+    private class DetailRoutePinDrawable(
+        private val hasInnerDot: Boolean,
+        private val strokeColor: Int
+    ) : Drawable() {
+        private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = strokeColor
+            style = Paint.Style.STROKE
+        }
+        private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = strokeColor
+            style = Paint.Style.FILL
+        }
+
+        override fun draw(canvas: Canvas) {
+            val b = bounds
+            if (b.isEmpty) return
+            val cx = b.exactCenterX()
+            val cy = b.exactCenterY()
+            val r = minOf(b.width(), b.height()) / 2f
+
+            strokePaint.strokeWidth = (r * 0.26f).coerceAtLeast(1.8f)
+            canvas.drawCircle(cx, cy, r * 0.80f, strokePaint)
+
+            if (hasInnerDot) {
+                canvas.drawCircle(cx, cy, r * 0.28f, fillPaint)
+            }
+        }
+
+        override fun setAlpha(alpha: Int) {
+            strokePaint.alpha = alpha
+            fillPaint.alpha = alpha
+        }
+
+        override fun setColorFilter(colorFilter: ColorFilter?) {
+            strokePaint.colorFilter = colorFilter
+            fillPaint.colorFilter = colorFilter
+        }
+
+        @Deprecated("Deprecated in Java")
+        override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
+    }
+
+    private class DetailSectionIconDrawable(
+        private val isWallet: Boolean,
+        private val strokeColor: Int
+    ) : Drawable() {
+        private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = strokeColor
+            style = Paint.Style.STROKE
+            strokeCap = Paint.Cap.ROUND
+            strokeJoin = Paint.Join.ROUND
+        }
+
+        override fun draw(canvas: Canvas) {
+            val b = bounds
+            if (b.isEmpty) return
+            val w = b.width().toFloat()
+            val h = b.height().toFloat()
+            val s = minOf(w, h) / 24f
+
+            canvas.save()
+            canvas.translate(b.left + (w - 24f * s) / 2f, b.top + (h - 24f * s) / 2f)
+            canvas.scale(s, s)
+            paint.strokeWidth = 1.9f
+
+            if (isWallet) {
+                val rect = RectF(3.5f, 5.5f, 20.5f, 18.5f)
+                canvas.drawRoundRect(rect, 2.5f, 2.5f, paint)
+                val clasp = RectF(15.2f, 10.0f, 20.5f, 14.0f)
+                canvas.drawRoundRect(clasp, 1.6f, 1.6f, paint)
+            } else {
+                canvas.drawLine(6f, 19f, 6f, 15f, paint)
+                canvas.drawLine(10f, 19f, 10f, 13f, paint)
+                canvas.drawLine(14f, 19f, 14f, 11f, paint)
+                canvas.drawLine(18f, 19f, 18f, 9f, paint)
+
+                val trendPath = Path().apply {
+                    moveTo(5f, 12f)
+                    lineTo(10f, 7.5f)
+                    lineTo(13.5f, 10f)
+                    lineTo(18.5f, 5f)
+                }
+                canvas.drawPath(trendPath, paint)
+                canvas.drawLine(14.8f, 5f, 18.5f, 5f, paint)
+                canvas.drawLine(18.5f, 5f, 18.5f, 8.7f, paint)
+            }
+
+            canvas.restore()
+        }
+
+        override fun setAlpha(alpha: Int) {
+            paint.alpha = alpha
+        }
+
+        override fun setColorFilter(colorFilter: ColorFilter?) {
+            paint.colorFilter = colorFilter
+        }
+
+        @Deprecated("Deprecated in Java")
+        override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
     }
 }

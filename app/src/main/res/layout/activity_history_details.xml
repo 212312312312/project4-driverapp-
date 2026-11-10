@@ -2,50 +2,70 @@
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/history_details_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/driver_black_bg">
+    android:background="@color/driver_card_bg">
 
-    <RelativeLayout
+    <!-- ВЕРХНЯ ШАПКА "ДЕТАЛІ ЗАМОВЛЕННЯ" -->
+    <LinearLayout
         android:id="@+id/header_history_details"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
-        android:layout_marginBottom="16dp"
-        android:layout_marginHorizontal="24dp"
+        android:orientation="vertical"
+        android:background="@color/driver_black_bg"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <ImageView
-            android:id="@+id/btn_back"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:src="@drawable/ic_arrow_back_black"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:clickable="true"
-            android:focusable="true"
-            app:tint="@color/driver_text_primary"
-            android:layout_centerVertical="true"
-            android:layout_alignParentStart="true"/>
-
-        <TextView
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:id="@+id/header_history_inner"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/hist_det_title"
-            android:textSize="22sp"
-            android:textStyle="bold"
-            android:textColor="@color/driver_text_primary"
-            android:layout_centerVertical="true"
-            android:layout_toEndOf="@id/btn_back"
-            android:layout_marginStart="16dp"/>
-    </RelativeLayout>
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingTop="16dp"
+            android:paddingBottom="16dp"
+            android:paddingHorizontal="16dp">
 
+            <ImageView
+                android:id="@+id/btn_back"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:padding="4dp"
+                android:src="@drawable/ic_arrow_back_black"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true"
+                app:tint="@color/driver_text_primary"
+                android:contentDescription="@null" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="20dp"
+                android:text="Деталі замовлення"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColor="@color/driver_text_primary"
+                android:fontFamily="@font/app_font_family" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/driver_divider" />
+    </LinearLayout>
+
+    <!-- ОСНОВНИЙ СКРОЛ ЕКРАНУ -->
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:fillViewport="true"
-        android:scrollbars="none" app:layout_constraintTop_toBottomOf="@id/header_history_details"
+        android:overScrollMode="never"
+        android:scrollbars="none"
+        app:layout_constraintTop_toBottomOf="@id/header_history_details"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
@@ -56,120 +76,247 @@
             android:orientation="vertical"
             android:paddingBottom="32dp">
 
+            <!-- ВЕРХНІЙ БЛОК ІНФОРМАЦІЇ ПРО ЗАМОВЛЕННЯ (ЯК НА СКРІНШОТІ) -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:background="@color/driver_card_bg"
-                android:padding="16dp"
-                android:layout_marginTop="12dp">
+                android:background="@color/driver_black_bg"
+                android:paddingHorizontal="16dp"
+                android:paddingTop="14dp"
+                android:paddingBottom="16dp">
 
-                <TextView
-                    android:id="@+id/tv_order_uuid_short"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Код замовлення: ****------"
-                    android:textColor="@color/driver_text_secondary"
-                    android:textSize="13sp"
-                    android:textStyle="bold"
-                    android:layout_marginBottom="12dp" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-
-                    <ImageView
-                        android:layout_width="12dp"
-                        android:layout_height="12dp"
-                        android:src="@drawable/bg_circle_white"
-                        android:layout_marginTop="4dp" />
-
-                    <TextView
-                        android:id="@+id/tv_from_detail"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="@string/hist_det_placeholder_dots"
-                        android:textColor="@color/driver_text_primary"
-                        android:layout_marginStart="12dp"
-                        android:textSize="16sp" />
-                </LinearLayout>
-
+                <!-- Рядок 1: ID замовлення зліва + ****0933e4 справа -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:layout_marginTop="12dp">
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="14dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="ID замовлення"
+                        android:textColor="@color/driver_text_secondary"
+                        android:textSize="15sp"
+                        android:fontFamily="@font/app_font_family" />
+
+                    <TextView
+                        android:id="@+id/tv_order_uuid_short"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="****0933e4"
+                        android:textColor="@color/driver_text_secondary"
+                        android:textSize="15sp"
+                        android:fontFamily="@font/app_font_family" />
+                </LinearLayout>
+
+                <!-- Рядок 2: Бейдж "Архівне" зліва + Дата/час справа -->
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="18dp">
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentStart="true"
+                        android:layout_centerVertical="true"
+                        app:cardBackgroundColor="@color/driver_surface_elevated"
+                        app:cardCornerRadius="7dp"
+                        app:cardElevation="0dp"
+                        app:strokeWidth="0dp">
+
+                        <TextView
+                            android:id="@+id/tv_detail_status_badge"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:paddingHorizontal="10dp"
+                            android:paddingVertical="4dp"
+                            android:text="@string/history_item_status_archived"
+                            android:textColor="@color/driver_text_primary"
+                            android:textSize="14sp"
+                            android:fontFamily="@font/app_font_family" />
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <TextView
+                        android:id="@+id/tv_date_detail"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:textColor="@color/driver_text_primary"
+                        android:textSize="15sp"
+                        android:fontFamily="@font/app_font_family"
+                        tools:text="31 серп. 19:47" />
+                </RelativeLayout>
+
+                <!-- Рядок 3: Маршрут поїздки з вертикальною лінією та точками -->
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="20dp">
+
+                    <View
+                        android:id="@+id/view_detail_route_line"
+                        android:layout_width="1.5dp"
+                        android:layout_height="0dp"
+                        android:background="@color/driver_text_secondary"
+                        android:alpha="0.65"
+                        app:layout_constraintTop_toBottomOf="@id/iv_detail_from_pin"
+                        app:layout_constraintBottom_toTopOf="@id/iv_detail_to_pin"
+                        app:layout_constraintStart_toStartOf="@id/iv_detail_from_pin"
+                        app:layout_constraintEnd_toEndOf="@id/iv_detail_from_pin" />
 
                     <ImageView
+                        android:id="@+id/iv_detail_from_pin"
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:layout_marginStart="4dp"
+                        android:layout_marginTop="4dp"
+                        android:src="@drawable/ic_marker_from"
+                        android:contentDescription="@null"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="@id/tv_from_detail" />
+
+                    <TextView
+                        android:id="@+id/tv_from_detail"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="30dp"
+                        android:text="@string/hist_det_placeholder_dots"
+                        android:textColor="@color/driver_text_primary"
+                        android:alpha="0.9"
+                        android:textSize="16sp"
+                        android:fontFamily="@font/app_font_family"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent" />
+
+                    <LinearLayout
+                        android:id="@+id/ll_detail_stops_container"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginTop="8dp"
+                        android:layout_marginBottom="8dp"
+                        app:layout_constraintTop_toBottomOf="@id/tv_from_detail"
+                        app:layout_constraintBottom_toTopOf="@id/tv_to_detail"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent" />
+
+                    <ImageView
+                        android:id="@+id/iv_detail_to_pin"
                         android:layout_width="12dp"
                         android:layout_height="12dp"
-                        android:src="@drawable/bg_circle_dark"
-                        app:tint="@color/driver_neon_teal"
-                        android:layout_marginTop="4dp" />
+                        android:layout_marginStart="5dp"
+                        android:layout_marginTop="5dp"
+                        android:src="@drawable/ic_marker_to"
+                        android:contentDescription="@null"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="@id/tv_to_detail" />
 
                     <TextView
                         android:id="@+id/tv_to_detail"
-                        android:layout_width="match_parent"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
+                        android:layout_marginStart="30dp"
+                        android:layout_marginTop="14dp"
                         android:text="@string/hist_det_placeholder_dots"
                         android:textColor="@color/driver_text_primary"
-                        android:layout_marginStart="12dp"
-                        android:textSize="16sp" />
-                </LinearLayout>
+                        android:alpha="0.9"
+                        android:textSize="16sp"
+                        android:fontFamily="@font/app_font_family"
+                        app:layout_constraintTop_toBottomOf="@id/ll_detail_stops_container"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent" />
+                </androidx.constraintlayout.widget.ConstraintLayout>
 
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:background="@color/driver_black_bg"
-                    android:layout_marginVertical="16dp" />
-
+                <!-- Рядок 4: Плашка ціни [картка 374 ₴] зліва + Тариф + Плашка дистанції [13,73 км] справа -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
                     android:gravity="center_vertical">
 
+                    <LinearLayout
+                        android:id="@+id/ll_price_detail_badge"
+                        android:layout_width="wrap_content"
+                        android:layout_height="34dp"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:background="@drawable/bg_round_button_gray"
+                        android:backgroundTint="@color/driver_neon_teal"
+                        android:paddingHorizontal="10dp">
+
+                        <ImageView
+                            android:id="@+id/iv_payment_detail_icon"
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:layout_marginEnd="6dp"
+                            android:src="@drawable/ic_payment_card"
+                            app:tint="@color/driver_text_black"
+                            android:contentDescription="@null" />
+
+                        <TextView
+                            android:id="@+id/tv_price_detail"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/hist_det_placeholder_price"
+                            android:textColor="@color/driver_text_black"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:fontFamily="@font/app_font_family" />
+                    </LinearLayout>
+
                     <TextView
                         android:id="@+id/tv_tariff_name"
                         android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
+                        android:layout_height="34dp"
+                        android:layout_marginStart="8dp"
+                        android:gravity="center"
+                        android:background="@drawable/bg_round_button_gray"
+                        android:backgroundTint="@color/driver_surface_elevated"
+                        android:paddingHorizontal="10dp"
                         android:text="@string/hist_det_placeholder_tariff"
                         android:textColor="@color/driver_text_secondary"
-                        android:background="@drawable/bg_status_pill"
-                        android:paddingHorizontal="12dp"
-                        android:paddingVertical="4dp"
-                        android:textSize="12sp"
-                        android:textStyle="bold" />
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:fontFamily="@font/app_font_family" />
 
                     <View
                         android:layout_width="0dp"
                         android:layout_height="0dp"
                         android:layout_weight="1" />
 
-                    <TextView
-                        android:id="@+id/tv_distance_detail"
+                    <LinearLayout
                         android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/hist_det_placeholder_dist"
-                        android:textColor="@color/driver_text_secondary"
-                        android:layout_marginEnd="12dp" />
+                        android:layout_height="34dp"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:background="@drawable/bg_round_button_gray"
+                        android:backgroundTint="@color/driver_surface_elevated"
+                        android:paddingHorizontal="10dp">
 
-                    <TextView
-                        android:id="@+id/tv_price_detail"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/hist_det_placeholder_price"
-                        android:textColor="@color/driver_text_primary"
-                        android:textSize="20sp"
-                        android:textStyle="bold" />
+                        <TextView
+                            android:id="@+id/tv_distance_detail"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/hist_det_placeholder_dist"
+                            android:textColor="@color/driver_text_primary"
+                            android:textSize="15sp"
+                            android:fontFamily="@font/app_font_family" />
+                    </LinearLayout>
                 </LinearLayout>
+
             </LinearLayout>
 
+            <!-- КАРТА МАРШРУТУ ПОЇЗДКИ (EDGE-TO-EDGE ЯК НА СКРІНШОТІ) -->
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
-                android:layout_height="200dp"
-                android:layout_marginTop="2dp"
+                android:layout_height="215dp"
                 app:cardBackgroundColor="@color/driver_black_bg"
                 app:cardCornerRadius="0dp"
                 app:cardElevation="0dp">
@@ -179,93 +326,66 @@
                     android:name="com.google.android.gms.maps.SupportMapFragment"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent" />
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:clickable="true"
-                    android:focusable="true" />
             </androidx.cardview.widget.CardView>
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/hist_det_label_activity"
-                android:textColor="@color/driver_text_secondary"
-                android:layout_marginStart="24dp"
-                android:layout_marginTop="24dp"
-                android:textSize="14sp" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@color/driver_card_bg"
-                android:padding="16dp"
-                android:layout_marginTop="8dp"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/hist_det_label_success"
-                    android:textColor="@color/driver_text_primary"
-                    android:textSize="16sp" />
-
-                <TextView
-                    android:id="@+id/tv_activity_score"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/hist_det_score_plus"
-                    android:textColor="@color/driver_neon_teal"
-                    android:textStyle="bold"
-                    android:textSize="16sp" />
-            </LinearLayout>
+            <!-- СЕКЦІЯ 1: РУХ КОШТІВ НА БАЛАНСІ ("Транзакції в замовленні") -->
             <TextView
                 android:id="@+id/tv_label_finance"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:paddingHorizontal="16dp"
+                android:paddingTop="14dp"
+                android:paddingBottom="10dp"
                 android:text="Рух коштів на балансі"
                 android:textColor="@color/driver_text_secondary"
-                android:layout_marginStart="24dp"
-                android:layout_marginTop="24dp"
-                android:textSize="14sp" />
+                android:textSize="15sp"
+                android:fontFamily="@font/app_font_family" />
 
             <LinearLayout
                 android:id="@+id/layout_finance_container"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@color/driver_card_bg"
-                android:layout_marginTop="8dp"
+                android:background="@color/driver_black_bg"
                 android:orientation="vertical">
 
                 <LinearLayout
                     android:id="@+id/layout_finance_header"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:padding="16dp"
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="18dp"
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
                     android:background="?attr/selectableItemBackground"
                     android:clickable="true"
                     android:focusable="true">
 
+                    <ImageView
+                        android:id="@+id/iv_finance_wallet_icon"
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:src="@drawable/ic_wallet"
+                        app:tint="@color/driver_text_secondary"
+                        android:contentDescription="@null" />
+
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Деталізація розрахунку"
+                        android:layout_marginStart="14dp"
+                        android:text="Транзакції в замовленні"
                         android:textColor="@color/driver_text_primary"
-                        android:textSize="16sp"
-                        android:textStyle="bold" />
+                        android:textSize="17sp"
+                        android:fontFamily="@font/app_font_family" />
 
                     <ImageView
                         android:id="@+id/iv_finance_chevron"
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:rotation="90"
                         android:src="@drawable/ic_chevron"
-                        app:tint="@color/driver_text_secondary" />
+                        app:tint="@color/driver_text_secondary"
+                        android:contentDescription="@null" />
                 </LinearLayout>
 
                 <LinearLayout
@@ -276,6 +396,36 @@
                     android:paddingHorizontal="16dp"
                     android:paddingBottom="16dp"
                     android:visibility="gone">
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginBottom="10dp"
+                        android:background="@color/driver_divider" />
+
+                    <LinearLayout
+                        android:id="@+id/row_order_base_price"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="4dp">
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Вартість поїздки"
+                            android:textColor="@color/driver_text_secondary"
+                            android:textSize="14sp"
+                            android:fontFamily="@font/app_font_family" />
+                        <TextView
+                            android:id="@+id/tv_finance_base_price"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/driver_text_primary"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:fontFamily="@font/app_font_family" />
+                    </LinearLayout>
 
                     <LinearLayout
                         android:id="@+id/row_service_commission"
@@ -289,14 +439,16 @@
                             android:layout_weight="1"
                             android:text="Комісія Сервісу"
                             android:textColor="@color/driver_text_secondary"
-                            android:textSize="14sp"/>
+                            android:textSize="14sp"
+                            android:fontFamily="@font/app_font_family" />
                         <TextView
                             android:id="@+id/tv_service_commission"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:textColor="@color/driver_error"
                             android:textSize="14sp"
-                            android:textStyle="bold"/>
+                            android:textStyle="bold"
+                            android:fontFamily="@font/app_font_family" />
                     </LinearLayout>
 
                     <LinearLayout
@@ -311,14 +463,16 @@
                             android:layout_weight="1"
                             android:text="Нараховано на баланс"
                             android:textColor="@color/driver_text_secondary"
-                            android:textSize="14sp"/>
+                            android:textSize="14sp"
+                            android:fontFamily="@font/app_font_family" />
                         <TextView
                             android:id="@+id/tv_amount_to_balance"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:textColor="@color/driver_neon_teal"
                             android:textSize="14sp"
-                            android:textStyle="bold"/>
+                            android:textStyle="bold"
+                            android:fontFamily="@font/app_font_family" />
                     </LinearLayout>
 
                     <LinearLayout
@@ -333,14 +487,16 @@
                             android:layout_weight="1"
                             android:text="Комісія фінансових установ"
                             android:textColor="@color/driver_text_secondary"
-                            android:textSize="14sp"/>
+                            android:textSize="14sp"
+                            android:fontFamily="@font/app_font_family" />
                         <TextView
                             android:id="@+id/tv_bank_commission"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:textColor="@color/driver_error"
                             android:textSize="14sp"
-                            android:textStyle="bold"/>
+                            android:textStyle="bold"
+                            android:fontFamily="@font/app_font_family" />
                     </LinearLayout>
 
                     <LinearLayout
@@ -355,61 +511,189 @@
                             android:layout_weight="1"
                             android:text="Перерахування на картку"
                             android:textColor="@color/driver_text_secondary"
-                            android:textSize="14sp"/>
+                            android:textSize="14sp"
+                            android:fontFamily="@font/app_font_family" />
                         <TextView
                             android:id="@+id/tv_transfer_to_card"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:textColor="@color/driver_text_primary"
                             android:textSize="14sp"
-                            android:textStyle="bold"/>
+                            android:textStyle="bold"
+                            android:fontFamily="@font/app_font_family" />
                     </LinearLayout>
 
                 </LinearLayout>
             </LinearLayout>
 
+            <!-- СЕКЦІЯ 2: ЗМІНИ АКТИВНОСТІ ("Бали за замовлення") -->
             <TextView
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:paddingHorizontal="16dp"
+                android:paddingTop="14dp"
+                android:paddingBottom="10dp"
+                android:text="Зміни Активності"
+                android:textColor="@color/driver_text_secondary"
+                android:textSize="15sp"
+                android:fontFamily="@font/app_font_family" />
+
+            <LinearLayout
+                android:id="@+id/layout_activity_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@color/driver_black_bg"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:id="@+id/layout_activity_header"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="14dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <ImageView
+                        android:id="@+id/iv_activity_trend_icon"
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:src="@drawable/ic_menu_stats"
+                        app:tint="@color/driver_text_secondary"
+                        android:contentDescription="@null" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="14dp"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Бали за замовлення"
+                            android:textColor="@color/driver_text_primary"
+                            android:textSize="17sp"
+                            android:fontFamily="@font/app_font_family" />
+
+                        <TextView
+                            android:id="@+id/tv_activity_subtitle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="Успішне виконання замовлення"
+                            android:textColor="@color/driver_text_secondary"
+                            android:textSize="14sp"
+                            android:fontFamily="@font/app_font_family" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tv_activity_score"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="10dp"
+                        android:text="@string/hist_det_score_plus"
+                        android:textColor="@color/driver_text_secondary"
+                        android:textSize="17sp"
+                        android:fontFamily="@font/app_font_family" />
+
+                    <ImageView
+                        android:id="@+id/iv_activity_chevron"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:rotation="90"
+                        android:src="@drawable/ic_chevron"
+                        app:tint="@color/driver_text_secondary"
+                        android:contentDescription="@null" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/layout_activity_details"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="16dp"
+                    android:paddingBottom="14dp"
+                    android:visibility="gone">
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginBottom="10dp"
+                        android:background="@color/driver_divider" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/hist_det_label_success"
+                            android:textColor="@color/driver_text_secondary"
+                            android:textSize="14sp"
+                            android:fontFamily="@font/app_font_family" />
+                        <TextView
+                            android:id="@+id/tv_activity_score_breakdown"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/driver_neon_teal"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:fontFamily="@font/app_font_family"
+                            tools:text="+6" />
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- СЕКЦІЯ 3: АВТОМОБІЛЬ ТА ПАРК (ЗБЕРІГАЄМО ВСІ НАШІ ДАНІ АВТО) -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingHorizontal="16dp"
+                android:paddingTop="14dp"
+                android:paddingBottom="10dp"
                 android:text="@string/hist_det_label_car"
                 android:textColor="@color/driver_text_secondary"
-                android:layout_marginStart="24dp"
-                android:layout_marginTop="24dp"
-                android:textSize="14sp" />
+                android:textSize="15sp"
+                android:fontFamily="@font/app_font_family" />
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@color/driver_card_bg"
-                android:padding="16dp"
-                android:layout_marginTop="8dp"
-                android:orientation="vertical">
+                android:background="@color/driver_black_bg"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="14dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
 
-                <LinearLayout
-                    android:layout_width="match_parent"
+                <TextView
+                    android:id="@+id/tv_car_plate"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
+                    android:text="@string/hist_det_placeholder_plate"
+                    android:textColor="@color/driver_text_black"
+                    android:background="@drawable/bg_license_plate"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="2dp"
+                    android:textStyle="bold"
+                    android:fontFamily="@font/app_font_family" />
 
-                    <TextView
-                        android:id="@+id/tv_car_plate"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/hist_det_placeholder_plate"
-                        android:textColor="@color/driver_text_black"
-                        android:background="@drawable/bg_license_plate"
-                        android:paddingHorizontal="8dp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:id="@+id/tv_car_model"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/hist_det_placeholder_model"
-                        android:textColor="@color/driver_text_primary"
-                        android:layout_marginStart="16dp"
-                        android:textSize="16sp" />
-                </LinearLayout>
+                <TextView
+                    android:id="@+id/tv_car_model"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="14dp"
+                    android:text="@string/hist_det_placeholder_model"
+                    android:textColor="@color/driver_text_primary"
+                    android:textSize="16sp"
+                    android:fontFamily="@font/app_font_family" />
 
                 <TextView
                     android:id="@+id/tv_car_class"
@@ -417,8 +701,8 @@
                     android:layout_height="wrap_content"
                     android:text="@string/hist_det_placeholder_tariff"
                     android:textColor="@color/driver_text_secondary"
-                    android:layout_marginTop="8dp"
-                    android:textSize="14sp" />
+                    android:textSize="14sp"
+                    android:fontFamily="@font/app_font_family" />
             </LinearLayout>
 
         </LinearLayout>

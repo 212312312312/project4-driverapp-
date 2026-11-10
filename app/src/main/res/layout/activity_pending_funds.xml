@@ -2,55 +2,124 @@
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://tools.android.com/tools"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/pending_funds_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/driver_black_bg">
+    android:background="@color/driver_card_bg">
 
-    <RelativeLayout
+    <!-- ВЕРХНЯ ШАПКА "ВАШІ КОШТИ" -->
+    <com.google.android.material.card.MaterialCardView
         android:id="@+id/layout_header_pending"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/driver_black_bg"
-        android:paddingTop="32dp"
-        android:paddingBottom="16dp"
-        android:paddingHorizontal="24dp"
+        android:layout_marginTop="-16dp"
+        app:cardBackgroundColor="@color/driver_black_bg"
+        app:cardCornerRadius="22dp"
+        app:cardElevation="4dp"
+        app:strokeWidth="0dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
+        <LinearLayout
+            android:id="@+id/header_pending_inner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingTop="32dp"
+            android:paddingBottom="16dp"
+            android:paddingHorizontal="16dp">
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                app:cardBackgroundColor="@color/driver_surface_elevated"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp">
+
+                <ImageView
+                    android:id="@+id/btn_back_pending"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:padding="10dp"
+                    android:src="@drawable/ic_arrow_back_black"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:clickable="true"
+                    android:focusable="true"
+                    app:tint="@color/driver_text_primary"
+                    android:contentDescription="@null" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                android:id="@+id/tv_title_pending"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:text="Ваші кошти"
+                android:textSize="20sp"
+                android:fontFamily="@font/app_font_family"
+                android:textStyle="bold"
+                android:textColor="@color/driver_text_primary" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- ПУСТЕ СТАНОВИЩЕ ("Даних поки немає" з ілюстрацією як на скріншоті) -->
+    <LinearLayout
+        android:id="@+id/layout_empty_pending"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:paddingHorizontal="32dp"
+        app:layout_constraintTop_toBottomOf="@id/layout_header_pending"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintVertical_bias="0.45">
+
         <ImageView
-            android:id="@+id/btn_back_pending"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:src="@drawable/ic_arrow_back_black"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:clickable="true"
-            android:focusable="true"
-            app:tint="@color/driver_text_primary"
-            android:layout_centerVertical="true"
-            android:layout_alignParentStart="true"
+            android:id="@+id/iv_empty_pending_illustration"
+            android:layout_width="220dp"
+            android:layout_height="150dp"
+            android:src="@drawable/ic_wallet"
             android:contentDescription="@null" />
 
         <TextView
-            android:id="@+id/tv_title_pending"
+            android:id="@+id/tv_empty_pending_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Кошти в черзі"
-            android:textSize="22sp"
-            android:fontFamily="@font/app_font_family"
-            android:textStyle="bold"
+            android:layout_marginTop="16dp"
+            android:text="Даних поки немає"
             android:textColor="@color/driver_text_primary"
-            android:layout_centerVertical="true"
-            android:layout_toEndOf="@id/btn_back_pending"
-            android:layout_marginStart="16dp" />
-    </RelativeLayout>
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:fontFamily="@font/app_font_family" />
 
+        <TextView
+            android:id="@+id/tv_empty_pending_subtitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:gravity="center"
+            android:lineSpacingExtra="4dp"
+            android:text="Виконайте безготівкове замовлення — і\nтут з’явиться сума для переказу"
+            android:textColor="@color/driver_text_secondary"
+            android:textSize="15sp"
+            android:fontFamily="@font/app_font_family" />
+    </LinearLayout>
+
+    <!-- Список операцій в черзі (якщо є) -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rv_pending_transactions"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:background="@color/driver_black_bg"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/bg_bottom_sheet_driver"
+        android:paddingTop="12dp"
+        android:visibility="gone"
         app:layout_constraintTop_toBottomOf="@id/layout_header_pending"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
