@@ -5,11 +5,14 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <!-- СТОРІНКА 0: АКТИВНЕ ЗАМОВЛЕННЯ ВОДІЯ -->
     <FrameLayout
         android:id="@+id/container_active"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:padding="16dp"
+        android:paddingHorizontal="10dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="16dp"
         android:visibility="gone"
         tools:visibility="visible">
 
@@ -17,10 +20,12 @@
             android:id="@+id/card_active_order"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardCornerRadius="16dp"
+            app:cardCornerRadius="14dp"
             app:cardBackgroundColor="@color/driver_black_bg"
-            app:strokeWidth="0dp"
             app:cardElevation="0dp"
+            app:cardMaxElevation="0dp"
+            app:strokeWidth="0dp"
+            app:cardPreventCornerOverlap="false"
             android:visibility="gone"
             tools:visibility="visible">
 
@@ -28,8 +33,11 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="16dp">
+                android:paddingHorizontal="14dp"
+                android:paddingTop="14dp"
+                android:paddingBottom="14dp">
 
+                <!-- Заголовок картки активного замовлення -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -37,9 +45,10 @@
                     android:textColor="@color/driver_neon_teal"
                     android:fontFamily="@font/app_font_family"
                     android:textStyle="bold"
-                    android:textSize="18sp"
+                    android:textSize="17sp"
                     android:layout_marginBottom="12dp" />
 
+                <!-- РЯДОК 1: ПЛАШКА ЦІНИ [ гаманець/картка 180 ₴ ] ЗЛІВА + ЦІНА ЗА КМ [ 69.23 ₴/км ] СПРАВА -->
                 <RelativeLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -48,70 +57,58 @@
                     <LinearLayout
                         android:id="@+id/ll_price_background"
                         android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
+                        android:layout_height="38dp"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:background="@drawable/bg_driver_input"
+                        android:background="@drawable/bg_round_button_gray"
+                        android:backgroundTint="@color/driver_neon_teal"
                         android:paddingHorizontal="12dp"
-                        android:paddingVertical="6dp"
                         android:layout_alignParentStart="true"
                         android:layout_centerVertical="true">
 
                         <ImageView
                             android:id="@+id/iv_payment_icon"
-                            android:layout_width="25dp"
-                            android:layout_height="25dp"
-                            android:layout_marginEnd="6dp"
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:layout_marginEnd="8dp"
+                            android:contentDescription="@null"
                             tools:src="@drawable/ic_payment_cash" />
 
                         <TextView
                             android:id="@+id/tv_price"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:textSize="18sp"
+                            android:textSize="19sp"
                             android:textStyle="bold"
                             android:fontFamily="@font/app_font_family"
-                            tools:text="250₴"
-                            tools:textColor="#000000" />
+                            android:textColor="@color/driver_text_black"
+                            tools:text="180 ₴" />
                     </LinearLayout>
 
-                    <LinearLayout
+                    <TextView
+                        android:id="@+id/tv_price_per_km"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:gravity="end"
                         android:layout_alignParentEnd="true"
-                        android:layout_centerVertical="true">
-
-                        <TextView
-                            android:id="@+id/tv_price_per_km"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:textColor="@color/driver_text_primary"
-                            android:textSize="15sp"
-                            android:textStyle="bold"
-                            android:fontFamily="@font/app_font_family"
-                            tools:text="24.33 ₴/км" />
-                    </LinearLayout>
+                        android:layout_centerVertical="true"
+                        android:textColor="@color/driver_text_primary"
+                        android:textSize="16sp"
+                        android:fontFamily="@font/app_font_family"
+                        tools:text="69.23 ₴/км" />
                 </RelativeLayout>
 
+                <!-- РЯДОК 2: БЛОК МАРШРУТУ З ВЕРТИКАЛЬНОЮ ЛІНІЄЮ ТА СЕКТОРАМИ В ЕДИНОМУ СТИЛІ -->
                 <androidx.constraintlayout.widget.ConstraintLayout
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp">
+                    android:layout_height="wrap_content">
 
-                    <androidx.constraintlayout.widget.Guideline
-                        android:id="@+id/guideline_address_block"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        app:layout_constraintGuide_begin="54dp" />
-
+                    <!-- Наскрізна вертикальна лінія маршруту -->
                     <View
                         android:id="@+id/view_route_line"
-                        android:layout_width="2dp"
+                        android:layout_width="1.5dp"
                         android:layout_height="0dp"
-                        android:background="@color/driver_divider"
+                        android:background="@color/driver_text_secondary"
+                        android:alpha="0.65"
                         app:layout_constraintTop_toTopOf="@id/iv_icon_from"
                         app:layout_constraintBottom_toBottomOf="@id/iv_icon_to"
                         app:layout_constraintStart_toStartOf="@id/iv_icon_from"
@@ -119,11 +116,12 @@
 
                     <ImageView
                         android:id="@+id/iv_icon_from"
-                        android:layout_width="18dp"
-                        android:layout_height="18dp"
-                        android:layout_marginStart="14dp"
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:layout_marginStart="8dp"
                         android:layout_marginTop="4dp"
                         android:src="@drawable/ic_marker_from"
+                        android:contentDescription="@null"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toTopOf="@id/ll_from_text" />
 
@@ -132,8 +130,9 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
+                        android:layout_marginStart="36dp"
                         app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintStart_toStartOf="@id/guideline_address_block"
+                        app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintEnd_toEndOf="parent">
 
                         <TextView
@@ -141,21 +140,20 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:textColor="@color/driver_text_primary"
-                            android:textSize="15sp"
+                            android:textSize="17sp"
+                            android:lineSpacingExtra="1dp"
                             android:fontFamily="@font/app_font_family"
-                            android:textStyle="bold"
-                            tools:text="ул. Крещатик, 1" />
+                            tools:text="Леся Курбаса Проспект (Київ), 19а" />
 
                         <TextView
                             android:id="@+id/tv_sector_from"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:textColor="@color/driver_text_secondary"
-                            android:textSize="13sp"
+                            android:textSize="14sp"
                             android:fontFamily="@font/app_font_family"
-                            android:textStyle="bold"
-                            android:layout_marginTop="1dp"
-                            tools:text="Печерский район" />
+                            android:layout_marginTop="2dp"
+                            tools:text="Борщагівка Кольцова" />
                     </LinearLayout>
 
                     <LinearLayout
@@ -163,8 +161,8 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
-                        android:layout_marginTop="6dp"
-                        android:layout_marginBottom="6dp"
+                        android:layout_marginTop="8dp"
+                        android:visibility="gone"
                         app:layout_constraintTop_toBottomOf="@id/ll_from_text"
                         app:layout_constraintBottom_toTopOf="@id/ll_to_text"
                         app:layout_constraintStart_toStartOf="parent"
@@ -172,11 +170,12 @@
 
                     <ImageView
                         android:id="@+id/iv_icon_to"
-                        android:layout_width="18dp"
-                        android:layout_height="18dp"
-                        android:layout_marginStart="14dp"
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:layout_marginStart="8dp"
                         android:layout_marginTop="4dp"
                         android:src="@drawable/ic_marker_to"
+                        android:contentDescription="@null"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toTopOf="@id/ll_to_text" />
 
@@ -185,8 +184,10 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
+                        android:layout_marginStart="36dp"
+                        android:layout_marginTop="10dp"
                         app:layout_constraintTop_toBottomOf="@id/ll_stops_container"
-                        app:layout_constraintStart_toStartOf="@id/guideline_address_block"
+                        app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintEnd_toEndOf="parent">
 
                         <TextView
@@ -194,88 +195,109 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:textColor="@color/driver_text_primary"
-                            android:textSize="15sp"
+                            android:textSize="17sp"
+                            android:lineSpacingExtra="1dp"
                             android:fontFamily="@font/app_font_family"
-                            android:textStyle="bold"
-                            tools:text="проспект Победы, 45" />
+                            tools:text="Академіка Кіпріанова Вулиця (Київ), 6а" />
 
                         <TextView
                             android:id="@+id/tv_sector_to"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:textColor="@color/driver_text_secondary"
-                            android:textSize="13sp"
+                            android:textSize="14sp"
                             android:fontFamily="@font/app_font_family"
-                            android:textStyle="bold"
-                            android:layout_marginTop="1dp"
-                            tools:text="Шулявка" />
+                            android:layout_marginTop="2dp"
+                            tools:text="Борщагівка Микіл" />
                     </LinearLayout>
                 </androidx.constraintlayout.widget.ConstraintLayout>
 
-                <RelativeLayout
+                <!-- РЯДОК 3: НИЖНЯ СТРІЧКА БЕЙДЖІВ [ 🚗 Стандарт | 📈 +3 | Завтра, 05:40 ] + ДИСТАНЦІЯ СПРАВА -->
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:layout_marginBottom="14dp">
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="14dp">
 
+                    <!-- Бейджі зліва -->
                     <LinearLayout
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
+                        android:layout_weight="1"
                         android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:layout_alignParentStart="true"
-                        android:layout_centerVertical="true">
+                        android:gravity="start|center_vertical">
 
-                        <TextView
-                            android:id="@+id/tv_tariff_badge"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:textColor="@color/driver_neon_teal"
-                            android:textSize="14sp"
-                            android:textStyle="bold"
-                            android:fontFamily="@font/app_font_family"
-                            tools:text="Стандарт" />
-
+                        <!-- Сегмент 1: Іконка авто + Назва тарифу ("Стандарт") -->
                         <LinearLayout
                             android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
+                            android:layout_height="32dp"
                             android:orientation="horizontal"
                             android:gravity="center_vertical"
-                            android:background="@drawable/bg_driver_input"
-                            android:backgroundTint="@color/driver_surface_elevated"
-                            android:paddingHorizontal="8dp"
-                            android:paddingVertical="4dp"
-                            android:layout_marginStart="10dp">
+                            android:background="#26272B"
+                            android:paddingHorizontal="12dp">
 
                             <ImageView
-                                android:layout_width="12dp"
-                                android:layout_height="12dp"
-                                android:src="@drawable/ic_menu_graph"
-                                app:tint="#00E676" />
+                                android:layout_width="16dp"
+                                android:layout_height="16dp"
+                                android:src="@drawable/ic_car"
+                                app:tint="@color/driver_text_primary"
+                                android:contentDescription="@null" />
+
+                            <TextView
+                                android:id="@+id/tv_tariff_badge"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="8dp"
+                                android:textColor="@color/driver_text_primary"
+                                android:textSize="14sp"
+                                android:fontFamily="@font/app_font_family"
+                                tools:text="Стандарт" />
+                        </LinearLayout>
+
+                        <View
+                            android:layout_width="1.5dp"
+                            android:layout_height="32dp"
+                            android:background="@color/driver_black_bg" />
+
+                        <!-- Сегмент 2: Іконка графіка активності + бонус ("+3") -->
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="32dp"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:background="#26272B"
+                            android:paddingHorizontal="10dp">
+
+                            <ImageView
+                                android:layout_width="15dp"
+                                android:layout_height="15dp"
+                                android:src="@drawable/ic_menu_stats"
+                                android:contentDescription="@null" />
 
                             <TextView
                                 android:id="@+id/tv_activity_bonus"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginStart="4dp"
+                                android:layout_marginStart="5dp"
                                 android:text="+3"
-                                android:textColor="#00E676"
-                                android:textSize="12sp"
+                                android:textColor="@color/driver_neon_teal"
+                                android:textSize="14sp"
                                 android:textStyle="bold"
                                 android:fontFamily="@font/app_font_family" />
                         </LinearLayout>
 
+                        <!-- Сегмент 3: Час запланованого замовлення ("Завтра, 14:30") -->
                         <TextView
                             android:id="@+id/tv_scheduled_time"
                             android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="10dp"
-                            android:background="@drawable/bg_driver_input"
-                            android:backgroundTint="#FFE03B"
-                            android:paddingHorizontal="8dp"
-                            android:paddingVertical="4dp"
-                            android:textColor="#000000"
-                            android:textSize="12sp"
+                            android:layout_height="32dp"
+                            android:layout_marginStart="1.5dp"
+                            android:background="#F5D033"
+                            android:gravity="center"
+                            android:paddingHorizontal="10dp"
+                            android:textColor="#1A1C1E"
+                            android:textSize="14sp"
                             android:textStyle="bold"
                             android:fontFamily="@font/app_font_family"
                             android:visibility="gone"
@@ -283,34 +305,38 @@
                             tools:text="Завтра, 14:30" />
                     </LinearLayout>
 
+                    <!-- Дистанція справа -->
                     <TextView
                         android:id="@+id/tv_distance"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_alignParentEnd="true"
-                        android:layout_centerVertical="true"
                         android:textColor="@color/driver_text_primary"
                         android:textSize="16sp"
                         android:textStyle="bold"
                         android:fontFamily="@font/app_font_family"
                         tools:text="2.4 км" />
-                </RelativeLayout>
+                </LinearLayout>
 
-                <Button
+                <!-- КНОПКА ДІЇ ЗАКІНЧЕННЯ / ПЕРЕГЛЯДУ / ВІДКРИТТЯ АКТИВНОГО ЗАМОВЛЕННЯ -->
+                <androidx.appcompat.widget.AppCompatButton
                     android:id="@+id/btn_open_active"
                     android:layout_width="match_parent"
                     android:layout_height="52dp"
                     android:text="@string/orders_btn_open"
+                    android:background="@drawable/bg_round_button_gray"
                     android:backgroundTint="@color/driver_neon_teal"
                     android:textColor="@color/driver_text_black"
                     android:fontFamily="@font/app_font_family"
                     android:textStyle="bold"
                     android:textSize="16sp"
                     android:textAllCaps="false"
-                    android:layout_marginTop="4dp" />
+                    android:layout_marginTop="16dp"
+                    android:elevation="0dp"
+                    android:stateListAnimator="@null" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- ПОВІДОМЛЕННЯ, ЯКЩО НЕМАЄ АКТИВНОГО ЗАМОВЛЕННЯ -->
         <TextView
             android:id="@+id/tv_no_active"
             android:layout_width="wrap_content"
@@ -322,6 +348,7 @@
             android:layout_gravity="center" />
     </FrameLayout>
 
+    <!-- СТОРІНКА 1: СПИСОК АРХІВУ / ІСТОРІЇ ЗАМОВЛЕНЬ ВОДІЯ -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rv_history"
         android:layout_width="match_parent"

@@ -45,6 +45,7 @@ class AccountSelectionActivity : AppCompatActivity() {
             validateTokenAndProceed()
         } else {
             Toast.makeText(this, "Для отримання замовлень увімкніть повноекранні сповіщення", Toast.LENGTH_LONG).show()
+            showFullScreenIntentPermissionDialog()
         }
     }
 
@@ -84,8 +85,8 @@ class AccountSelectionActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        // Если водитель включил полноэкранный доступ в настройках и вернулся в приложение —
-        // мгновенно закрываем диалог (если он был открыт) и сразу пускаем в приложение!
+        // Якщо водій увімкнув повноекранні сповіщення в налаштуваннях та повернувся —
+        // закриваємо діалог та переходимо на головний екран
         if (checkFullScreenIntentPermission()) {
             val wasDialogShowing = permissionDialog?.isShowing == true
             dismissPermissionDialog()
@@ -196,15 +197,18 @@ class AccountSelectionActivity : AppCompatActivity() {
         val btnAllow = dialogView.findViewById<androidx.appcompat.widget.AppCompatButton>(R.id.btnAllowPermission)
         val tvDesc = (dialogView as LinearLayout).getChildAt(1) as TextView
 
-        tvDesc.setText(R.string.permission_fsi_desc)
+        tvDesc.text = "Для безперебійного отримання замовлень:\n\n1. Натисніть «Зрозуміло» нижче.\n2. Увімкніть пункт «Повноекранні сповіщення»."
 
-        btnCancel.visibility = View.VISIBLE
-        btnCancel.setOnClickListener {
-            dismissPermissionDialog()
-            validateTokenAndProceed()
-        }
+        // Прибираємо кнопку "Скасувати", щоб водій не міг зайти в додаток в обхід обов'язкового дозволу
+        btnCancel.visibility = View.GONE
 
-        btnAllow.text = "Увімкнути"
+        // Розтягуємо єдину кнопку "Зрозуміло" на всю ширину
+        val params = btnAllow.layoutParams as LinearLayout.LayoutParams
+        params.weight = 2f
+        params.marginStart = 0
+        btnAllow.layoutParams = params
+
+        btnAllow.text = getString(R.string.btn_understood) // "Зрозуміло"
         btnAllow.setOnClickListener {
             dismissPermissionDialog()
             openFullScreenIntentSettings()
@@ -234,7 +238,6 @@ class AccountSelectionActivity : AppCompatActivity() {
         } catch (e: Exception) {
             isWaitingForFullScreenSettings = false
             Toast.makeText(this, "Не вдалося відкрити налаштування системи", Toast.LENGTH_SHORT).show()
-            validateTokenAndProceed()
         }
     }
 

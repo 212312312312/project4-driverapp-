@@ -6,16 +6,105 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <!-- РЯДОК ФІЛЬТРІВ ДАТИ ДЛЯ СТОРІНКИ "НА ЧАС": [ Всі (2) ] [ Сьогодні ] [ Завтра ] [ Пізніше ] -->
+    <!-- Знаходиться безпосередньо всередині сторінки ViewPager2, щоб виїжджати синхронно при свайпі -->
+    <HorizontalScrollView
+        android:id="@+id/hsv_scheduled_chips"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:scrollbars="none"
+        android:overScrollMode="never"
+        android:clipToPadding="false"
+        android:paddingHorizontal="10dp"
+        android:paddingTop="10dp"
+        android:paddingBottom="4dp"
+        android:visibility="gone"
+        tools:visibility="visible"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/chip_sched_all"
+                android:layout_width="wrap_content"
+                android:layout_height="38dp"
+                android:minWidth="76dp"
+                android:paddingHorizontal="16dp"
+                android:gravity="center"
+                android:text="Всі (0)"
+                android:textColor="@color/driver_text_primary"
+                android:textSize="14sp"
+                android:fontFamily="@font/app_font_family"
+                android:clickable="true"
+                android:focusable="true" />
+
+            <TextView
+                android:id="@+id/chip_sched_today"
+                android:layout_width="wrap_content"
+                android:layout_height="38dp"
+                android:minWidth="92dp"
+                android:layout_marginStart="8dp"
+                android:paddingHorizontal="16dp"
+                android:gravity="center"
+                android:text="Сьогодні"
+                android:textColor="@color/driver_text_primary"
+                android:textSize="14sp"
+                android:fontFamily="@font/app_font_family"
+                android:clickable="true"
+                android:focusable="true" />
+
+            <TextView
+                android:id="@+id/chip_sched_tomorrow"
+                android:layout_width="wrap_content"
+                android:layout_height="38dp"
+                android:minWidth="86dp"
+                android:layout_marginStart="8dp"
+                android:paddingHorizontal="16dp"
+                android:gravity="center"
+                android:text="Завтра"
+                android:textColor="@color/driver_text_primary"
+                android:textSize="14sp"
+                android:fontFamily="@font/app_font_family"
+                android:clickable="true"
+                android:focusable="true" />
+
+            <TextView
+                android:id="@+id/chip_sched_later"
+                android:layout_width="wrap_content"
+                android:layout_height="38dp"
+                android:minWidth="86dp"
+                android:layout_marginStart="8dp"
+                android:paddingHorizontal="16dp"
+                android:gravity="center"
+                android:text="Пізніше"
+                android:textColor="@color/driver_text_primary"
+                android:textSize="14sp"
+                android:fontFamily="@font/app_font_family"
+                android:clickable="true"
+                android:focusable="true" />
+        </LinearLayout>
+    </HorizontalScrollView>
+
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rv_orders_list"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:paddingHorizontal="2dp"
+        android:layout_height="0dp"
+        android:paddingHorizontal="0dp"
         android:paddingTop="8dp"
-        android:paddingBottom="24dp"
+        android:paddingBottom="16dp"
         android:clipToPadding="false"
         android:overScrollMode="never"
         android:scrollbars="none"
+        app:layout_constraintTop_toBottomOf="@id/hsv_scheduled_chips"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         tools:listitem="@layout/item_order" />
 
     <LinearLayout
@@ -25,7 +114,7 @@
         android:orientation="vertical"
         android:gravity="center"
         android:visibility="gone"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/hsv_scheduled_chips"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">

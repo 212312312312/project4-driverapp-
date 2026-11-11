@@ -64,11 +64,11 @@ class HistoryOrderAdapter(private val onClick: (Order) -> Unit) :
             // 1. Векторні іконки точок маршруту (із заливкою фону всередині кільця, щоб лінія не просвічувала)
             ivIconFrom?.apply {
                 imageTintList = null
-                setImageDrawable(RoutePinDrawable(hasInnerDot = true, strokeColor = secondaryColor, bgColor = cardBgColor))
+                setImageDrawable(OrderAdapter.RoutePinDrawable(hasInnerDot = true, strokeColor = secondaryColor, bgColor = cardBgColor))
             }
             ivIconTo?.apply {
                 imageTintList = null
-                setImageDrawable(RoutePinDrawable(hasInnerDot = false, strokeColor = secondaryColor, bgColor = cardBgColor))
+                setImageDrawable(OrderAdapter.RoutePinDrawable(hasInnerDot = false, strokeColor = secondaryColor, bgColor = cardBgColor))
             }
 
             // 2. Адреси, ціна та дистанція
@@ -77,23 +77,43 @@ class HistoryOrderAdapter(private val onClick: (Order) -> Unit) :
             tvPrice.text = "${order.getTotalFullPrice().toInt()} ₴"
             tvDistance.text = order.getFormattedDistance().replace('.', ',')
 
-            // 3. Бали активності
+            // 3. Бали активності з єдиною іконкою графіка тренду (як в Ефірі та Деталях поїздки)
             val bonus = order.activityBonus
             tvActivityBonus.text = if (bonus >= 0) "+$bonus" else "$bonus"
             val bonusColor = if (bonus >= 0) neonTeal else errorRed
             tvActivityBonus.setTextColor(bonusColor)
-            ivActivityIcon?.setColorFilter(bonusColor)
+            ivActivityIcon?.apply {
+                imageTintList = null
+                clearColorFilter()
+                setImageDrawable(
+                    OrderAdapter.UnifiedCardIconDrawable(
+                        type = OrderAdapter.UnifiedCardIconDrawable.Type.ACTIVITY_TREND,
+                        strokeColor = primaryColor
+                    )
+                )
+            }
 
-            // 4. Плашка ціни та іконка методу оплати
-            if (order.paymentMethod == "CARD" || order.paymentMethod == "ELECTRONIC") {
-                ivPaymentIcon.setImageResource(R.drawable.ic_payment_card)
+            // 4. Плашка ціни та єдина векторна іконка методу оплати (Картка / Гаманець)
+            val isCard = (order.paymentMethod == "CARD" || order.paymentMethod == "ELECTRONIC")
+            ivPaymentIcon.imageTintList = null
+            ivPaymentIcon.clearColorFilter()
+            if (isCard) {
                 llPriceBackground.backgroundTintList = ContextCompat.getColorStateList(context, R.color.driver_neon_teal)
-                ivPaymentIcon.imageTintList = android.content.res.ColorStateList.valueOf(blackText)
+                ivPaymentIcon.setImageDrawable(
+                    OrderAdapter.UnifiedCardIconDrawable(
+                        type = OrderAdapter.UnifiedCardIconDrawable.Type.CARD,
+                        strokeColor = blackText
+                    )
+                )
                 tvPrice.setTextColor(blackText)
             } else {
-                ivPaymentIcon.setImageResource(R.drawable.ic_payment_cash)
                 llPriceBackground.backgroundTintList = ContextCompat.getColorStateList(context, R.color.driver_surface_elevated)
-                ivPaymentIcon.imageTintList = android.content.res.ColorStateList.valueOf(primaryColor)
+                ivPaymentIcon.setImageDrawable(
+                    OrderAdapter.UnifiedCardIconDrawable(
+                        type = OrderAdapter.UnifiedCardIconDrawable.Type.WALLET,
+                        strokeColor = primaryColor
+                    )
+                )
                 tvPrice.setTextColor(primaryColor)
             }
 
@@ -118,7 +138,6 @@ class HistoryOrderAdapter(private val onClick: (Order) -> Unit) :
                     lineTop.visibility = View.GONE
                     lineBottom.visibility = View.GONE
 
-                    // Вирівнюємо іконку проміжної точки точно на лінію маршруту (4dp + 14dp/2 = 11dp)
                     (ivIcon.layoutParams as? ConstraintLayout.LayoutParams)?.apply {
                         width = (14 * density).toInt()
                         height = (14 * density).toInt()
@@ -129,9 +148,10 @@ class HistoryOrderAdapter(private val onClick: (Order) -> Unit) :
                         ivIcon.layoutParams = this
                     }
                     ivIcon.imageTintList = null
-                    ivIcon.setImageDrawable(RoutePinDrawable(hasInnerDot = false, strokeColor = secondaryColor, bgColor = cardBgColor))
+                    ivIcon.setImageDrawable(
+                        OrderAdapter.RoutePinDrawable(hasInnerDot = false, strokeColor = secondaryColor, bgColor = cardBgColor)
+                    )
 
-                    // Вирівнюємо текст проміжної точки з tv_from та tv_to (30dp зліва, 16sp, без жирного виділення)
                     (tvAddress.layoutParams as? ConstraintLayout.LayoutParams)?.apply {
                         marginStart = (30 * density).toInt()
                         tvAddress.layoutParams = this
@@ -191,55 +211,6 @@ class HistoryOrderAdapter(private val onClick: (Order) -> Unit) :
             val monthName = monthsShort.getOrElse(monthIdx) { "" }
             return "$day $monthName $timeStr"
         }
-    }
-
-    private class RoutePinDrawable(
-        private val hasInnerDot: Boolean,
-        private val strokeColor: Int,
-        private val bgColor: Int
-    ) : Drawable() {
-        private val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = bgColor
-            style = Paint.Style.FILL
-        }
-        private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = strokeColor
-            style = Paint.Style.STROKE
-        }
-        private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = strokeColor
-            style = Paint.Style.FILL
-        }
-
-        override fun draw(canvas: Canvas) {
-            val b = bounds
-            if (b.isEmpty) return
-            val cx = b.exactCenterX()
-            val cy = b.exactCenterY()
-            val r = minOf(b.width(), b.height()) / 2f
-
-            strokePaint.strokeWidth = (r * 0.26f).coerceAtLeast(1.8f)
-            // Спочатку зафарбовуємо внутрішню область кружка кольором фону картки, щоб наскрізна лінія не просвічувала
-            canvas.drawCircle(cx, cy, r * 0.80f, bgPaint)
-            canvas.drawCircle(cx, cy, r * 0.80f, strokePaint)
-
-            if (hasInnerDot) {
-                canvas.drawCircle(cx, cy, r * 0.28f, fillPaint)
-            }
-        }
-
-        override fun setAlpha(alpha: Int) {
-            strokePaint.alpha = alpha
-            fillPaint.alpha = alpha
-        }
-
-        override fun setColorFilter(colorFilter: ColorFilter?) {
-            strokePaint.colorFilter = colorFilter
-            fillPaint.colorFilter = colorFilter
-        }
-
-        @Deprecated("Deprecated in Java")
-        override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
     }
 
     class HistoryDiffCallback : DiffUtil.ItemCallback<Order>() {
