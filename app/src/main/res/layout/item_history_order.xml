@@ -61,7 +61,7 @@
                 tools:text="31 серп. 19:47" />
         </RelativeLayout>
 
-        <!-- БЛОК МАРШРУТУ З ІКОНКАМИ ТОЧОК ТА ВЕРТИКАЛЬНОЮ ЛІНІЄЮ (ЯК НА СКРІНШОТІ) -->
+        <!-- БЛОК МАРШРУТУ З ІКОНКАМИ ТОЧОК ТА ВЕРТИКАЛЬНОЮ ЛІНІЄЮ (ІДЕАЛЬНА ВІСЬ X = 11dp) -->
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -73,8 +73,8 @@
                 android:layout_height="0dp"
                 android:background="@color/driver_text_secondary"
                 android:alpha="0.65"
-                app:layout_constraintTop_toBottomOf="@id/iv_icon_from"
-                app:layout_constraintBottom_toTopOf="@id/iv_icon_to"
+                app:layout_constraintTop_toTopOf="@id/iv_icon_from"
+                app:layout_constraintBottom_toBottomOf="@id/iv_icon_to"
                 app:layout_constraintStart_toStartOf="@id/iv_icon_from"
                 app:layout_constraintEnd_toEndOf="@id/iv_icon_from" />
 
@@ -115,8 +115,8 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="8dp"
+                android:layout_marginTop="12dp"
+                android:visibility="gone"
                 app:layout_constraintTop_toBottomOf="@id/ll_from_text"
                 app:layout_constraintBottom_toTopOf="@id/ll_to_text"
                 app:layout_constraintStart_toStartOf="parent"
@@ -124,10 +124,10 @@
 
             <ImageView
                 android:id="@+id/iv_icon_to"
-                android:layout_width="12dp"
-                android:layout_height="12dp"
-                android:layout_marginStart="5dp"
-                android:layout_marginTop="5dp"
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:layout_marginStart="4dp"
+                android:layout_marginTop="4dp"
                 android:src="@drawable/ic_marker_to"
                 android:contentDescription="@null"
                 app:layout_constraintStart_toStartOf="parent"
@@ -138,7 +138,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="30dp"
-                android:layout_marginTop="14dp"
+                android:layout_marginTop="12dp"
                 android:orientation="vertical"
                 app:layout_constraintTop_toBottomOf="@id/ll_stops_container"
                 app:layout_constraintStart_toStartOf="parent"
@@ -163,7 +163,7 @@
             android:orientation="horizontal"
             android:gravity="center_vertical">
 
-            <!-- Компактний бейдж балів активності (зберігаємо наші дані) -->
+            <!-- Компактний бейдж балів активності -->
             <LinearLayout
                 android:id="@+id/ll_activity_badge"
                 android:layout_width="wrap_content"
@@ -199,7 +199,7 @@
                 android:layout_height="0dp"
                 android:layout_weight="1" />
 
-            <!-- Плашка ціни та методу оплати (як [картка 374 ₴] на скріншоті) -->
+            <!-- Плашка ціни та методу оплати -->
             <LinearLayout
                 android:id="@+id/ll_price_background"
                 android:layout_width="wrap_content"
@@ -231,7 +231,7 @@
                     tools:text="374 ₴" />
             </LinearLayout>
 
-            <!-- Плашка дистанції (як [13,73 км] на скріншоті) -->
+            <!-- Плашка дистанції -->
             <LinearLayout
                 android:id="@+id/ll_distance_badge"
                 android:layout_width="wrap_content"

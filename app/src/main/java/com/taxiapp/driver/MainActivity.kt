@@ -10,7 +10,13 @@ import android.content.res.ColorStateList
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.ColorFilter
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.PixelFormat
+import android.graphics.RectF
 import android.graphics.Typeface
+import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -45,9 +51,11 @@ import com.google.android.gms.maps.model.*
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.firebase.messaging.FirebaseMessaging
 import com.taxiapp.driver.network.ApiClient
+import com.taxiapp.driver.network.DriverFilter
 import com.taxiapp.driver.network.DriverSearchMode
 import com.taxiapp.driver.network.DriverSearchSettingsDto
 import com.taxiapp.driver.network.HeatmapZoneDto
+import com.taxiapp.driver.network.Order
 import com.taxiapp.driver.network.Sector
 import com.taxiapp.driver.network.SectorPointDto
 import com.taxiapp.driver.network.UpdateDriverStatusRequest
@@ -57,7 +65,10 @@ import com.taxiapp.driver.service.LocationService
 import com.taxiapp.driver.utils.LocaleHelper
 import com.taxiapp.driver.utils.SessionManager
 import com.taxiapp.driver.utils.toFullImageUrl
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
@@ -70,9 +81,23 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private val sectorMarkersList = mutableListOf<Marker>()
     private var sectorsListAdapter: SectorsListAdapter? = null
 
+    private lateinit var ivSearchModeIcon: ImageView
     private lateinit var tvSearchModeTitle: TextView
     private lateinit var tvSearchModeSubtitle: TextView
     private lateinit var btnToggleSearchMode: LinearLayout
+
+    // Элементы нижней панели (иконки и счетчики как на скриншоте)
+    private lateinit var ivEtherFilterIcon: ImageView
+    private lateinit var tvEtherFilterCount: TextView
+    private lateinit var ivEtherListIcon: ImageView
+    private lateinit var tvEtherListCount: TextView
+    private lateinit var ivNavOrdersIcon: ImageView
+    private lateinit var ivFilterAutoIcon: ImageView
+    private lateinit var tvFilterAutoCount: TextView
+    private lateinit var ivFilterCycleIcon: ImageView
+    private lateinit var tvFilterCycleCount: TextView
+
+    private var currentDisplayedSearchMode: DriverSearchMode = DriverSearchMode.CHAIN
 
     private var isLeavingSectorSelection = false
 
@@ -264,7 +289,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 btnLogout.layoutParams = logoutParams
             }
 
-            defaultMapPaddingBottom = systemBars.bottom + ((88 + 12 + 72 + 8 + 4) * density).toInt()
+            defaultMapPaddingBottom = systemBars.bottom + ((80 + 12 + 68 + 8 + 4) * density).toInt()
             if (::map.isInitialized && !sectorOverlay.isShown) {
                 map.setPadding(0, 0, 0, defaultMapPaddingBottom)
             }
@@ -306,6 +331,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         updateLockIconState()
         syncActiveOrderAndBadge()
+        syncBottomNavCounters()
         updateCommissionInfo()
 
         if (hasLocationPermission()) {
@@ -352,6 +378,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     fun onSearchSettingsUpdated() {
         updateSearchStatusUI()
+    }
+
+    private fun formatRadiusKm(radius: Double): String {
+        return String.format(Locale.US, "%.1f км", radius)
     }
 
     private fun drawSearchRadius() {
@@ -410,12 +440,25 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         drawerLayout = findViewById(R.id.drawer_layout)
         navViewContent = findViewById(R.id.nav_view_content)
 
+        ivSearchModeIcon = findViewById(R.id.ivSearchModeIcon)
         tvSearchModeTitle = findViewById(R.id.tvSearchModeTitle)
         tvSearchModeSubtitle = findViewById(R.id.tvSearchModeSubtitle)
         btnToggleSearchMode = findViewById(R.id.btnToggleSearchMode)
 
+        ivEtherFilterIcon = findViewById(R.id.iv_ether_filter_icon)
+        tvEtherFilterCount = findViewById(R.id.tv_ether_filter_count)
+        ivEtherListIcon = findViewById(R.id.iv_ether_list_icon)
+        tvEtherListCount = findViewById(R.id.tv_ether_list_count)
+        ivNavOrdersIcon = findViewById(R.id.iv_nav_orders_icon)
+        ivFilterAutoIcon = findViewById(R.id.iv_filter_auto_icon)
+        tvFilterAutoCount = findViewById(R.id.tv_filter_auto_count)
+        ivFilterCycleIcon = findViewById(R.id.iv_filter_cycle_icon)
+        tvFilterCycleCount = findViewById(R.id.tv_filter_cycle_count)
+
+        setupBottomBarIcons()
+
         tvSearchModeTitle.text = getString(R.string.main_search_chain_title)
-        tvSearchModeSubtitle.text = "Натисніть для активації"
+        tvSearchModeSubtitle.text = formatRadiusKm(currentSearchRadiusKm)
 
         updateSearchBlockVisuals(false)
 
@@ -536,6 +579,114 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         updateSearchStatusUI()
     }
 
+    /**
+     * Инициализирует векторные иконки нижней панели и карточки поиска в едином стиле со скриншотом.
+     */
+    private fun setupBottomBarIcons() {
+        val density = resources.displayMetrics.density
+        val primaryColor = ContextCompat.getColor(this, R.color.driver_text_primary)
+        val iconSize22 = (22 * density).toInt()
+        val iconSize24 = (24 * density).toInt()
+
+        ivEtherFilterIcon.imageTintList = null
+        ivEtherFilterIcon.setImageDrawable(
+            BottomBarIconDrawable(BottomBarIconDrawable.Type.ETHER_FILTER, primaryColor, iconSize22)
+        )
+
+        ivEtherListIcon.imageTintList = null
+        ivEtherListIcon.setImageDrawable(
+            BottomBarIconDrawable(BottomBarIconDrawable.Type.ETHER_LIST, primaryColor, iconSize22)
+        )
+
+        ivNavOrdersIcon.imageTintList = null
+        ivNavOrdersIcon.setImageDrawable(
+            BottomBarIconDrawable(BottomBarIconDrawable.Type.HISTORY_CLOCK, primaryColor, iconSize24)
+        )
+
+        ivFilterAutoIcon.imageTintList = null
+        ivFilterAutoIcon.setImageDrawable(
+            BottomBarIconDrawable(BottomBarIconDrawable.Type.FILTER_AUTO, primaryColor, iconSize22)
+        )
+
+        ivFilterCycleIcon.imageTintList = null
+        ivFilterCycleIcon.setImageDrawable(
+            BottomBarIconDrawable(BottomBarIconDrawable.Type.FILTER_CYCLE, primaryColor, iconSize22)
+        )
+    }
+
+    /**
+     * Синхронизирует 4 счетчика на нижней панели:
+     * - Ефір: [заказы по эфир-фильтрам] [всего доступных заказов сейчас в эфире]
+     * - Фільтри: [активных Авто-фильтров] [активных Цикл-фильтров]
+     */
+    private fun syncBottomNavCounters() {
+        lifecycleScope.launch {
+            try {
+                val api = ApiClient.getInstance().getApiService(this@MainActivity)
+                coroutineScope {
+                    val filtersDeferred = async {
+                        try { api.getFilters() } catch (_: Exception) { null }
+                    }
+                    val ordersDeferred = async {
+                        if (isDriverOnline) {
+                            try { api.getAvailableOrders() } catch (_: Exception) { null }
+                        } else null
+                    }
+
+                    val filtersRes = filtersDeferred.await()
+                    val ordersRes = ordersDeferred.await()
+
+                    val filters = if (filtersRes?.isSuccessful == true) filtersRes.body().orEmpty() else emptyList()
+                    val activeOrders = if (ordersRes?.isSuccessful == true) {
+                        ordersRes.body().orEmpty().filter { !it.isScheduled() }
+                    } else {
+                        emptyList()
+                    }
+
+                    val autoCount = filters.count { it.isActive && it.isAuto }
+                    val cycleCount = filters.count { it.isActive && it.isCycle }
+                    val activeEtherFilters = filters.filter { it.isActive && it.isEther }
+
+                    val etherTotalCount = if (isDriverOnline) activeOrders.size else 0
+                    val etherFilteredCount = if (!isDriverOnline || activeEtherFilters.isEmpty()) {
+                        0
+                    } else {
+                        activeOrders.count { order ->
+                            activeEtherFilters.any { filter -> matchesEtherFilter(order, filter) }
+                        }
+                    }
+
+                    tvEtherFilterCount.text = etherFilteredCount.toString()
+                    tvEtherListCount.text = etherTotalCount.toString()
+                    tvFilterAutoCount.text = autoCount.toString()
+                    tvFilterCycleCount.text = cycleCount.toString()
+                }
+            } catch (e: Exception) {
+                Log.w("MainActivity", "Не вдалося оновити лічильники нижньої панелі: ${e.message}")
+            }
+        }
+    }
+
+    private fun matchesEtherFilter(order: Order, filter: DriverFilter): Boolean {
+        if (filter.paymentType != "ANY" && !filter.paymentType.equals(order.paymentMethod, ignoreCase = true)) {
+            return false
+        }
+        val orderPrice = order.getTotalFullPrice()
+        if (filter.tariffType == "SIMPLE") {
+            val minP = filter.minPrice ?: 0.0
+            if (minP > 0.0 && orderPrice < minP) return false
+            val minKm = filter.minPricePerKm ?: 0.0
+            if (minKm > 0.0) {
+                val distKm = (order.distanceMeters ?: 0) / 1000.0
+                if (distKm > 0.0 && (orderPrice / distKm) < minKm) return false
+            }
+        } else {
+            val cMin = filter.complexMinPrice ?: 0.0
+            if (cMin > 0.0 && orderPrice < cMin) return false
+        }
+        return true
+    }
+
     private fun setOnlineVisualState(online: Boolean, animate: Boolean) {
         this.isDriverOnline = online
         val trackContainer = findViewById<ViewGroup>(R.id.switch_track_container)
@@ -642,6 +793,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
                             if (settingsResponse.isSuccessful && settingsResponse.body() != null) {
                                 displaySearchState(settingsResponse.body()!!)
+                                syncBottomNavCounters()
                                 Toast.makeText(this@MainActivity, "Вийшли в онлайн та розпочали пошук!", Toast.LENGTH_SHORT).show()
                             }
                         } else {
@@ -666,6 +818,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
                             if (settingsResponse.isSuccessful && settingsResponse.body() != null) {
                                 displaySearchState(settingsResponse.body()!!)
+                                syncBottomNavCounters()
                             }
                         } else {
                             revertOfflineState()
@@ -730,7 +883,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         sessionManager.saveHomeSectorIds(currentHomeSectorIds)
         drawSearchRadius()
 
-        // ИСПРАВЛЕНО: state.mode является nullable (DriverSearchMode?), поэтому задаем дефолт MANUAL
         val rawMode = state.mode ?: DriverSearchMode.MANUAL
         val displayedMode: DriverSearchMode = if (rawMode == DriverSearchMode.MANUAL || rawMode == DriverSearchMode.OFFLINE) {
             isSearchActive = false
@@ -746,32 +898,23 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             rawMode
         }
 
+        currentDisplayedSearchMode = displayedMode
+
         when (displayedMode) {
             DriverSearchMode.OFFLINE,
             DriverSearchMode.BUSY,
             DriverSearchMode.MANUAL,
             DriverSearchMode.CHAIN -> {
                 tvSearchModeTitle.text = getString(R.string.main_search_chain_title)
+                tvSearchModeSubtitle.text = formatRadiusKm(state.radius)
                 if (searchRadiusCircle != null) searchRadiusCircle?.isVisible = !sectorOverlay.isShown
-                if (!isSearchActive) {
-                    tvSearchModeSubtitle.text = "Радіус: ${state.radius} км • Натисніть для старту"
-                }
             }
             DriverSearchMode.HOME -> {
                 val sectorsText = if (state.homeSectorNames.isNullOrEmpty()) "не обрано" else state.homeSectorNames
                 tvSearchModeTitle.text = "Додому ($sectorsText)"
+                tvSearchModeSubtitle.text = formatRadiusKm(state.radius)
                 if (searchRadiusCircle != null) searchRadiusCircle?.isVisible = !sectorOverlay.isShown
-                if (!isSearchActive) {
-                    tvSearchModeSubtitle.text = "Натисніть для активації"
-                }
             }
-        }
-
-        if (isSearchActive) {
-            tvSearchModeSubtitle.text = "Пошук замовлень..."
-            tvSearchModeTitle.setTextColor(ContextCompat.getColor(this, R.color.driver_text_primary))
-        } else {
-            tvSearchModeTitle.setTextColor(ContextCompat.getColor(this, R.color.driver_neon_teal))
         }
 
         updateSearchBlockVisuals(isSearchActive)
@@ -781,19 +924,30 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val cardSearchContainer = findViewById<com.google.android.material.card.MaterialCardView>(R.id.cardSearchContainer)
         val cardSearchMode = findViewById<com.google.android.material.card.MaterialCardView>(R.id.cardSearchMode)
         val borderAnimView = findViewById<View>(R.id.search_border_animator)
+        val density = resources.displayMetrics.density
+        val iconSize = (28 * density).toInt()
 
         if (originalContainerElevation == -1f) {
             originalContainerElevation = cardSearchContainer.cardElevation
         }
 
+        val iconType = if (currentDisplayedSearchMode == DriverSearchMode.HOME) {
+            BottomBarIconDrawable.Type.HOME_MODE
+        } else {
+            BottomBarIconDrawable.Type.CHAIN_LINK
+        }
+
         if (isActive) {
+            val activeDarkColor = Color.parseColor("#1A1C1E")
             cardSearchContainer.setCardBackgroundColor(Color.TRANSPARENT)
             cardSearchContainer.cardElevation = 0f
             cardSearchContainer.clipToOutline = true
             cardSearchMode.setCardBackgroundColor(ContextCompat.getColor(this, R.color.driver_neon_teal))
-            tvSearchModeTitle.setTextColor(Color.parseColor("#1A1C1E"))
-            tvSearchModeSubtitle.setTextColor(Color.parseColor("#232426"))
-            tvSearchModeSubtitle.text = "Пошук замовлень..."
+            tvSearchModeTitle.setTextColor(activeDarkColor)
+            tvSearchModeSubtitle.setTextColor(activeDarkColor)
+            ivSearchModeIcon.imageTintList = null
+            ivSearchModeIcon.setImageDrawable(BottomBarIconDrawable(iconType, activeDarkColor, iconSize))
+
             borderAnimView.visibility = View.VISIBLE
             if (searchBorderAnimator == null) {
                 searchBorderAnimator = android.animation.ObjectAnimator.ofFloat(borderAnimView, "rotation", 360f, 0f).apply {
@@ -806,12 +960,16 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 searchBorderAnimator?.start()
             }
         } else {
+            val tealColor = ContextCompat.getColor(this, R.color.driver_neon_teal)
+            val secondaryTextColor = ContextCompat.getColor(this, R.color.driver_text_secondary)
             cardSearchContainer.setCardBackgroundColor(ContextCompat.getColor(this, R.color.driver_black_bg))
             cardSearchContainer.cardElevation = originalContainerElevation
             cardSearchMode.setCardBackgroundColor(ContextCompat.getColor(this, R.color.driver_black_bg))
-            tvSearchModeTitle.setTextColor(ContextCompat.getColor(this, R.color.driver_neon_teal))
-            tvSearchModeSubtitle.setTextColor(ContextCompat.getColor(this, R.color.driver_text_secondary))
-            tvSearchModeSubtitle.text = "Натисніть для активації"
+            tvSearchModeTitle.setTextColor(tealColor)
+            tvSearchModeSubtitle.setTextColor(secondaryTextColor)
+            ivSearchModeIcon.imageTintList = null
+            ivSearchModeIcon.setImageDrawable(BottomBarIconDrawable(iconType, tealColor, iconSize))
+
             searchBorderAnimator?.cancel()
             borderAnimView.visibility = View.GONE
         }
@@ -821,9 +979,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         lifecycleScope.launch {
             if (!isDriverOnline) {
                 isSearchActive = false
-                updateSearchBlockVisuals(false)
 
                 val cachedMode = sessionManager.getSearchMode()
+                currentDisplayedSearchMode = if (cachedMode == DriverSearchMode.HOME) DriverSearchMode.HOME else DriverSearchMode.CHAIN
                 currentHomeSectorIds = sessionManager.getHomeSectorIds()
 
                 try {
@@ -836,31 +994,31 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                         if (cachedMode == DriverSearchMode.HOME) {
                             val sectorsText = if (state.homeSectorNames.isNullOrEmpty()) "не обрано" else state.homeSectorNames
                             tvSearchModeTitle.text = "Додому ($sectorsText)"
-                            tvSearchModeSubtitle.text = "Натисніть для активації"
+                            tvSearchModeSubtitle.text = formatRadiusKm(state.radius)
                         } else {
                             tvSearchModeTitle.text = getString(R.string.main_search_chain_title)
-                            tvSearchModeSubtitle.text = "Радіус: ${state.radius} км • Натисніть для старту"
+                            tvSearchModeSubtitle.text = formatRadiusKm(state.radius)
                         }
                     } else {
                         if (cachedMode == DriverSearchMode.HOME) {
                             tvSearchModeTitle.text = "Додому"
-                            tvSearchModeSubtitle.text = "Натисніть для активації"
+                            tvSearchModeSubtitle.text = formatRadiusKm(currentSearchRadiusKm)
                         } else {
                             tvSearchModeTitle.text = getString(R.string.main_search_chain_title)
-                            tvSearchModeSubtitle.text = "Радіус: ${currentSearchRadiusKm} км • Натисніть для старту"
+                            tvSearchModeSubtitle.text = formatRadiusKm(currentSearchRadiusKm)
                         }
                     }
                 } catch (e: Exception) {
                     if (cachedMode == DriverSearchMode.HOME) {
                         tvSearchModeTitle.text = "Додому"
-                        tvSearchModeSubtitle.text = "Натисніть для активації"
+                        tvSearchModeSubtitle.text = formatRadiusKm(currentSearchRadiusKm)
                     } else {
                         tvSearchModeTitle.text = getString(R.string.main_search_chain_title)
-                        tvSearchModeSubtitle.text = "Радіус: ${currentSearchRadiusKm} км • Натисніть для старту"
+                        tvSearchModeSubtitle.text = formatRadiusKm(currentSearchRadiusKm)
                     }
                 }
 
-                tvSearchModeTitle.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.driver_neon_teal))
+                updateSearchBlockVisuals(false)
                 return@launch
             }
 
@@ -958,6 +1116,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                             sessionManager.saveDriverOnlineStatus(srvOnline)
                             setOnlineVisualState(srvOnline, animate = false)
                             updateSearchStatusUI()
+                            syncBottomNavCounters()
                         }
                     }
                     val serverName = profile.fullName ?: "Водій"
@@ -1058,7 +1217,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         if (defaultMapPaddingBottom == 0) {
             val density = resources.displayMetrics.density
-            defaultMapPaddingBottom = (180 * density).toInt()
+            defaultMapPaddingBottom = (172 * density).toInt()
         }
         map.setPadding(0, 0, 0, defaultMapPaddingBottom)
 
@@ -1393,6 +1552,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 } else {
                     sessionManager.saveDriverOnlineStatus(isOnline)
                     updateSearchStatusUI()
+                    syncBottomNavCounters()
                 }
             } catch (e: Exception) {
                 setOnlineVisualState(!isOnline, animate = true)
@@ -1736,6 +1896,177 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             updateSectorSaveButtonState(selectedIds.size)
             overlayBackPressedCallback?.isEnabled = true
         }
+    }
+
+    /**
+     * Отрисовывает точные векторные иконки нижней панели и карточки "Ланцюг замовлень"
+     * один-в-один по референсному скриншоту без необходимости вручную добавлять внешние SVG.
+     */
+    private class BottomBarIconDrawable(
+        private val type: Type,
+        private val color: Int,
+        private val sizePx: Int
+    ) : Drawable() {
+
+        enum class Type {
+            CHAIN_LINK,
+            HOME_MODE,
+            ETHER_FILTER,
+            ETHER_LIST,
+            HISTORY_CLOCK,
+            FILTER_AUTO,
+            FILTER_CYCLE
+        }
+
+        private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            this.color = this@BottomBarIconDrawable.color
+            style = Paint.Style.STROKE
+            strokeCap = Paint.Cap.ROUND
+            strokeJoin = Paint.Join.ROUND
+        }
+
+        private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            this.color = this@BottomBarIconDrawable.color
+            style = Paint.Style.FILL
+        }
+
+        override fun getIntrinsicWidth(): Int = sizePx
+        override fun getIntrinsicHeight(): Int = sizePx
+
+        override fun draw(canvas: Canvas) {
+            val b = bounds
+            if (b.isEmpty) return
+            val w = b.width().toFloat()
+            val h = b.height().toFloat()
+            val s = minOf(w, h) / 24f
+
+            canvas.save()
+            canvas.translate(b.left + (w - 24f * s) / 2f, b.top + (h - 24f * s) / 2f)
+            canvas.scale(s, s)
+            strokePaint.strokeWidth = 2.1f
+
+            when (type) {
+                Type.CHAIN_LINK -> {
+                    // Два горизонтальных звена цепи с центральной перемычкой (как на скриншоте "Ланцюг замовлень")
+                    val leftLink = Path().apply {
+                        moveTo(10.2f, 8.2f)
+                        lineTo(6.8f, 8.2f)
+                        arcTo(RectF(2.5f, 8.2f, 10.1f, 15.8f), 270f, -180f, false)
+                        lineTo(10.2f, 15.8f)
+                    }
+                    val rightLink = Path().apply {
+                        moveTo(13.8f, 8.2f)
+                        lineTo(17.2f, 8.2f)
+                        arcTo(RectF(13.9f, 8.2f, 21.5f, 15.8f), 270f, 180f, false)
+                        lineTo(13.8f, 15.8f)
+                    }
+                    canvas.drawPath(leftLink, strokePaint)
+                    canvas.drawPath(rightLink, strokePaint)
+                    canvas.drawLine(8.2f, 12.0f, 15.8f, 12.0f, strokePaint)
+                }
+
+                Type.HOME_MODE -> {
+                    val roof = Path().apply {
+                        moveTo(3.5f, 11.5f)
+                        lineTo(12f, 4.2f)
+                        lineTo(20.5f, 11.5f)
+                    }
+                    val walls = Path().apply {
+                        moveTo(6.2f, 10.2f)
+                        lineTo(6.2f, 19.5f)
+                        lineTo(17.8f, 19.5f)
+                        lineTo(17.8f, 10.2f)
+                    }
+                    canvas.drawPath(roof, strokePaint)
+                    canvas.drawPath(walls, strokePaint)
+                }
+
+                Type.ETHER_FILTER -> {
+                    // Пирамидка фильтра (3 горизонтальные линии разной ширины)
+                    canvas.drawLine(3.2f, 6.5f, 20.8f, 6.5f, strokePaint)
+                    canvas.drawLine(6.5f, 12.0f, 17.5f, 12.0f, strokePaint)
+                    canvas.drawLine(9.8f, 17.5f, 14.2f, 17.5f, strokePaint)
+                }
+
+                Type.ETHER_LIST -> {
+                    // 3 горизонтальные полосы слева и 3 точки справа (как на скриншоте рядом с "Ефір")
+                    canvas.drawLine(3.0f, 6.5f, 15.2f, 6.5f, strokePaint)
+                    canvas.drawLine(3.0f, 12.0f, 15.2f, 12.0f, strokePaint)
+                    canvas.drawLine(3.0f, 17.5f, 15.2f, 17.5f, strokePaint)
+
+                    canvas.drawCircle(19.8f, 6.5f, 1.35f, fillPaint)
+                    canvas.drawCircle(19.8f, 12.0f, 1.35f, fillPaint)
+                    canvas.drawCircle(19.8f, 17.5f, 1.35f, fillPaint)
+                }
+
+                Type.HISTORY_CLOCK -> {
+                    // Круглая стрелка истории против часовой стрелки + стрелки часов внутри
+                    val arcRect = RectF(3.5f, 3.5f, 20.5f, 20.5f)
+                    canvas.drawArc(arcRect, -135f, 305f, false, strokePaint)
+
+                    // Наконечник стрелки в верхней левой части
+                    val arrowHead = Path().apply {
+                        moveTo(3.5f, 4.2f)
+                        lineTo(3.5f, 8.8f)
+                        lineTo(8.1f, 8.8f)
+                    }
+                    canvas.drawPath(arrowHead, strokePaint)
+
+                    // Стрелки часов в центре
+                    val clockHands = Path().apply {
+                        moveTo(12.0f, 7.8f)
+                        lineTo(12.0f, 12.2f)
+                        lineTo(15.2f, 14.2f)
+                    }
+                    canvas.drawPath(clockHands, strokePaint)
+                }
+
+                Type.FILTER_AUTO -> {
+                    // Прицел (кольцо с 4 засечками по сторонам)
+                    canvas.drawCircle(12f, 12f, 5.8f, strokePaint)
+                    canvas.drawLine(12f, 2.6f, 12f, 6.0f, strokePaint)
+                    canvas.drawLine(12f, 18.0f, 12f, 21.4f, strokePaint)
+                    canvas.drawLine(2.6f, 12f, 6.0f, 12f, strokePaint)
+                    canvas.drawLine(18.0f, 12f, 21.4f, 12f, strokePaint)
+                }
+
+                Type.FILTER_CYCLE -> {
+                    // Две противоположные стрелки цикла
+                    val topPath = Path().apply {
+                        moveTo(4.8f, 10.5f)
+                        quadTo(4.8f, 6.8f, 8.5f, 6.8f)
+                        lineTo(18.8f, 6.8f)
+                    }
+                    canvas.drawPath(topPath, strokePaint)
+                    canvas.drawLine(15.6f, 4.0f, 19.0f, 6.8f, strokePaint)
+                    canvas.drawLine(19.0f, 6.8f, 15.6f, 9.6f, strokePaint)
+
+                    val bottomPath = Path().apply {
+                        moveTo(19.2f, 13.5f)
+                        quadTo(19.2f, 17.2f, 15.5f, 17.2f)
+                        lineTo(5.2f, 17.2f)
+                    }
+                    canvas.drawPath(bottomPath, strokePaint)
+                    canvas.drawLine(8.4f, 14.4f, 5.0f, 17.2f, strokePaint)
+                    canvas.drawLine(5.0f, 17.2f, 8.4f, 20.0f, strokePaint)
+                }
+            }
+
+            canvas.restore()
+        }
+
+        override fun setAlpha(alpha: Int) {
+            strokePaint.alpha = alpha
+            fillPaint.alpha = alpha
+        }
+
+        override fun setColorFilter(colorFilter: ColorFilter?) {
+            strokePaint.colorFilter = colorFilter
+            fillPaint.colorFilter = colorFilter
+        }
+
+        @Deprecated("Deprecated in Java")
+        override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
     }
 
     private inner class SectorsListAdapter(

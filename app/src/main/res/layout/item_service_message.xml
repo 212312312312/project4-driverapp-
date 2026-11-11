@@ -1,74 +1,119 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/cardMessage"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginVertical="6dp"
-    app:cardCornerRadius="14dp"
+    android:layout_marginBottom="10dp"
+    app:cardCornerRadius="16dp"
     app:cardElevation="0dp"
-    app:cardMaxElevation="0dp"
-    app:cardBackgroundColor="@color/driver_card_bg">
+    app:strokeWidth="0dp"
+    app:cardBackgroundColor="@color/driver_black_bg">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:orientation="horizontal"
         android:padding="16dp">
 
-        <ImageView
-            android:id="@+id/ivIcon"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:src="@drawable/ic_stat_star"
-            app:tint="@color/driver_neon_teal"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="@+id/tvTitle"
-            app:layout_constraintBottom_toBottomOf="@+id/tvTitle"/>
+        <!-- Контейнер іконки у стилі @color/driver_surface_elevated -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardIconBadge"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            app:cardBackgroundColor="@color/driver_surface_elevated"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="0dp"
+            app:strokeWidth="0dp">
 
-        <TextView
-            android:id="@+id/tvTitle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:layout_marginEnd="6dp"
-            android:paddingEnd="6dp"
-            android:text="Заголовок"
-            android:textSize="16sp"
-            android:fontFamily="@font/app_font_family"
-            android:textStyle="bold"
-            android:textColor="@color/driver_text_primary"
-            android:maxLines="1"
-            android:ellipsize="end"
-            app:layout_constrainedWidth="true"
-            app:layout_constraintStart_toEndOf="@+id/ivIcon"
-            app:layout_constraintEnd_toStartOf="@+id/tvDate"
-            app:layout_constraintHorizontal_bias="0.0"
-            app:layout_constraintTop_toTopOf="parent"/>
+            <ImageView
+                android:id="@+id/ivIcon"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_messages"
+                app:tint="@color/driver_neon_teal"
+                android:contentDescription="@null" />
+        </com.google.android.material.card.MaterialCardView>
 
-        <TextView
-            android:id="@+id/tvDate"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="12:00"
-            android:textSize="12sp"
-            android:fontFamily="@font/app_font_family"
-            android:textColor="@color/driver_text_secondary"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="@+id/tvTitle"
-            app:layout_constraintBottom_toBottomOf="@+id/tvTitle"/>
-
-        <TextView
-            android:id="@+id/tvBody"
+        <!-- Текстовий блок повідомлення -->
+        <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Текст сообщения..."
-            android:textSize="14sp"
-            android:fontFamily="@font/app_font_family"
-            android:textColor="@color/driver_text_secondary"
-            android:lineSpacingExtra="3dp"
-            app:layout_constraintStart_toStartOf="@+id/tvTitle"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/tvTitle"/>
+            android:layout_weight="1"
+            android:layout_marginStart="14dp"
+            android:orientation="vertical">
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
-</androidx.cardview.widget.CardView>
+            <!-- Верхній рядок: Заголовок + точка непрочитаного + капсула дати -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/tvTitle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="8dp"
+                    android:text="Заголовок"
+                    android:textSize="16sp"
+                    android:fontFamily="@font/app_font_family"
+                    android:textStyle="bold"
+                    android:textColor="@color/driver_text_primary"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+
+                <View
+                    android:id="@+id/viewUnreadDot"
+                    android:layout_width="8dp"
+                    android:layout_height="8dp"
+                    android:layout_marginEnd="8dp"
+                    android:background="@drawable/bg_circle_red"
+                    android:backgroundTint="@color/driver_neon_teal"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
+
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:cardBackgroundColor="@color/driver_surface_elevated"
+                    app:cardCornerRadius="8dp"
+                    app:cardElevation="0dp"
+                    app:strokeWidth="0dp">
+
+                    <TextView
+                        android:id="@+id/tvDate"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:paddingHorizontal="8dp"
+                        android:paddingVertical="3dp"
+                        android:text="12:00"
+                        android:textSize="12sp"
+                        android:fontFamily="@font/app_font_family"
+                        android:textColor="@color/driver_text_secondary" />
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginVertical="10dp"
+                android:background="@color/driver_divider" />
+
+            <TextView
+                android:id="@+id/tvBody"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Текст повідомлення..."
+                android:textSize="14sp"
+                android:fontFamily="@font/app_font_family"
+                android:textColor="@color/driver_text_secondary"
+                android:lineSpacingExtra="3dp" />
+
+        </LinearLayout>
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

@@ -10,15 +10,19 @@ import android.graphics.Path
 import android.graphics.PixelFormat
 import android.graphics.PorterDuff
 import android.graphics.RectF
+import android.graphics.Typeface
 import android.graphics.drawable.Drawable
 import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -95,20 +99,22 @@ class HistoryDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private fun setupUI() {
         val currentOrder = order
+        val density = resources.displayMetrics.density
         val secondaryColor = ContextCompat.getColor(this, R.color.driver_text_secondary)
         val primaryColor = ContextCompat.getColor(this, R.color.driver_text_primary)
+        val cardBgColor = ContextCompat.getColor(this, R.color.driver_black_bg)
         val neonTeal = ContextCompat.getColor(this, R.color.driver_neon_teal)
         val errorRed = ContextCompat.getColor(this, R.color.driver_error_red)
         val blackText = ContextCompat.getColor(this, R.color.driver_text_black)
 
-        // 1. Векторні іконки точок маршруту та іконки секцій ("Транзакції в замовленні" і "Бали за замовлення")
+        // 1. Векторні іконки точок маршруту та іконки секцій
         findViewById<ImageView>(R.id.iv_detail_from_pin)?.apply {
             imageTintList = null
-            setImageDrawable(DetailRoutePinDrawable(hasInnerDot = true, strokeColor = secondaryColor))
+            setImageDrawable(DetailRoutePinDrawable(hasInnerDot = true, strokeColor = secondaryColor, bgColor = cardBgColor))
         }
         findViewById<ImageView>(R.id.iv_detail_to_pin)?.apply {
             imageTintList = null
-            setImageDrawable(DetailRoutePinDrawable(hasInnerDot = false, strokeColor = secondaryColor))
+            setImageDrawable(DetailRoutePinDrawable(hasInnerDot = false, strokeColor = secondaryColor, bgColor = cardBgColor))
         }
         findViewById<ImageView>(R.id.iv_finance_wallet_icon)?.apply {
             imageTintList = null
@@ -134,29 +140,63 @@ class HistoryDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
         val rawDate = currentOrder.arrivedAt ?: currentOrder.startedAt ?: currentOrder.scheduledAt
         findViewById<TextView>(R.id.tv_date_detail)?.text = formatOrderDetailDate(rawDate)
 
-        // Проміжні зупинки маршруту (виносимо в локальну val stopsList для Smart Cast)
+        // Проміжні зупинки маршруту — строго по осі X = 11dp (marginStart = 4dp, size = 14dp) та текст з 30dp
         val stopsList = currentOrder.stops
-        val stopsContainer = findViewById<android.widget.LinearLayout>(R.id.ll_detail_stops_container)
+        val stopsContainer = findViewById<LinearLayout>(R.id.ll_detail_stops_container)
         stopsContainer?.removeAllViews()
         if (!stopsList.isNullOrEmpty() && stopsContainer != null) {
+            stopsContainer.visibility = View.VISIBLE
             val inflater = LayoutInflater.from(this)
             val sortedStops = stopsList.sortedBy { it.stopOrder }
-            for (stop in sortedStops) {
+            sortedStops.forEachIndexed { index, stop ->
                 val stopView = inflater.inflate(R.layout.item_route_point, stopsContainer, false)
                 val tvAddress = stopView.findViewById<TextView>(R.id.tv_point_address)
                 val ivIcon = stopView.findViewById<ImageView>(R.id.iv_point_icon)
                 val lineTop = stopView.findViewById<View>(R.id.view_line_top)
                 val lineBottom = stopView.findViewById<View>(R.id.view_line_bottom)
 
-                tvAddress.text = stop.address
-                tvAddress.textSize = 15f
-                ivIcon.imageTintList = null
-                ivIcon.setImageDrawable(DetailRoutePinDrawable(hasInnerDot = false, strokeColor = secondaryColor))
                 lineTop.visibility = View.GONE
                 lineBottom.visibility = View.GONE
 
+                // Вирівнюємо кружок проміжної точки точно на лінію маршруту (4dp + 14dp/2 = 11dp)
+                (ivIcon.layoutParams as? ConstraintLayout.LayoutParams)?.apply {
+                    width = (14 * density).toInt()
+                    height = (14 * density).toInt()
+                    marginStart = (4 * density).toInt()
+                    topMargin = (4 * density).toInt()
+                    bottomToBottom = ConstraintLayout.LayoutParams.UNSET
+                    topToTop = R.id.tv_point_address
+                    ivIcon.layoutParams = this
+                }
+                ivIcon.imageTintList = null
+                ivIcon.setImageDrawable(DetailRoutePinDrawable(hasInnerDot = false, strokeColor = secondaryColor, bgColor = cardBgColor))
+
+                // Вирівнюємо текст проміжної точки з tv_from_detail та tv_to_detail (30dp зліва, 16sp, без жирного виділення)
+                (tvAddress.layoutParams as? ConstraintLayout.LayoutParams)?.apply {
+                    marginStart = (30 * density).toInt()
+                    tvAddress.layoutParams = this
+                }
+                tvAddress.setPadding(0, 0, 0, 0)
+                tvAddress.text = stop.address
+                tvAddress.textSize = 16f
+                tvAddress.setTextColor(primaryColor)
+                tvAddress.alpha = 0.9f
+                tvAddress.setTypeface(binding.tvFromDetail.typeface, Typeface.NORMAL)
+
+                if (index > 0) {
+                    val rowParams = LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        topMargin = (12 * density).toInt()
+                    }
+                    stopView.layoutParams = rowParams
+                }
+
                 stopsContainer.addView(stopView)
             }
+        } else {
+            stopsContainer?.visibility = View.GONE
         }
 
         // 3. Колір плашки ціни та іконка оплати
@@ -174,7 +214,7 @@ class HistoryDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
             binding.tvPriceDetail.setTextColor(primaryColor)
         }
 
-        // 4. Короткий ID замовлення ("****0933e4", виносимо idLong в локальну val для Smart Cast)
+        // 4. Короткий ID замовлення ("****0933e4")
         val fullUuid = currentOrder.id
         val idLongVal = currentOrder.idLong
         val shortUuid = when {
@@ -432,8 +472,13 @@ class HistoryDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private class DetailRoutePinDrawable(
         private val hasInnerDot: Boolean,
-        private val strokeColor: Int
+        private val strokeColor: Int,
+        private val bgColor: Int
     ) : Drawable() {
+        private val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = bgColor
+            style = Paint.Style.FILL
+        }
         private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = strokeColor
             style = Paint.Style.STROKE
@@ -451,6 +496,8 @@ class HistoryDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
             val r = minOf(b.width(), b.height()) / 2f
 
             strokePaint.strokeWidth = (r * 0.26f).coerceAtLeast(1.8f)
+            // Зафарбовуємо внутрішню область кружка кольором фону картки, щоб лінія маршруту не просвічувала всередині кільця
+            canvas.drawCircle(cx, cy, r * 0.80f, bgPaint)
             canvas.drawCircle(cx, cy, r * 0.80f, strokePaint)
 
             if (hasInnerDot) {

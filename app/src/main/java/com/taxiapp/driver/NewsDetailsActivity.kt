@@ -1,23 +1,44 @@
 package com.taxiapp.driver
 
+import android.content.Context
 import android.os.Bundle
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.bumptech.glide.Glide
+import com.taxiapp.driver.utils.LocaleHelper
 import com.taxiapp.driver.utils.toFullImageUrl
 
 class NewsDetailsActivity : AppCompatActivity() {
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(LocaleHelper.onAttach(newBase))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_news_details)
 
-        val rootView = findViewById<android.view.ViewGroup>(android.R.id.content).getChildAt(0)
-        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(rootView) { v, insets ->
-            val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+        val rootView = findViewById<View>(R.id.news_details_root) ?: findViewById(android.R.id.content)
+        val headerContent = findViewById<View>(R.id.header_content)
+        val density = resources.displayMetrics.density
+
+        ViewCompat.setOnApplyWindowInsetsListener(rootView) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            if (headerContent != null) {
+                headerContent.setPadding(
+                    (16 * density).toInt(),
+                    systemBars.top + (28 * density).toInt(),
+                    (16 * density).toInt(),
+                    (16 * density).toInt()
+                )
+                v.setPadding(systemBars.left, 0, systemBars.right, systemBars.bottom)
+            } else {
+                v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            }
             insets
         }
 

@@ -76,7 +76,7 @@
             android:orientation="vertical"
             android:paddingBottom="32dp">
 
-            <!-- ВЕРХНІЙ БЛОК ІНФОРМАЦІЇ ПРО ЗАМОВЛЕННЯ (ЯК НА СКРІНШОТІ) -->
+            <!-- ВЕРХНІЙ БЛОК ІНФОРМАЦІЇ ПРО ЗАМОВЛЕННЯ -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -153,7 +153,7 @@
                         tools:text="31 серп. 19:47" />
                 </RelativeLayout>
 
-                <!-- Рядок 3: Маршрут поїздки з вертикальною лінією та точками -->
+                <!-- Рядок 3: Маршрут поїздки з вертикальною лінією та точками (ІДЕАЛЬНА ВІСЬ X = 11dp) -->
                 <androidx.constraintlayout.widget.ConstraintLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -165,8 +165,8 @@
                         android:layout_height="0dp"
                         android:background="@color/driver_text_secondary"
                         android:alpha="0.65"
-                        app:layout_constraintTop_toBottomOf="@id/iv_detail_from_pin"
-                        app:layout_constraintBottom_toTopOf="@id/iv_detail_to_pin"
+                        app:layout_constraintTop_toTopOf="@id/iv_detail_from_pin"
+                        app:layout_constraintBottom_toBottomOf="@id/iv_detail_to_pin"
                         app:layout_constraintStart_toStartOf="@id/iv_detail_from_pin"
                         app:layout_constraintEnd_toEndOf="@id/iv_detail_from_pin" />
 
@@ -200,8 +200,8 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
-                        android:layout_marginTop="8dp"
-                        android:layout_marginBottom="8dp"
+                        android:layout_marginTop="12dp"
+                        android:visibility="gone"
                         app:layout_constraintTop_toBottomOf="@id/tv_from_detail"
                         app:layout_constraintBottom_toTopOf="@id/tv_to_detail"
                         app:layout_constraintStart_toStartOf="parent"
@@ -209,10 +209,10 @@
 
                     <ImageView
                         android:id="@+id/iv_detail_to_pin"
-                        android:layout_width="12dp"
-                        android:layout_height="12dp"
-                        android:layout_marginStart="5dp"
-                        android:layout_marginTop="5dp"
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:layout_marginStart="4dp"
+                        android:layout_marginTop="4dp"
                         android:src="@drawable/ic_marker_to"
                         android:contentDescription="@null"
                         app:layout_constraintStart_toStartOf="parent"
@@ -223,7 +223,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="30dp"
-                        android:layout_marginTop="14dp"
+                        android:layout_marginTop="12dp"
                         android:text="@string/hist_det_placeholder_dots"
                         android:textColor="@color/driver_text_primary"
                         android:alpha="0.9"
@@ -313,7 +313,7 @@
 
             </LinearLayout>
 
-            <!-- КАРТА МАРШРУТУ ПОЇЗДКИ (EDGE-TO-EDGE ЯК НА СКРІНШОТІ) -->
+            <!-- КАРТА МАРШРУТУ ПОЇЗДКИ -->
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="215dp"
@@ -651,7 +651,7 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- СЕКЦІЯ 3: АВТОМОБІЛЬ ТА ПАРК (ЗБЕРІГАЄМО ВСІ НАШІ ДАНІ АВТО) -->
+            <!-- СЕКЦІЯ 3: АВТОМОБІЛЬ ТА ПАРК -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

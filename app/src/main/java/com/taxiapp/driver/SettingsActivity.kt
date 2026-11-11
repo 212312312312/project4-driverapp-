@@ -12,12 +12,13 @@ import android.os.Bundle
 import android.provider.Settings
 import android.view.View
 import android.widget.ImageView
-import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.switchmaterial.SwitchMaterial
 import com.taxiapp.driver.service.FloatingWidgetService
@@ -40,10 +41,23 @@ class SettingsActivity : AppCompatActivity() {
 
         setContentView(R.layout.activity_settings)
 
-        // 🛠️ ДОБАВЛЕНО: Безопасный отступ контента от системных панелей для Android 15 во избежание Type mismatch
-        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { v, insets ->
-            val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+        val rootView = findViewById<View>(R.id.settings_root) ?: findViewById(android.R.id.content)
+        val headerContent = findViewById<View>(R.id.header_content)
+        val density = resources.displayMetrics.density
+
+        ViewCompat.setOnApplyWindowInsetsListener(rootView) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            if (headerContent != null) {
+                headerContent.setPadding(
+                    (16 * density).toInt(),
+                    systemBars.top + (28 * density).toInt(),
+                    (16 * density).toInt(),
+                    (16 * density).toInt()
+                )
+                v.setPadding(systemBars.left, 0, systemBars.right, systemBars.bottom)
+            } else {
+                v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            }
             insets
         }
 
@@ -54,6 +68,8 @@ class SettingsActivity : AppCompatActivity() {
         setupSimpleButton(R.id.btn_ether_settings, R.string.settings_ether_orders)
         setupSimpleButton(R.id.btn_sounds, R.string.settings_sounds)
         setupSimpleButton(R.id.btn_navigator, R.string.navigator_title)
+
+        updateSettingSubtitles()
 
         findViewById<View>(R.id.btn_language).setOnClickListener {
             showLanguageBottomSheet()
@@ -71,7 +87,7 @@ class SettingsActivity : AppCompatActivity() {
             showNavigatorBottomSheet()
         }
 
-        // --- ДИНАМИЧЕСКАЯ НАСТРОЙКА ЦВЕТОВ СВИТЧЕЙ ИЗ КОДА ---
+        // --- ЕДИНЫЙ СТИЛЬ СВИТЧЕЙ (как на экране Авто) ---
         val thumbStates = ColorStateList(
             arrayOf(
                 intArrayOf(android.R.attr.state_checked),
@@ -79,7 +95,7 @@ class SettingsActivity : AppCompatActivity() {
             ),
             intArrayOf(
                 ContextCompat.getColor(this, R.color.driver_neon_teal),
-                ContextCompat.getColor(this, R.color.driver_black_bg)
+                ContextCompat.getColor(this, R.color.driver_text_secondary)
             )
         )
 
@@ -89,8 +105,8 @@ class SettingsActivity : AppCompatActivity() {
                 intArrayOf(-android.R.attr.state_checked)
             ),
             intArrayOf(
-                Color.parseColor("#5500BFA5"),
-                Color.parseColor("#22FFFFFF")
+                Color.parseColor("#4D33CCA1"),
+                Color.parseColor("#33FFFFFF")
             )
         )
 
@@ -131,6 +147,29 @@ class SettingsActivity : AppCompatActivity() {
         findViewById<View>(R.id.btn_sounds).setOnClickListener(clickListener)
     }
 
+    override fun onResume() {
+        super.onResume()
+        updateSettingSubtitles()
+    }
+
+    private fun updateSettingSubtitles() {
+        findViewById<TextView>(R.id.tv_value_language)?.text = when (sessionManager.getLanguage()) {
+            "en" -> "English"
+            else -> "Українська"
+        }
+
+        findViewById<TextView>(R.id.tv_value_theme)?.text = when (sessionManager.getTheme()) {
+            "DARK" -> getString(R.string.theme_dark)
+            "LIGHT" -> getString(R.string.theme_light)
+            else -> getString(R.string.theme_system)
+        }
+
+        findViewById<TextView>(R.id.tv_value_navigator)?.text = when (sessionManager.getNavigator()) {
+            "waze" -> getString(R.string.navigator_waze)
+            else -> getString(R.string.navigator_google_maps)
+        }
+    }
+
     private fun checkOverlayPermission(): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             Settings.canDrawOverlays(this)
@@ -139,7 +178,6 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
-    // --- ОБНОВЛЕННЫЙ КАСТОМНЫЙ ДИАЛОГ С УМНЫМ ПЕРЕХОДОМ ---
     private fun showPermissionDialog() {
         val builder = AlertDialog.Builder(this)
         val dialogView = layoutInflater.inflate(R.layout.dialog_permission_overlay, null)
@@ -153,33 +191,27 @@ class SettingsActivity : AppCompatActivity() {
 
         dialogView.findViewById<View>(R.id.btnAllowPermission).setOnClickListener {
             alertDialog.dismiss()
-            openOverlayPermissionSettings() // Вызов умного метода перехода
+            openOverlayPermissionSettings()
         }
 
         alertDialog.show()
         alertDialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
     }
 
-    // --- МЕТОД ДЛЯ МГНОВЕННОГО ПЕРЕХОДА К НАСТРОЙКЕ НА РАЗНЫХ УСТРОЙСТВАХ ---
     private fun openOverlayPermissionSettings() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-
-            // 1. Проверяем, не Xiaomi ли это (они чаще всего ломают переход)
             if (isXiaomiDevice()) {
                 try {
-                    // Специальный прямой интент для открытия окна разрешений конкретного приложения в MIUI/HyperOS
                     val miuiIntent = Intent("miui.intent.action.APP_PERM_EDITOR").apply {
                         setClassName("com.miui.securitycenter", "com.miui.permcenter.permissions.PermissionsEditorActivity")
                         putExtra("extra_pkgname", packageName)
                     }
                     startActivityForResult(miuiIntent, OVERLAY_PERMISSION_REQ_CODE)
-                    return // Если успешно запустилось — выходим
-                } catch (e: Exception) {
-                    // Если прошивка старая/новая и интент упал — идем дальше к стандартным методам
+                    return
+                } catch (_: Exception) {
                 }
             }
 
-            // 2. Стандартный и самый точный способ для чистого Android, Samsung, Pixel
             try {
                 val intent = Intent(
                     Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
@@ -187,18 +219,16 @@ class SettingsActivity : AppCompatActivity() {
                 )
                 startActivityForResult(intent, OVERLAY_PERMISSION_REQ_CODE)
             } catch (e: Exception) {
-                // 3. Тотальный фолбек (если устройство заблокировало прямой переход по пакету, открываем общий список)
                 try {
                     val fallbackIntent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
                     startActivityForResult(fallbackIntent, OVERLAY_PERMISSION_REQ_CODE)
                 } catch (anfe: Exception) {
-                    Toast.makeText(this, "Не удалось открыть настройки системы", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Не вдалося відкрити налаштування системи", Toast.LENGTH_SHORT).show()
                 }
             }
         }
     }
 
-    // Вспомогательная функция определения китайских прошивок Xiaomi / Poco / RedMi
     private fun isXiaomiDevice(): Boolean {
         val manufacturer = Build.MANUFACTURER.lowercase()
         if (manufacturer.contains("xiaomi") || manufacturer.contains("poco") || manufacturer.contains("redmi")) {
@@ -229,13 +259,12 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun setupSimpleButton(includeId: Int, stringId: Int) {
-        val view = findViewById<View>(includeId)
+        val view = findViewById<View>(includeId) ?: return
         val tvTitle = view.findViewById<TextView>(R.id.item_title)
-        tvTitle.text = getString(stringId)
+        tvTitle?.text = getString(stringId)
     }
 
     private fun showNavigatorBottomSheet() {
-        // Передаем кастомный стиль в конструктор
         val bottomSheetDialog = BottomSheetDialog(this, R.style.BottomSheetDialogTheme)
         val view = layoutInflater.inflate(R.layout.bottom_sheet_navigator, null)
         bottomSheetDialog.setContentView(view)
@@ -259,6 +288,7 @@ class SettingsActivity : AppCompatActivity() {
 
             btnGoogle.setOnClickListener {
                 sessionManager.saveNavigator("google")
+                updateSettingSubtitles()
                 bottomSheetDialog.dismiss()
                 Toast.makeText(this, "Google Maps обрано", Toast.LENGTH_SHORT).show()
             }
@@ -278,6 +308,7 @@ class SettingsActivity : AppCompatActivity() {
 
             btnWaze.setOnClickListener {
                 sessionManager.saveNavigator("waze")
+                updateSettingSubtitles()
                 bottomSheetDialog.dismiss()
                 Toast.makeText(this, "Waze обрано", Toast.LENGTH_SHORT).show()
             }
@@ -312,7 +343,6 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun showLanguageBottomSheet() {
-        // Передаем кастомный стиль в конструктор
         val bottomSheetDialog = BottomSheetDialog(this, R.style.BottomSheetDialogTheme)
         val view = layoutInflater.inflate(R.layout.bottom_sheet_language, null)
         bottomSheetDialog.setContentView(view)
@@ -338,7 +368,6 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun showThemeBottomSheet() {
-        // Передаем кастомный стиль в конструктор
         val bottomSheetDialog = BottomSheetDialog(this, R.style.BottomSheetDialogTheme)
         val view = layoutInflater.inflate(R.layout.bottom_sheet_theme, null)
         bottomSheetDialog.setContentView(view)
