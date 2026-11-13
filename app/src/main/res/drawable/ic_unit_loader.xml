@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt">
+
+    <aapt:attr name="android:drawable">
+        <vector
+            android:width="88dp"
+            android:height="88dp"
+            android:viewportWidth="500"
+            android:viewportHeight="500">
+
+            <!-- Центральная белая точка -->
+            <path
+                android:fillColor="#FFFFFF"
+                android:pathData="M250,171 A79,79 0 1,1 250,329 A79,79 0 1,1 250,171 Z" />
+
+            <!-- Вращающаяся в RenderThread группа -->
+            <group
+                android:name="rotating_group"
+                android:pivotX="250"
+                android:pivotY="250">
+
+                <path
+                    android:fillColor="#FFFFFF"
+                    android:pathData="M307.96,412.47 A172.5,172.5 0 1,1 412.47,307.96 A74,74 0 0,0 376.48,285.98 A131.5,131.5 0 1,0 285.98,376.48 A74,74 0 0,0 307.96,412.47 Z" />
+
+                <path
+                    android:fillColor="#33CCA1"
+                    android:pathData="M357.5,309.5 A48,48 0 1,1 357.5,405.5 A48,48 0 1,1 357.5,309.5 Z" />
+            </group>
+        </vector>
+    </aapt:attr>
+
+    <target android:name="rotating_group">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:duration="1000"
+                android:interpolator="@android:interpolator/linear"
+                android:propertyName="rotation"
+                android:repeatCount="infinite"
+                android:repeatMode="restart"
+                android:valueFrom="0"
+                android:valueTo="360"
+                android:valueType="floatType" />
+        </aapt:attr>
+    </target>
+
+</animated-vector>

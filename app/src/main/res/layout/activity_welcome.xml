@@ -2,66 +2,57 @@
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/driver_black_bg"
-    android:padding="24dp">
+    android:background="#454754"
+    android:paddingHorizontal="16dp"
+    android:paddingVertical="20dp">
 
+    <!-- Логотип сервиса по центру -->
     <LinearLayout
         android:id="@+id/layout_logo_group"
         android:layout_width="wrap_content"
-        android:layout_height="96dp"
+        android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        app:layout_constraintBottom_toTopOf="@+id/btn_login_container"
         app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/btn_login_container"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintVertical_bias="0.3">
+        app:layout_constraintVertical_bias="0.38">
 
-        <com.google.android.material.card.MaterialCardView
+        <ImageView
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:src="@drawable/ic_unit_loader"
+            android:scaleType="fitCenter" />
+
+        <TextView
             android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            app:cardCornerRadius="24dp"
-            app:cardElevation="0dp"
-            app:strokeWidth="0dp"
-            app:cardBackgroundColor="@color/driver_neon_teal">
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:text="unit"
+            android:textColor="#FFFFFF"
+            android:textSize="34sp"
+            android:textStyle="bold"
+            android:fontFamily="@font/app_font_family" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:text="Unit"
-                android:textColor="#000000"
-                android:textSize="70sp"
-                android:textStyle="bold"
-                android:gravity="center"
-                android:paddingHorizontal="20dp"
-                android:fontFamily="@font/app_font_family" />
-        </com.google.android.material.card.MaterialCardView>
-
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="96dp"
-            android:layout_height="96dp"
-            android:layout_marginStart="8dp"
-            app:cardCornerRadius="24dp"
-            app:cardElevation="0dp"
-            app:strokeColor="@color/driver_card_bg"
-            app:cardBackgroundColor="#000000">
-
-            <ImageView
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:src="@drawable/ic_unit_logo"
-                android:scaleType="fitCenter" />
-        </com.google.android.material.card.MaterialCardView>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:text="driver"
+            android:textColor="#FFFFFF"
+            android:textSize="34sp"
+            android:fontFamily="@font/app_font_family" />
     </LinearLayout>
 
+    <!-- Кнопка "Увійти" (фирменная бирюзовая #33CCA1) -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/btn_login_container"
         android:layout_width="match_parent"
-        android:layout_height="60dp"
-        android:layout_marginBottom="16dp"
+        android:layout_height="58dp"
+        android:layout_marginBottom="12dp"
         android:background="@drawable/bg_driver_btn"
         app:layout_constraintBottom_toTopOf="@+id/btn_register_container"
         app:layout_constraintStart_toStartOf="parent"
@@ -71,11 +62,11 @@
             android:id="@+id/btn_login_nav"
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:text="@string/welcome_btn_login"
+            android:text="Увійти"
             android:textAllCaps="false"
             android:textSize="18sp"
             android:textStyle="bold"
-            android:textColor="@color/driver_text_black"
+            android:textColor="#1A1C1E"
             android:background="@android:color/transparent"
             android:elevation="0dp"
             android:stateListAnimator="@null"
@@ -86,13 +77,14 @@
             app:layout_constraintBottom_toBottomOf="parent" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
+    <!-- Кнопка "Реєстрація" (графитовая #32353C под цвет инпутов) -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/btn_register_container"
         android:layout_width="match_parent"
-        android:layout_height="60dp"
-        android:layout_marginBottom="16dp"
+        android:layout_height="58dp"
+        android:layout_marginBottom="12dp"
         android:background="@drawable/bg_round_button_gray"
-        android:backgroundTint="@color/driver_card_bg"
+        android:backgroundTint="#32353C"
         app:layout_constraintBottom_toTopOf="@+id/btn_privacy_policy"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
@@ -101,11 +93,11 @@
             android:id="@+id/btn_register_nav"
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:text="@string/welcome_btn_register"
+            android:text="Реєстрація"
             android:textAllCaps="false"
             android:textSize="18sp"
             android:textStyle="bold"
-            android:textColor="@color/driver_text_primary"
+            android:textColor="#FFFFFF"
             android:background="@android:color/transparent"
             android:elevation="0dp"
             android:stateListAnimator="@null"
@@ -120,10 +112,10 @@
         android:id="@+id/btn_privacy_policy"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:padding="8dp"
+        android:padding="6dp"
         android:text="Політика конфіденційності"
-        android:textColor="@color/driver_text_secondary"
-        android:textSize="14sp"
+        android:textColor="#8A8D97"
+        android:textSize="13sp"
         android:fontFamily="@font/app_font_family"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"

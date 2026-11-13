@@ -10,12 +10,26 @@ import com.taxiapp.driver.network.DriverSearchMode
 
 class SessionManager(context: Context) {
 
-    private val prefs: SharedPreferences = context.getSharedPreferences("DriverPrefs", Context.MODE_PRIVATE)
+    private val appContext = context.applicationContext
 
-    // 🛠️ ЗАЩИТА ОТ КРАША: Инициализация зашифрованного хранилища с перехватом ошибок KeyStore
-    private val securePrefs: SharedPreferences = createSecurePrefs(context)
+    private val prefs: SharedPreferences = cachedPrefs ?: synchronized(LOCK) {
+        cachedPrefs ?: appContext.getSharedPreferences("DriverPrefs", Context.MODE_PRIVATE).also {
+            cachedPrefs = it
+        }
+    }
+
+    // 🛠️ Кэшируем EncryptedSharedPreferences в памяти, чтобы KeyStore не фризил UI при каждом вызове SessionManager(context)
+    private val securePrefs: SharedPreferences = cachedSecurePrefs ?: synchronized(LOCK) {
+        cachedSecurePrefs ?: createSecurePrefs(appContext).also {
+            cachedSecurePrefs = it
+        }
+    }
 
     companion object {
+        private val LOCK = Any()
+        @Volatile private var cachedPrefs: SharedPreferences? = null
+        @Volatile private var cachedSecurePrefs: SharedPreferences? = null
+
         private const val TAG = "SessionManager"
         private const val SECURE_PREFS_FILE = "SecureTokens"
 

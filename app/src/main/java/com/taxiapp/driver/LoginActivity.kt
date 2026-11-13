@@ -1,18 +1,29 @@
 package com.taxiapp.driver
 
+import android.animation.ObjectAnimator
+import android.animation.ValueAnimator
 import android.content.Intent
+import android.graphics.Color
+import android.net.Uri
 import android.os.Bundle
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
+import android.graphics.drawable.Animatable
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import android.os.CountDownTimer
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
+import android.view.animation.LinearInterpolator
 import android.view.animation.OvershootInterpolator
+import android.view.inputmethod.InputMethodManager
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.taxiapp.driver.databinding.ActivityLoginBinding
 import com.taxiapp.driver.network.ApiClient
 import com.taxiapp.driver.network.SmsRequestDto
@@ -30,12 +41,12 @@ class LoginActivity : AppCompatActivity() {
 
     private var currentMode = LoginMode.PHONE_INPUT
     private var formattedPhone = ""
+    private var isFormattingPhone = false
 
-    // Таймер и корутина для курсора
     private var resendTimer: CountDownTimer? = null
     private var cursorJob: Job? = null
+    private var loaderAnimator: ObjectAnimator? = null
 
-    // Массив ячеек
     private val codeViews: List<TextView> by lazy {
         listOf(
             binding.tvCode1, binding.tvCode2, binding.tvCode3,
@@ -52,22 +63,28 @@ class LoginActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        val density = resources.displayMetrics.density
-        val basePaddingHorizontal = (16 * density).toInt()
-        val basePaddingVertical = (24 * density).toInt()
 
-        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+        val density = resources.displayMetrics.density
+        val padH = (16 * density).toInt()
+        val padTop = (12 * density).toInt()
+        val padBottom = (16 * density).toInt()
+
+        ViewCompat.setOnApplyWindowInsetsListener(binding.contentContainer) { v, insets ->
+            val bars = insets.getInsets(
+                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.ime()
+            )
             v.setPadding(
-                systemBars.left + basePaddingHorizontal,
-                systemBars.top + basePaddingVertical,
-                systemBars.right + basePaddingHorizontal,
-                systemBars.bottom + basePaddingVertical
+                bars.left + padH,
+                bars.top + padTop,
+                bars.right + padH,
+                bars.bottom + padBottom
             )
             insets
         }
+
         sessionManager = SessionManager(this)
 
+        setupPhoneInputFormatting()
         setupListeners()
         setupOtpInput()
         showPhoneInputStep()
@@ -77,75 +94,124 @@ class LoginActivity : AppCompatActivity() {
         super.onDestroy()
         resendTimer?.cancel()
         cursorJob?.cancel()
+        stopLoaderAnimation()
     }
 
-    // --- ЛОГИКА ВВОДА SMS (С АНИМАЦИЕЙ И КУРСОРОМ) ---
+    private fun setupPhoneInputFormatting() {
+        updatePhoneButtonState(false)
+
+        binding.etPhone.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+
+            override fun afterTextChanged(s: Editable?) {
+                if (isFormattingPhone) return
+                isFormattingPhone = true
+
+                val rawDigits = s?.toString()?.filter { it.isDigit() } ?: ""
+                val cleanDigits = if (rawDigits.startsWith("380")) {
+                    rawDigits.removePrefix("380")
+                } else if (rawDigits.startsWith("0") && rawDigits.length > 9) {
+                    rawDigits.removePrefix("0")
+                } else {
+                    rawDigits
+                }.take(9)
+
+                val formatted = buildString {
+                    for (i in cleanDigits.indices) {
+                        if (i == 2 || i == 5 || i == 7) append(' ')
+                        append(cleanDigits[i])
+                    }
+                }
+
+                if (formatted != s?.toString()) {
+                    binding.etPhone.setText(formatted)
+                    binding.etPhone.setSelection(formatted.length)
+                }
+
+                updatePhoneButtonState(cleanDigits.length == 9)
+                isFormattingPhone = false
+            }
+        })
+    }
+
+    private fun getCleanPhoneDigits(): String {
+        val digits = binding.etPhone.text?.toString()?.filter { it.isDigit() } ?: ""
+        return if (digits.length == 10 && digits.startsWith("0")) {
+            digits.removePrefix("0")
+        } else {
+            digits
+        }
+    }
+
+    private fun updatePhoneButtonState(enabled: Boolean) {
+        binding.btnGetCode.isEnabled = enabled
+        binding.btnGetCode.setTextColor(
+            if (enabled) Color.parseColor("#1A1C1E") else Color.parseColor("#3B3D46")
+        )
+    }
+
+    private fun updateVerifyButtonState(enabled: Boolean) {
+        binding.btnVerifyCode.isEnabled = enabled
+        binding.btnVerifyCode.setTextColor(
+            if (enabled) Color.parseColor("#1A1C1E") else Color.parseColor("#3B3D46")
+        )
+    }
 
     private fun setupOtpInput() {
-        // Изначально отключаем кнопку
-        binding.btnVerifyCode.isEnabled = false
-        binding.btnVerifyCode.alpha = 0.5f
+        updateVerifyButtonState(false)
 
         binding.etCodeHidden.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                // Если добавили символ (ввод цифры), запускаем анимацию
                 if (count > before && start < 6) {
                     animateCellJump(codeViews[start])
                 }
             }
 
             override fun afterTextChanged(s: Editable?) {
-                updateOtpVisuals(s?.toString() ?: "")
+                val code = s?.toString() ?: ""
+                updateOtpVisuals(code)
+                if (code.length == 6 && currentMode == LoginMode.SMS_VERIFY) {
+                    verifySms(formattedPhone, code)
+                }
             }
         })
 
-        // Фокус на скрытое поле при клике на ячейки
         val clickListener = View.OnClickListener {
             binding.etCodeHidden.requestFocus()
-            val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
-            imm.showSoftInput(binding.etCodeHidden, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+            val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+            imm.showSoftInput(binding.etCodeHidden, InputMethodManager.SHOW_IMPLICIT)
             binding.etCodeHidden.setSelection(binding.etCodeHidden.text.length)
         }
 
         codeViews.forEach { it.setOnClickListener(clickListener) }
     }
 
-    // Главный метод отрисовки ячеек
     private fun updateOtpVisuals(input: String) {
         val len = input.length
 
-        // 1. Управляем активностью кнопки
         if (len == 6) {
-            binding.btnVerifyCode.isEnabled = true
-            binding.btnVerifyCode.alpha = 1.0f
-            stopCursorBlink() // Код введен, курсор не нужен
+            updateVerifyButtonState(true)
+            stopCursorBlink()
         } else {
-            binding.btnVerifyCode.isEnabled = false
-            binding.btnVerifyCode.alpha = 0.5f
-            startCursorBlink(len) // Запускаем мигание на текущей позиции
+            updateVerifyButtonState(false)
+            startCursorBlink(len)
         }
 
-        // 2. Отрисовка цифр и состояний
         codeViews.forEachIndexed { index, textView ->
             if (index < len) {
-                // Цифра уже введена
                 textView.text = input[index].toString()
-                textView.isSelected = true // Подсветка (тиловая рамка)
-            } else if (index == len) {
-                // Это текущая ячейка ввода (здесь будет курсор)
-                // ВАЖНО: Мы ставим isSelected = true, чтобы она светилась
                 textView.isSelected = true
-                // Текст здесь управляется корутиной startCursorBlink
+            } else if (index == len) {
+                textView.isSelected = true
             } else {
-                // Пустая ячейка впереди
                 textView.text = ""
-                textView.isSelected = false // Серая рамка
+                textView.isSelected = false
             }
         }
     }
 
-    // Анимация "Прыжок" при вводе
     private fun animateCellJump(view: View) {
         view.scaleX = 0.8f
         view.scaleY = 0.8f
@@ -153,29 +219,24 @@ class LoginActivity : AppCompatActivity() {
             .scaleX(1.0f)
             .scaleY(1.0f)
             .setDuration(200)
-            .setInterpolator(OvershootInterpolator(2.0f)) // Эффект пружины
+            .setInterpolator(OvershootInterpolator(2.0f))
             .start()
     }
 
-    // Логика мигающего курсора "|"
     private fun startCursorBlink(position: Int) {
         cursorJob?.cancel()
         if (position >= 6) return
 
         cursorJob = lifecycleScope.launch {
             val targetView = codeViews[position]
-
-            // ПРИНУДИТЕЛЬНО включаем подсветку для активной ячейки курсора
             targetView.isSelected = true
 
             while (isActive) {
                 targetView.text = "|"
                 delay(600)
                 if (!isActive) break
-                targetView.text = "" // Пустота
+                targetView.text = ""
                 delay(500)
-
-                // На всякий случай обновляем состояние, чтобы не слетело
                 targetView.isSelected = true
             }
         }
@@ -183,20 +244,16 @@ class LoginActivity : AppCompatActivity() {
 
     private fun stopCursorBlink() {
         cursorJob?.cancel()
-        // Очищаем курсоры во всех ячейках, которые еще пустые (начиная с текущей позиции ввода)
         val len = binding.etCodeHidden.text.length
         for (i in len until 6) {
             codeViews[i].text = ""
-            // Неактивные ячейки не должны быть выбраны
             codeViews[i].isSelected = false
         }
     }
 
-    // --- ТАЙМЕР ОТПРАВКИ ---
-
     private fun startResendTimer() {
         binding.tvResendCode.isEnabled = false
-        binding.tvResendCode.setTextColor(getColor(android.R.color.darker_gray)) // Серый цвет
+        binding.tvResendCode.setTextColor(Color.parseColor("#8A8D97"))
 
         resendTimer?.cancel()
         resendTimer = object : CountDownTimer(60000, 1000) {
@@ -208,24 +265,23 @@ class LoginActivity : AppCompatActivity() {
             override fun onFinish() {
                 binding.tvResendCode.isEnabled = true
                 binding.tvResendCode.text = "Надіслати код повторно"
-                // Возвращаем тиловый цвет
                 binding.tvResendCode.setTextColor(getColor(R.color.driver_neon_teal))
             }
         }.start()
     }
 
-    // --- СТАНДАРТНАЯ ЛОГИКА ---
-
     private fun setupListeners() {
         binding.btnBack.setOnClickListener { handleBackPress() }
 
+        binding.btnSupport.setOnClickListener { showSupportBottomSheet() }
+
         binding.btnGetCode.setOnClickListener {
-            val rawInput = binding.etPhone.text.toString().trim()
-            if (rawInput.length < 9) {
+            val digits = getCleanPhoneDigits()
+            if (digits.length < 9) {
                 Toast.makeText(this, "Введіть коректний номер", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            formattedPhone = if (rawInput.startsWith("+380")) rawInput else "+380${rawInput.removePrefix("0")}"
+            formattedPhone = "+380$digits"
             requestSms(formattedPhone)
         }
 
@@ -250,26 +306,57 @@ class LoginActivity : AppCompatActivity() {
         }
     }
 
+    private fun showSupportBottomSheet() {
+        val bottomSheetDialog = BottomSheetDialog(this)
+        val view = layoutInflater.inflate(R.layout.layout_bottom_sheet_support, null)
+        bottomSheetDialog.setContentView(view)
+        view.findViewById<View>(R.id.bs_btn_telegram)?.setOnClickListener {
+            bottomSheetDialog.dismiss()
+            try {
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://t.me/TaxiSupport")))
+            } catch (e: Exception) {
+                Toast.makeText(this, "Telegram не встановлено", Toast.LENGTH_SHORT).show()
+            }
+        }
+        view.findViewById<View>(R.id.bs_btn_call)?.setOnClickListener {
+            bottomSheetDialog.dismiss()
+            try {
+                startActivity(Intent(Intent.ACTION_DIAL).apply {
+                    data = Uri.parse("tel:+380999999999")
+                })
+            } catch (e: Exception) {
+                Toast.makeText(this, "Помилка дзвінка", Toast.LENGTH_SHORT).show()
+            }
+        }
+        bottomSheetDialog.show()
+    }
+
     private fun showPhoneInputStep() {
         currentMode = LoginMode.PHONE_INPUT
         binding.layoutStepPhone.visibility = View.VISIBLE
         binding.layoutStepSms.visibility = View.GONE
-        binding.progressBar.visibility = View.GONE
-        resendTimer?.cancel() // Сбрасываем таймер если вышли назад
+        setLoading(false)
+        resendTimer?.cancel()
+
+        binding.etPhone.requestFocus()
+        binding.etPhone.postDelayed({
+            val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+            imm.showSoftInput(binding.etPhone, InputMethodManager.SHOW_IMPLICIT)
+        }, 150)
     }
 
     private fun showSmsVerifyStep(phone: String) {
         currentMode = LoginMode.SMS_VERIFY
         binding.layoutStepPhone.visibility = View.GONE
         binding.layoutStepSms.visibility = View.VISIBLE
-        binding.progressBar.visibility = View.GONE
+        setLoading(false)
         binding.tvSmsSubtitle.text = "Ми відправили код на номер\n$phone"
 
-        // Очистка и фокус
         binding.etCodeHidden.text.clear()
         binding.etCodeHidden.requestFocus()
+        val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.showSoftInput(binding.etCodeHidden, InputMethodManager.SHOW_IMPLICIT)
 
-        // Запускаем таймер при переходе на экран
         startResendTimer()
     }
 
@@ -322,18 +409,16 @@ class LoginActivity : AppCompatActivity() {
                 val response = ApiClient.getInstance().getApiService(this@LoginActivity)
                     .verifyDriverLoginSms(SmsVerifyDto(phone, code))
 
-                // --- ПОЧАТОК ЗМІН ---
                 if (response.isSuccessful && response.body() != null) {
                     val loginData = response.body()!!
-
-                    // Зберігаємо статус видалення для головного екрану!
                     sessionManager.setPendingDeletion(loginData.isPendingDeletion == true)
-
-                    // Зберігаємо сесію та переходимо далі
                     saveSession(loginData)
                 } else {
-                    // --- КІНЕЦЬ ЗМІН ---
-                    val errorMsg = if (response.code() == 429) getString(R.string.error_too_many_requests) else "Невірний код"
+                    val errorMsg = if (response.code() == 429) {
+                        getString(R.string.error_too_many_requests)
+                    } else {
+                        "Невірний код"
+                    }
                     Toast.makeText(this@LoginActivity, errorMsg, Toast.LENGTH_SHORT).show()
                     setLoading(false)
                     binding.etCodeHidden.text.clear()
@@ -348,23 +433,20 @@ class LoginActivity : AppCompatActivity() {
 
     private fun saveSession(data: com.taxiapp.driver.network.LoginResponse) {
         sessionManager.saveAuthToken(data.token)
-        // --- ДОБАВЛЕНО: Сохраняем рефреш-токен при СМС входе ---
         if (!data.refreshToken.isNullOrEmpty()) {
             sessionManager.saveRefreshToken(data.refreshToken)
         }
         sessionManager.saveDriverId(data.userId)
-
-        // ИСПРАВЛЕНО: используем phoneNumber вместо userPhone
-        // И добавляем ?: "", так как поле может быть null
         sessionManager.saveDriverName(data.fullName ?: "Водій")
-        sessionManager.saveDriverPhone(data.phoneNumber ?: "")
+        sessionManager.saveDriverPhone(data.phoneNumber ?: formattedPhone)
         ApiClient.getInstance().reset()
 
         com.google.firebase.messaging.FirebaseMessaging.getInstance().token.addOnSuccessListener { fcmToken ->
             if (!fcmToken.isNullOrEmpty()) {
                 kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
                     try {
-                        ApiClient.getInstance().getApiService(applicationContext).updateFcmToken(mapOf("token" to fcmToken))
+                        ApiClient.getInstance().getApiService(applicationContext)
+                            .updateFcmToken(mapOf("token" to fcmToken))
                     } catch (_: Exception) {}
                 }
             }
@@ -377,13 +459,25 @@ class LoginActivity : AppCompatActivity() {
     }
 
     private fun setLoading(loading: Boolean) {
-        binding.progressBar.visibility = if (loading) View.VISIBLE else View.GONE
-        binding.btnGetCode.isEnabled = !loading
-
-        if (!loading) {
+        if (loading) {
+            binding.loadingOverlay.visibility = View.VISIBLE
+            startLoaderAnimation()
+            binding.btnGetCode.isEnabled = false
+            binding.btnVerifyCode.isEnabled = false
+        } else {
+            stopLoaderAnimation()
+            binding.loadingOverlay.visibility = View.GONE
+            updatePhoneButtonState(getCleanPhoneDigits().length == 9)
             val codeLen = binding.etCodeHidden.text?.length ?: 0
-            binding.btnVerifyCode.isEnabled = (codeLen == 6)
-            binding.btnVerifyCode.alpha = if (codeLen == 6) 1.0f else 0.5f
+            updateVerifyButtonState(codeLen == 6)
         }
+    }
+
+    private fun startLoaderAnimation() {
+        (binding.ivLoader.drawable as? Animatable)?.start()
+    }
+
+    private fun stopLoaderAnimation() {
+        (binding.ivLoader.drawable as? Animatable)?.stop()
     }
 }

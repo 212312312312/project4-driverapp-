@@ -1,16 +1,24 @@
 package com.taxiapp.driver
 
 import android.Manifest
+import android.animation.ObjectAnimator
+import android.animation.ValueAnimator
+import android.graphics.drawable.Animatable
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import android.app.AlertDialog
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Paint
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.view.View
+import android.view.animation.LinearInterpolator
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -34,6 +42,7 @@ class AccountSelectionActivity : AppCompatActivity() {
     private var permissionDialog: AlertDialog? = null
     private var isWaitingForFullScreenSettings = false
     private var isProceeding = false
+    private var loaderAnimator: ObjectAnimator? = null
 
     private val fullScreenIntentLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -71,7 +80,7 @@ class AccountSelectionActivity : AppCompatActivity() {
         binding = ActivityAccountSelectionBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { v, insets ->
+        ViewCompat.setOnApplyWindowInsetsListener(binding.contentContainer) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
@@ -85,8 +94,6 @@ class AccountSelectionActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        // Якщо водій увімкнув повноекранні сповіщення в налаштуваннях та повернувся —
-        // закриваємо діалог та переходимо на головний екран
         if (checkFullScreenIntentPermission()) {
             val wasDialogShowing = permissionDialog?.isShowing == true
             dismissPermissionDialog()
@@ -98,6 +105,7 @@ class AccountSelectionActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        stopLoaderAnimation()
         dismissPermissionDialog()
         super.onDestroy()
     }
@@ -114,6 +122,10 @@ class AccountSelectionActivity : AppCompatActivity() {
     private fun setupUI() {
         val phone = sessionManager.getDriverPhone() ?: "Невідомий номер"
         binding.tvPhoneNumber.text = phone
+        binding.tvAppVersion.text = "${BuildConfig.VERSION_NAME}.${BuildConfig.VERSION_CODE}"
+
+        binding.btnSwitchAccount.paintFlags =
+            binding.btnSwitchAccount.paintFlags or Paint.UNDERLINE_TEXT_FLAG
     }
 
     private fun setupListeners() {
@@ -122,6 +134,7 @@ class AccountSelectionActivity : AppCompatActivity() {
         }
 
         binding.btnSwitchAccount.setOnClickListener {
+            if (isProceeding) return@setOnClickListener
             sessionManager.clearSession()
             val intent = Intent(this, WelcomeActivity::class.java)
             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -199,16 +212,14 @@ class AccountSelectionActivity : AppCompatActivity() {
 
         tvDesc.text = "Для безперебійного отримання замовлень:\n\n1. Натисніть «Зрозуміло» нижче.\n2. Увімкніть пункт «Повноекранні сповіщення»."
 
-        // Прибираємо кнопку "Скасувати", щоб водій не міг зайти в додаток в обхід обов'язкового дозволу
         btnCancel.visibility = View.GONE
 
-        // Розтягуємо єдину кнопку "Зрозуміло" на всю ширину
         val params = btnAllow.layoutParams as LinearLayout.LayoutParams
         params.weight = 2f
         params.marginStart = 0
         btnAllow.layoutParams = params
 
-        btnAllow.text = getString(R.string.btn_understood) // "Зрозуміло"
+        btnAllow.text = getString(R.string.btn_understood)
         btnAllow.setOnClickListener {
             dismissPermissionDialog()
             openFullScreenIntentSettings()
@@ -241,6 +252,31 @@ class AccountSelectionActivity : AppCompatActivity() {
         }
     }
 
+    private fun setLoadingOverlay(show: Boolean) {
+        if (show) {
+            binding.loadingOverlay.visibility = View.VISIBLE
+            (binding.ivLoader.drawable as? Animatable)?.start()
+        } else {
+            (binding.ivLoader.drawable as? Animatable)?.stop()
+            binding.loadingOverlay.visibility = View.GONE
+        }
+    }
+
+    private fun startLoaderAnimation() {
+        loaderAnimator?.cancel()
+        binding.ivLoader.rotation = 0f
+        loaderAnimator = ObjectAnimator.ofFloat(binding.ivLoader, View.ROTATION, 0f, 360f).apply {
+            duration = 1000L
+            repeatCount = ValueAnimator.INFINITE
+            interpolator = LinearInterpolator()
+            start()
+        }
+    }
+
+    private fun stopLoaderAnimation() {
+        (binding.ivLoader.drawable as? Animatable)?.stop()
+    }
+
     private fun goToMainActivity() {
         val serviceIntent = Intent(this, LocationService::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -259,15 +295,23 @@ class AccountSelectionActivity : AppCompatActivity() {
         isProceeding = true
         dismissPermissionDialog()
         binding.btnContinue.isEnabled = false
+        setLoadingOverlay(true)
 
         lifecycleScope.launch {
             try {
-                val response = ApiClient.getInstance().getApiService(this@AccountSelectionActivity).getDriverProfile()
+                delay(350) // Даем RenderThread плавно показать оверлей и раскрутить лоадер
+
+                val response = withContext(Dispatchers.IO) {
+                    ApiClient.getInstance()
+                        .getApiService(applicationContext)
+                        .getDriverProfile()
+                }
 
                 if (response.isSuccessful) {
                     goToMainActivity()
                 } else {
                     isProceeding = false
+                    setLoadingOverlay(false)
                     Toast.makeText(
                         this@AccountSelectionActivity,
                         "Не вдалося оновити сесію. Спробуйте увійти знову або змінити акаунт.",
@@ -277,6 +321,7 @@ class AccountSelectionActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 isProceeding = false
+                setLoadingOverlay(false)
                 Toast.makeText(
                     this@AccountSelectionActivity,
                     "Помилка з'єднання з сервером, спробуйте ще раз.",
@@ -288,6 +333,7 @@ class AccountSelectionActivity : AppCompatActivity() {
     }
 
     override fun onBackPressed() {
+        if (isProceeding) return
         moveTaskToBack(true)
     }
 }
