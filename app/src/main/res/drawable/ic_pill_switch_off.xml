@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="52dp"
+    android:height="30dp"
+    android:viewportWidth="52"
+    android:viewportHeight="30">
+    <path
+        android:fillColor="@color/driver_switch_inactive_track"
+        android:pathData="M15,0 L37,0 A15,15 0 0,1 52,15 A15,15 0 0,1 37,30 L15,30 A15,15 0 0,1 0,15 A15,15 0 0,1 15,0 Z" />
+    <path
+        android:fillColor="@color/driver_switch_inactive_thumb"
+        android:pathData="M15,4.8 A10.2,10.2 0 1,1 15,25.2 A10.2,10.2 0 1,1 15,4.8 Z" />
+</vector>

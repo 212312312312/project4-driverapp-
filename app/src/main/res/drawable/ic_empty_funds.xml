@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="220dp"
+    android:height="150dp"
+    android:viewportWidth="220"
+    android:viewportHeight="150">
+    <!-- Halo outer dots -->
+    <path
+        android:fillColor="#32343A"
+        android:pathData="M168,9 A9,9 0 1,1 168,27 A9,9 0 1,1 168,9 Z M50,109 A9,9 0 1,1 50,127 A9,9 0 1,1 50,109 Z M160,121 A7,7 0 1,1 160,135 A7,7 0 1,1 160,121 Z" />
+    <!-- Halo inner dots -->
+    <path
+        android:fillColor="#60636E"
+        android:pathData="M168,14.8 A3.2,3.2 0 1,1 168,21.2 A3.2,3.2 0 1,1 168,14.8 Z M50,114.8 A3.2,3.2 0 1,1 50,121.2 A3.2,3.2 0 1,1 50,114.8 Z M160,125.5 A2.5,2.5 0 1,1 160,130.5 A2.5,2.5 0 1,1 160,125.5 Z" />
+    <!-- Main face circle, sad mouth arc, and side waves -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#8A8E9B"
+        android:strokeWidth="3.2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M108,53 A33,33 0 1,1 108,119 A33,33 0 1,1 108,53 Z M98.8,98.6 A9.5,7.5 0 0,1 117.2,98.6 M64,108 C70,113 73,113 77,106 C81,99 84,100 88,107 M128,107 C132,100 135,99 139,106 C143,113 146,113 152,108" />
+    <!-- Eyes and question mark dots -->
+    <path
+        android:fillColor="#8A8E9B"
+        android:pathData="M101,86.7 A2.3,2.3 0 1,1 101,91.3 A2.3,2.3 0 1,1 101,86.7 Z M115,86.7 A2.3,2.3 0 1,1 115,91.3 A2.3,2.3 0 1,1 115,86.7 Z M61,65 A2.0,2.0 0 1,1 61,69 A2.0,2.0 0 1,1 61,65 Z M156,69.1 A1.9,1.9 0 1,1 156,72.9 A1.9,1.9 0 1,1 156,69.1 Z" />
+    <!-- Question mark curves -->
+    <group
+        android:pivotX="62"
+        android:pivotY="52"
+        android:rotation="-12">
+        <path
+            android:fillColor="#00000000"
+            android:strokeColor="#8A8E9B"
+            android:strokeWidth="2.4"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:pathData="M52,38 C52,25 72,25 72,37 C72,46 61,47 61,58" />
+    </group>
+    <group
+        android:pivotX="156"
+        android:pivotY="58"
+        android:rotation="14">
+        <path
+            android:fillColor="#00000000"
+            android:strokeColor="#8A8E9B"
+            android:strokeWidth="2.4"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:pathData="M148,46 C148,35 165,35 165,45 C165,53 156,54 156,63" />
+    </group>
+</vector>

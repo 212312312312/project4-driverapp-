@@ -1,20 +1,54 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Базовая светлая палитра экранов и карточек -->
     <color name="driver_black_bg">#FFFFFF</color>
     <color name="driver_card_bg">#F3F4F6</color>
     <color name="driver_surface_elevated">#E5E7EB</color>
     <color name="driver_divider">#E5E7EB</color>
 
+    <!-- Фирменный бирюзовый акцент -->
     <color name="driver_neon_teal">#33CCA1</color>
     <color name="driver_teal_dim">#A3EAD5</color>
 
+    <!-- Текстовая иерархия -->
     <color name="driver_text_primary">#1F2229</color>
     <color name="driver_text_secondary">#6E7380</color>
     <color name="driver_text_black">#1A1C1E</color>
 
+    <!-- Статусы ошибок -->
     <color name="driver_error">#FF5252</color>
     <color name="driver_error_red">#FF5252</color>
 
+    <!-- Семантические токены Этапа 1 (табы, чипы, плашки заказов, тумблеры, кошелек) -->
+    <color name="driver_tab_selected_bg">#D8DCE3</color>
+    <color name="driver_tab_selected_stroke">#9CA3AF</color>
+    <color name="driver_chip_selected_bg">#D1FAE5</color>
+    <color name="driver_chip_unselected_bg">#E5E7EB</color>
+    <color name="driver_badge_dark_bg">#E5E7EB</color>
+    <color name="driver_price_card_blue">#28C2E1</color>
+    <color name="driver_surge_blue">#0288D1</color>
+    <color name="driver_scheduled_yellow">#F5D033</color>
+    <color name="driver_comment_neon_bg">#1F33CCA1</color>
+
+    <!-- Тумблеры и неактивные состояния кнопок -->
+    <color name="driver_switch_inactive_track">#CBD5E1</color>
+    <color name="driver_switch_inactive_thumb">#FFFFFF</color>
+    <color name="driver_switch_active_thumb">#1F2229</color>
+    <color name="driver_btn_disabled_text">#9CA3AF</color>
+
+    <!-- Бейджи транзакций кошелька -->
+    <color name="driver_tx_in_circle_bg">#D1FAE5</color>
+    <color name="driver_tx_out_circle_bg">#FEE2E2</color>
+
+    <!-- Плашки таймера ожидания в OrderProgressActivity -->
+    <color name="driver_waiting_free_bg">#EBF5FF</color>
+    <color name="driver_waiting_free_text">#1C7ED6</color>
+    <color name="driver_waiting_paid_bg">#FFF4E6</color>
+    <color name="driver_waiting_paid_text">#D9480F</color>
+    <color name="driver_waiting_alert_bg">#FFF5F5</color>
+    <color name="driver_waiting_alert_text">#C92A2A</color>
+
+    <!-- Системные и базовые цвета -->
     <color name="purple_200">#FFBB86FC</color>
     <color name="purple_500">#33CCA1</color>
     <color name="purple_700">#218569</color>
@@ -24,6 +58,7 @@
     <color name="white">#FFFFFFFF</color>
     <color name="taxi_yellow">#FFD600</color>
 
+    <!-- Маркеры карты и уровни активности -->
     <color name="marker_green">#00C853</color>
     <color name="marker_yellow">#FFD600</color>
     <color name="marker_red">#FF5252</color>

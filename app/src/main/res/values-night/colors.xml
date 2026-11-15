@@ -1,30 +1,61 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Палітра Uklon Drive із збереженням архітектурних імен твого проекту: -->
-    <!-- driver_black_bg використовується у всіх макетах для КАРТОК, ПАНЕЛЕЙ КАРТИ та КНОПОК (світлий сланцево-сірий, світліший за карту!) -->
-    <color name="driver_black_bg">#44464d</color>
+    <!-- Палитра Uklon Drive с сохранением архитектурных имен проекта -->
+    <!-- driver_black_bg используется для КАРТОЧЕК, ПАНЕЛЕЙ КАРТЫ и КНОПОК (светлый сланцево-серый) -->
+    <color name="driver_black_bg">#44464D</color>
 
-    <!-- driver_card_bg використовується у боковому меню, ефірі та профілі як ТЕМНИЙ ФОН ЕКРАНУ (#232426) -->
-    <color name="driver_card_bg">#2f2f30</color>
+    <!-- driver_card_bg используется в боковом меню, эфире и профиле как ТЕМНЫЙ ФОН ЭКРАНА -->
+    <color name="driver_card_bg">#2F2F30</color>
 
-    <!-- Ще світліший сталево-сірий для внутрішніх кнопок (кнопка "Назад", повзунок "Офлайн") -->
+    <!-- Стальной серый для внутренних кнопок и приподнятых поверхностей -->
     <color name="driver_surface_elevated">#363840</color>
 
-    <!-- Тонкі розділювачі всередині карток -->
+    <!-- Тонкие разделители внутри карточек -->
     <color name="driver_divider">#454854</color>
 
-    <!-- Фірмовий бірюзовий акцент -->
+    <!-- Фирменный бирюзовый акцент -->
     <color name="driver_neon_teal">#33CCA1</color>
     <color name="driver_teal_dim">#218569</color>
 
-    <!-- Текстова ієрархія -->
+    <!-- Текстовая иерархия -->
     <color name="driver_text_primary">#FFFFFF</color>
     <color name="driver_text_secondary">#A6A9B2</color>
     <color name="driver_text_black">#1A1C1E</color>
 
+    <!-- Статусы ошибок -->
     <color name="driver_error">#FF6B6B</color>
     <color name="driver_error_red">#FF6B6B</color>
 
+    <!-- Семантические токены Этапа 1 (табы, чипы, плашки заказов, тумблеры, кошелек) -->
+    <color name="driver_tab_selected_bg">#5A5E6D</color>
+    <color name="driver_tab_selected_stroke">#A6A9B2</color>
+    <color name="driver_chip_selected_bg">#1B3E37</color>
+    <color name="driver_chip_unselected_bg">#2B2D33</color>
+    <color name="driver_badge_dark_bg">#26272B</color>
+    <color name="driver_price_card_blue">#28C2E1</color>
+    <color name="driver_surge_blue">#29B6F6</color>
+    <color name="driver_scheduled_yellow">#F5D033</color>
+    <color name="driver_comment_neon_bg">#2633CCA1</color>
+
+    <!-- Тумблеры и неактивные состояния кнопок -->
+    <color name="driver_switch_inactive_track">#5C606D</color>
+    <color name="driver_switch_inactive_thumb">#C9CCD4</color>
+    <color name="driver_switch_active_thumb">#1F2229</color>
+    <color name="driver_btn_disabled_text">#3B3D46</color>
+
+    <!-- Бейджи транзакций кошелька -->
+    <color name="driver_tx_in_circle_bg">#253D3B</color>
+    <color name="driver_tx_out_circle_bg">#3E2E35</color>
+
+    <!-- Плашки таймера ожидания в OrderProgressActivity -->
+    <color name="driver_waiting_free_bg">#1E293B</color>
+    <color name="driver_waiting_free_text">#60A5FA</color>
+    <color name="driver_waiting_paid_bg">#3B281E</color>
+    <color name="driver_waiting_paid_text">#FB923C</color>
+    <color name="driver_waiting_alert_bg">#3B1F22</color>
+    <color name="driver_waiting_alert_text">#F87171</color>
+
+    <!-- Системные и базовые цвета -->
     <color name="purple_200">#FFBB86FC</color>
     <color name="purple_500">#33CCA1</color>
     <color name="purple_700">#218569</color>
@@ -34,6 +65,7 @@
     <color name="white">#FFFFFFFF</color>
     <color name="taxi_yellow">#FFD600</color>
 
+    <!-- Маркеры карты и уровни активности -->
     <color name="marker_green">#00E676</color>
     <color name="marker_yellow">#FFD600</color>
     <color name="marker_red">#FF6B6B</color>
